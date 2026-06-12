@@ -135,6 +135,14 @@
       repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.02) 0 1px, transparent 1px 3px);
   }
 
+  [data-paper] {
+    --color-flap-ok: #155e38;
+    --color-flap-tbd: #8a5a12;
+    --color-flap-chg: #99251f;
+    --color-neon-cyan: #1f5f78;
+    --color-neon-magenta: #8a315d;
+  }
+
   [data-paper] .broadcast-air {
     background:
       radial-gradient(900px 420px at 85% -10%, color-mix(in srgb, var(--mp-primary) 7%, transparent), transparent 60%),
@@ -167,12 +175,22 @@
     text-shadow: 0 0 18px color-mix(in srgb, var(--mp-primary) 45%, transparent);
   }
 
+  [data-paper] .neon-text {
+    color: var(--mp-primary);
+    text-shadow: none;
+  }
+
   .silbo-mark,
   .silbo-channel-badge svg {
     overflow: visible;
     filter:
       drop-shadow(0 0 4px color-mix(in srgb, var(--silbo-color, var(--mp-primary)) 34%, transparent))
       drop-shadow(0 0 10px color-mix(in srgb, var(--silbo-color, var(--mp-primary)) 12%, transparent));
+  }
+
+  [data-paper] .silbo-mark,
+  [data-paper] .silbo-channel-badge svg {
+    filter: drop-shadow(0 1px 0 rgba(29, 24, 18, 0.18));
   }
 
   .silbo-channel-badge {

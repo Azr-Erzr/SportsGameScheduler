@@ -21,7 +21,7 @@ import { deriveTeams, filterMatchesForTeams, useMatches } from '../data/liveMatc
 import { brand } from '../domain/brand'
 import { associationFootballLabel, t } from '../lib/i18n'
 import { formatLongDate, formatTime } from '../lib/time'
-import { getTheme } from '../theme/themes'
+import { getTheme, withSurfaceMode } from '../theme/themes'
 
 const spotlightEvents = [
   {
@@ -68,8 +68,16 @@ const exportPaths = [
   { icon: Bell, title: 'Email and push alerts', body: 'Reminder and change alerts without SMS in the MVP.' },
 ]
 
-function ProgramCoverCard({ event, index }: { event: (typeof spotlightEvents)[number]; index: number }) {
-  const theme = getTheme(event.sportKey)
+function ProgramCoverCard({
+  event,
+  index,
+  surfaceMode,
+}: {
+  event: (typeof spotlightEvents)[number]
+  index: number
+  surfaceMode: 'broadcast' | 'program'
+}) {
+  const theme = withSurfaceMode(getTheme(event.sportKey), surfaceMode)
   const live = event.label === 'Live now'
 
   return (
@@ -268,7 +276,7 @@ export function HomePage() {
         </div>
         <div className="silbo-scrollbar flex snap-x gap-3 overflow-x-auto pb-3">
           {spotlightEvents.map((event, index) => (
-            <ProgramCoverCard key={event.title} event={event} index={index} />
+            <ProgramCoverCard key={event.title} event={event} index={index} surfaceMode={prefs.themeMode} />
           ))}
         </div>
       </section>

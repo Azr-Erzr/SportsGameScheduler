@@ -2,8 +2,9 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { ChevronDown } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
+import { useAppState } from '../app/state-context'
 import { sports } from '../domain/sports'
-import { getTheme } from '../theme/themes'
+import { getTheme, withSurfaceMode } from '../theme/themes'
 import { SilboBrandMark, SilboChannelBadge } from './SilboMark'
 
 // The brand block IS the sport selector: clicking the mark opens a themed bento
@@ -17,8 +18,9 @@ export function SportSwitcher() {
   const navigate = useNavigate()
   const location = useLocation()
   const { sportKey } = useParams()
+  const { prefs } = useAppState()
   const activeKey = location.pathname === '/' ? 'neutral' : sportKey ?? 'soccer'
-  const activeTheme = getTheme(activeKey)
+  const activeTheme = withSurfaceMode(getTheme(activeKey), prefs.themeMode)
   const activeSport = sports.find((sport) => sport.key === activeKey)
 
   useEffect(() => {
@@ -92,7 +94,7 @@ export function SportSwitcher() {
             <p className="board-label px-1 pb-2 text-ink/40">Pick your channel</p>
             <div className="grid grid-cols-2 gap-2">
               {sports.map((sport, index) => {
-                const theme = getTheme(sport.key)
+                const theme = withSurfaceMode(getTheme(sport.key), prefs.themeMode)
                 const isActive = sport.key === activeKey
                 return (
                   <motion.button

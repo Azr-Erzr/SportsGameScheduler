@@ -114,7 +114,15 @@ Research cues:
 | Icon sourcing pipeline | P1 | Planned | Prevent random asset sprawl | Compare IconScout, Iconify-derived custom 3D, Figma/Blender/Spline generated assets, and commissioned packs. Track source/license. |
 | Poster-card refinement | P1 | Partial | Make carousel cards feel intentionally designed, not tossed in | Active states and sport-object art are in. Future: richer card composition, sticker/ticket edges, and final art assets. |
 | Mobile top bar/nav cleanup | P1 | Partial | Stop icons/text from feeling squished on small screens | Bottom dock now expands only the active label; top row spacing tightened. Future: test alternate header/sport selector if needed. |
-| Light/dark presentation modes | P2 | Partial | Offer broadcast-dark and program-paper experiences | Current theme mode exists. Future: full contrast audit and deeper program-mode polish. |
+| Light/dark presentation modes | P2 | Partial | Offer broadcast-dark and program-paper experiences | Current theme mode exists. Program mode now routes sport cards/switcher through paper-safe colors and suppresses neon glow. Future: full contrast audit across every route/export. |
+
+### Program Mode Color Rule
+
+Program/light mode is not an inverted broadcast theme. Treat it as a printed sports program:
+cream paper, dark ink, muted sport colors, and minimal glow. Neon greens/cyans/pinks are
+reserved for broadcast-dark UI unless the specific foreground/background pair passes a
+contrast check on cream paper. Components that read theme colors directly must call
+`withSurfaceMode(theme, prefs.themeMode)` before rendering inline sport colors.
 
 ## Schedule Image Export Direction
 

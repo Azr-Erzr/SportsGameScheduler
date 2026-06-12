@@ -47,7 +47,9 @@ uncertainty as a first-class visual state. Treat that convergence as the locked 
 
 1. **Mode rule:** dark *broadcast* surfaces for live/action (home, My Schedule, Tonight,
    alerts); light *program-paper* surfaces for reading/sharing (tournament capsules, public
-   share pages, image/PDF exports). Never per-page vibes — per-surface purpose.
+   share pages, image/PDF exports). Never per-page vibes — per-surface purpose. Program
+   mode uses inkier paper-safe sport colors and little/no glow; broadcast neon does not carry
+   onto cream surfaces unless contrast has been checked.
 2. **One shell:** top nav (Home · My Schedule · Picks · Sync · Packs · Community) on every
    page; sport tabs and rails are page-internal. Entry B's three pages used three navs —
    rejected as a system.
