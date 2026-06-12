@@ -122,8 +122,8 @@
   .silbo-channel-badge svg {
     overflow: visible;
     filter:
-      drop-shadow(0 0 5px color-mix(in srgb, var(--silbo-color, var(--mp-primary)) 45%, transparent))
-      drop-shadow(0 0 14px color-mix(in srgb, var(--silbo-color, var(--mp-primary)) 18%, transparent));
+      drop-shadow(0 0 4px color-mix(in srgb, var(--silbo-color, var(--mp-primary)) 34%, transparent))
+      drop-shadow(0 0 10px color-mix(in srgb, var(--silbo-color, var(--mp-primary)) 12%, transparent));
   }
 
   .silbo-channel-badge {
@@ -156,10 +156,10 @@
   }
 
   .silbo-glyph {
-    filter: drop-shadow(0 0 5px color-mix(in srgb, currentColor 34%, transparent));
+    filter: drop-shadow(0 0 4px color-mix(in srgb, currentColor 24%, transparent));
     transform-box: fill-box;
     transform-origin: center;
-    transform: scale(0.7);
+    transform: scale(0.86);
   }
 
   .silbo-sheen {
@@ -224,6 +224,18 @@
   @keyframes silbo-clock-tick {
     to {
       transform: rotate(360deg);
+    }
+  }
+
+  @keyframes globe-signal-float {
+    0%, 100% {
+      translate: -50% -50%;
+    }
+    35% {
+      translate: calc(-50% + 9px) calc(-50% - 6px);
+    }
+    70% {
+      translate: calc(-50% - 7px) calc(-50% + 8px);
     }
   }
 
@@ -527,6 +539,130 @@
     font-size: clamp(3.2rem, 7vw, 7.8rem);
   }
 
+  .globe-signal-layer {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    pointer-events: none;
+  }
+
+  .globe-signal {
+    position: absolute;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    min-width: 36px;
+    min-height: 36px;
+    border: 1px solid color-mix(in srgb, var(--signal-color) 60%, transparent);
+    border-radius: 999px;
+    background:
+      radial-gradient(circle at 35% 25%, rgba(255, 255, 255, 0.18), transparent 36%),
+      color-mix(in srgb, #0b0a08 82%, var(--signal-color));
+    color: var(--signal-color);
+    box-shadow:
+      0 0 0 1px rgba(244, 234, 216, 0.08),
+      0 0 18px color-mix(in srgb, var(--signal-color) 36%, transparent);
+    padding: 5px;
+    pointer-events: auto;
+    translate: -50% -50%;
+    transition: transform 180ms ease, border-color 180ms ease, background 180ms ease, box-shadow 180ms ease;
+    animation: globe-signal-float 8.5s ease-in-out infinite;
+    animation-delay: var(--signal-delay, 0s);
+  }
+
+  .globe-signal.orbit-secondary {
+    animation-duration: 10.5s;
+  }
+
+  .globe-signal span:not(.sport-object, .sport-object *) {
+    max-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    opacity: 0;
+    transition: max-width 180ms ease, opacity 180ms ease, padding-right 180ms ease;
+  }
+
+  .globe-signal:hover,
+  .globe-signal:focus-visible,
+  .globe-signal.is-active {
+    z-index: 5;
+    border-color: var(--signal-color);
+    background:
+      radial-gradient(circle at 35% 25%, rgba(255, 255, 255, 0.26), transparent 38%),
+      color-mix(in srgb, #0b0a08 68%, var(--signal-color));
+    box-shadow:
+      0 0 0 2px color-mix(in srgb, var(--signal-color) 24%, transparent),
+      0 0 26px color-mix(in srgb, var(--signal-color) 56%, transparent);
+    transform: scale(1.08);
+  }
+
+  .globe-signal:hover span:not(.sport-object, .sport-object *),
+  .globe-signal:focus-visible span:not(.sport-object, .sport-object *),
+  .globe-signal.is-active span:not(.sport-object, .sport-object *) {
+    max-width: 8.5rem;
+    opacity: 1;
+    padding-right: 4px;
+  }
+
+  .globe-signal-preview {
+    position: relative;
+    z-index: 4;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    max-width: min(560px, 92vw);
+    margin-top: 18px;
+    border: 1px solid color-mix(in srgb, var(--signal-preview-color) 42%, transparent);
+    border-radius: 14px;
+    background:
+      linear-gradient(135deg, color-mix(in srgb, var(--signal-preview-color) 13%, transparent), transparent 42%),
+      color-mix(in srgb, var(--color-surface) 88%, #000);
+    padding: 10px 12px;
+    box-shadow: 0 16px 42px rgba(0, 0, 0, 0.28);
+  }
+
+  .globe-signal-preview p {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--signal-preview-color);
+  }
+
+  .globe-signal-preview strong {
+    display: block;
+    margin-top: 2px;
+    font-size: 15px;
+    line-height: 1.05;
+    color: var(--color-paper);
+  }
+
+  .globe-signal-preview span {
+    display: block;
+    margin-top: 3px;
+    font-size: 12px;
+    line-height: 1.28;
+    color: color-mix(in srgb, var(--color-ink) 66%, transparent);
+  }
+
+  .globe-signal-preview a {
+    display: inline-flex;
+    width: 34px;
+    height: 34px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid color-mix(in srgb, var(--signal-preview-color) 42%, transparent);
+    border-radius: 999px;
+    color: var(--signal-preview-color);
+  }
+
   .room-tabs {
     display: flex;
     flex-wrap: wrap;
@@ -655,12 +791,16 @@
     color: #1d1812;
     box-shadow: 0 16px 35px rgba(0, 0, 0, 0.4);
     transform: rotate(var(--tilt, -1deg));
-    transition: transform 180ms ease, box-shadow 180ms ease;
+    transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
   }
 
-  .event-poster-card:hover {
+  .event-poster-card:hover,
+  .event-poster-card.is-active {
     transform: translateY(-4px) rotate(0deg);
-    box-shadow: 0 22px 44px rgba(0, 0, 0, 0.45);
+    border-color: var(--poster-primary);
+    box-shadow:
+      0 22px 44px rgba(0, 0, 0, 0.45),
+      0 0 0 2px color-mix(in srgb, var(--poster-primary) 24%, transparent);
   }
 
   .poster-stack a:nth-child(2n) .event-poster-card { --tilt: 1.5deg; }
@@ -677,8 +817,16 @@
       repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.12) 0 1px, transparent 1px 5px);
   }
 
-  .event-poster-art svg {
-    filter: drop-shadow(8px 7px 0 rgba(0, 0, 0, 0.2));
+  .event-poster-art::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(circle at 30% 26%, rgba(255, 255, 255, 0.24), transparent 18%),
+      repeating-linear-gradient(0deg, rgba(244, 234, 216, 0.08) 0 1px, transparent 1px 6px);
+    mix-blend-mode: screen;
+    opacity: 0.45;
+    pointer-events: none;
   }
 
   .event-poster-number {
@@ -718,6 +866,266 @@
     font-size: 12px;
     line-height: 1.35;
     color: rgba(29, 24, 18, 0.68);
+  }
+
+  .sport-object {
+    --sport-object-primary: var(--mp-primary);
+    --sport-object-accent: var(--mp-accent);
+    position: relative;
+    display: inline-grid;
+    place-items: center;
+    width: 74px;
+    height: 74px;
+    flex: 0 0 auto;
+    isolation: isolate;
+    filter: drop-shadow(9px 8px 0 rgba(0, 0, 0, 0.22)) drop-shadow(0 0 14px color-mix(in srgb, var(--sport-object-primary) 28%, transparent));
+  }
+
+  .sport-object-md {
+    width: 44px;
+    height: 44px;
+    filter: drop-shadow(5px 4px 0 rgba(0, 0, 0, 0.18)) drop-shadow(0 0 10px color-mix(in srgb, var(--sport-object-primary) 24%, transparent));
+  }
+
+  .sport-object-sm {
+    width: 24px;
+    height: 24px;
+    filter: drop-shadow(2px 2px 0 rgba(0, 0, 0, 0.2));
+  }
+
+  .sport-object-core,
+  .sport-object-detail {
+    position: absolute;
+    display: block;
+  }
+
+  .sport-object-core {
+    inset: 10%;
+    border: 3px solid rgba(244, 234, 216, 0.78);
+    border-radius: 50%;
+    background:
+      radial-gradient(circle at 34% 27%, rgba(255, 255, 255, 0.82), transparent 11%),
+      linear-gradient(135deg, var(--sport-object-primary), var(--sport-object-accent));
+    box-shadow:
+      inset -10px -12px 0 rgba(0, 0, 0, 0.18),
+      inset 8px 8px 0 rgba(255, 255, 255, 0.12);
+  }
+
+  .sport-object-detail {
+    z-index: 2;
+    background: rgba(244, 234, 216, 0.78);
+  }
+
+  .sport-object-soccer .sport-object-core::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 28%;
+    height: 28%;
+    background: #1d1812;
+    clip-path: polygon(50% 0, 100% 36%, 82% 100%, 18% 100%, 0 36%);
+    translate: -50% -50%;
+  }
+
+  .sport-object-soccer .detail-one,
+  .sport-object-soccer .detail-two,
+  .sport-object-basketball .detail-one,
+  .sport-object-basketball .detail-two,
+  .sport-object-olympic .detail-one,
+  .sport-object-olympic .detail-two {
+    left: 20%;
+    right: 20%;
+    top: 50%;
+    height: 2px;
+    border-radius: 999px;
+    rotate: 28deg;
+  }
+
+  .sport-object-soccer .detail-two,
+  .sport-object-basketball .detail-two,
+  .sport-object-olympic .detail-two {
+    rotate: -32deg;
+  }
+
+  .sport-object-basketball .detail-one {
+    rotate: 0deg;
+  }
+
+  .sport-object-basketball .detail-two {
+    top: 18%;
+    bottom: 18%;
+    left: 50%;
+    right: auto;
+    width: 2px;
+    height: auto;
+    rotate: 0deg;
+  }
+
+  .sport-object-football .sport-object-core,
+  .sport-object-combat .sport-object-core {
+    inset: 18% 7%;
+    border-radius: 50% / 64%;
+    rotate: -18deg;
+  }
+
+  .sport-object-football .detail-one {
+    width: 34%;
+    height: 2px;
+    top: 50%;
+    left: 33%;
+    rotate: -18deg;
+  }
+
+  .sport-object-football .detail-two {
+    width: 2px;
+    height: 18%;
+    top: 41%;
+    left: 50%;
+    rotate: -18deg;
+  }
+
+  .sport-object-hockey .sport-object-core,
+  .sport-object-motorsport .sport-object-core {
+    inset: 26% 8%;
+    border-radius: 999px;
+  }
+
+  .sport-object-hockey .detail-one {
+    width: 10%;
+    height: 72%;
+    left: 61%;
+    top: 4%;
+    border-radius: 999px;
+    rotate: 28deg;
+  }
+
+  .sport-object-hockey .detail-two {
+    width: 46%;
+    height: 8%;
+    bottom: 18%;
+    left: 21%;
+    border-radius: 999px;
+  }
+
+  .sport-object-tennis .sport-object-core,
+  .sport-object-golf .sport-object-core {
+    inset: 12%;
+    border-style: dashed;
+  }
+
+  .sport-object-tennis .detail-one {
+    width: 42%;
+    height: 2px;
+    left: 29%;
+    top: 50%;
+    rotate: 42deg;
+  }
+
+  .sport-object-tennis .detail-two {
+    width: 2px;
+    height: 42%;
+    left: 49%;
+    top: 29%;
+    rotate: 42deg;
+  }
+
+  .sport-object-golf .detail-one {
+    width: 4px;
+    height: 58%;
+    left: 45%;
+    top: 8%;
+    border-radius: 999px;
+  }
+
+  .sport-object-golf .detail-two {
+    width: 30%;
+    height: 20%;
+    left: 49%;
+    top: 10%;
+    clip-path: polygon(0 0, 100% 28%, 0 100%);
+  }
+
+  .sport-object-motorsport .detail-one,
+  .sport-object-motorsport .detail-two {
+    width: 16%;
+    height: 16%;
+    bottom: 23%;
+    border-radius: 50%;
+    background: #1d1812;
+    box-shadow: inset 0 0 0 2px rgba(244, 234, 216, 0.72);
+  }
+
+  .sport-object-motorsport .detail-one {
+    left: 28%;
+  }
+
+  .sport-object-motorsport .detail-two {
+    right: 28%;
+  }
+
+  .sport-object-combat .sport-object-core {
+    border-radius: 40% 45% 48% 46%;
+    rotate: 10deg;
+  }
+
+  .sport-object-combat .detail-one {
+    width: 52%;
+    height: 18%;
+    left: 24%;
+    bottom: 18%;
+    border-radius: 999px;
+  }
+
+  .sport-object-combat .detail-two {
+    width: 2px;
+    height: 34%;
+    left: 50%;
+    top: 22%;
+  }
+
+  .sport-object-track .sport-object-core,
+  .sport-object-custom .sport-object-core {
+    inset: 14%;
+    border-radius: 24% 58% 42% 58%;
+  }
+
+  .sport-object-track .detail-one {
+    width: 50%;
+    height: 2px;
+    left: 25%;
+    top: 42%;
+    rotate: -28deg;
+  }
+
+  .sport-object-track .detail-two {
+    width: 62%;
+    height: 2px;
+    left: 19%;
+    top: 60%;
+    rotate: -28deg;
+  }
+
+  .sport-object-olympic .sport-object-core {
+    border-radius: 30% 70% 52% 48%;
+  }
+
+  .sport-object-custom .detail-one,
+  .sport-object-custom .detail-two {
+    width: 30%;
+    height: 30%;
+    top: 31%;
+    border: 2px solid rgba(244, 234, 216, 0.78);
+    border-radius: 50%;
+    background: transparent;
+  }
+
+  .sport-object-custom .detail-one {
+    left: 20%;
+  }
+
+  .sport-object-custom .detail-two {
+    right: 20%;
   }
 
   .feature-ribbon {
@@ -933,6 +1341,25 @@
       font-size: clamp(2.55rem, 15vw, 4.25rem);
     }
 
+    .globe-signal-preview {
+      grid-template-columns: auto minmax(0, 1fr);
+      max-width: 100%;
+      margin-top: 14px;
+    }
+
+    .globe-signal-preview a {
+      display: none;
+    }
+
+    .globe-signal {
+      min-width: 40px;
+      min-height: 40px;
+    }
+
+    .globe-signal span:not(.sport-object, .sport-object *) {
+      display: none;
+    }
+
     .room-tabs {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -985,6 +1412,21 @@
     .event-poster-card {
       min-width: 172px;
       grid-template-rows: 130px 1fr;
+    }
+
+    .sport-object {
+      width: 58px;
+      height: 58px;
+    }
+
+    .sport-object-md {
+      width: 40px;
+      height: 40px;
+    }
+
+    .sport-object-sm {
+      width: 26px;
+      height: 26px;
     }
 
     .manifesto-poster {
@@ -1057,6 +1499,9 @@
 
 @media (prefers-reduced-motion: reduce) {
   .signal-arc { animation: none !important; opacity: 1 !important; }
+  .globe-signal {
+    animation: none !important;
+  }
   .silbo-clock-hand,
   .silbo-channel-badge .silbo-sheen {
     animation: none !important;

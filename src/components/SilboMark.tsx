@@ -19,37 +19,18 @@ export type SportGlyphKey =
   | 'olympic'
   | 'custom'
 
-function WhistleBody({ color, strokeWidth = 3.2 }: { color: string; strokeWidth?: number }) {
+function WhistleBody({ color, strokeWidth = 2.75 }: { color: string; strokeWidth?: number }) {
   return (
     <>
       <path
         className="silbo-whistle-line"
-        d="M5 22 h29 l5.2 -5.2 h15.2 v7.2 h-8.3 a14 14 0 1 1 -16.7 17 H5.4 a3 3 0 0 1 -3 -3 V25 a3 3 0 0 1 2.6 -3 Z"
+        d="M5.5 22.5 h29 l5 -5 h14.2 v7 h-7.6 a13.6 13.6 0 1 1 -16.2 16.4 H5.8 a3 3 0 0 1 -3 -3 V25.6 a3 3 0 0 1 2.7 -3.1 Z"
         stroke={color}
         strokeWidth={strokeWidth}
         strokeLinejoin="round"
         strokeLinecap="round"
         fill="none"
       />
-      <path
-        className="silbo-whistle-line"
-        d="M22 22 v-5 h12"
-        stroke={color}
-        strokeWidth={strokeWidth}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill="none"
-      />
-      <path
-        className="silbo-whistle-line"
-        d="M58 27.8 h4.6 a5.2 5.2 0 0 1 0 10.4 h-5.3"
-        stroke={color}
-        strokeWidth={strokeWidth}
-        strokeLinecap="round"
-        fill="none"
-      />
-      <circle className="silbo-whistle-line" cx="43.5" cy="32.5" r="12.2" stroke={color} strokeWidth={2.8} fill="none" />
-      <circle className="silbo-whistle-line" cx="43.5" cy="11.2" r="3.8" stroke={color} strokeWidth={2.4} fill="none" />
     </>
   )
 }
@@ -67,7 +48,7 @@ function SignalArcs({ size = 1 }: { size?: number }) {
 function SportGlyph({ glyph, fallback: Fallback, color }: { glyph?: string; fallback?: LucideIcon; color: string }) {
   const common = {
     stroke: color,
-    strokeWidth: 2.35,
+    strokeWidth: 1.9,
     strokeLinecap: 'round' as const,
     strokeLinejoin: 'round' as const,
     fill: 'none',
@@ -144,7 +125,7 @@ function SportGlyph({ glyph, fallback: Fallback, color }: { glyph?: string; fall
       )
     case 'olympic':
       return (
-        <g className="silbo-glyph" stroke={color} strokeWidth="1.75" fill="none">
+        <g className="silbo-glyph" stroke={color} strokeWidth="1.35" fill="none">
           <circle cx="36.8" cy="30.4" r="3.4" />
           <circle cx="43.5" cy="30.4" r="3.4" />
           <circle cx="50.2" cy="30.4" r="3.4" />
@@ -182,10 +163,10 @@ export function SilboBrandMark({
 }) {
   return (
     <svg className="silbo-mark" width={size} height={(size * 54) / 72} viewBox={VIEWBOX} fill="none" aria-hidden="true">
-      <WhistleBody color={color} />
+      <WhistleBody color={color} strokeWidth={2.9} />
       {arcs && <SignalArcs />}
-      <circle className="silbo-clock-face" cx="43.5" cy="32.5" r="7.3" stroke={peaColor} strokeWidth={2.6} fill="none" />
-      <path className="silbo-clock-hand" d="M43.5 28.3 v4.2 l3.2 2.4" stroke={peaColor} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" fill="none" />
+      <circle className="silbo-clock-face" cx="43.5" cy="32.5" r="6.2" stroke={peaColor} strokeWidth={1.8} fill="none" />
+      <path className="silbo-clock-hand" d="M43.5 29 v3.5 l2.7 2" stroke={peaColor} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" fill="none" />
     </svg>
   )
 }

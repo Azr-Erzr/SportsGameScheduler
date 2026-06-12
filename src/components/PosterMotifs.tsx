@@ -11,6 +11,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import type { CSSProperties } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { getSport } from '../domain/sports'
 import { getTheme } from '../theme/themes'
@@ -30,6 +31,14 @@ type CapsuleStat = {
   value: string
   label: string
 }
+
+const signalPositions = [
+  { x: 67, y: 27, orbit: 'primary', delay: '0s', label: 'Signal east' },
+  { x: 43, y: 35, orbit: 'secondary', delay: '-2.4s', label: 'Signal central' },
+  { x: 56, y: 58, orbit: 'primary', delay: '-4.8s', label: 'Signal south' },
+  { x: 28, y: 47, orbit: 'secondary', delay: '-7.2s', label: 'Signal west' },
+  { x: 78, y: 53, orbit: 'primary', delay: '-9.6s', label: 'Signal far side' },
+]
 
 const defaultStats: CapsuleStat[] = [
   { icon: Trophy, value: '32', label: 'Teams' },
@@ -100,6 +109,36 @@ function PosterGlyph({ sportKey }: { sportKey: string }) {
   )
 }
 
+function sportObjectKind(sportKey: string) {
+  const sport = getSport(sportKey)
+  return sport?.badgeKey ?? sportKey
+}
+
+export function SportObjectIcon({
+  sportKey,
+  size = 'lg',
+  className = '',
+}: {
+  sportKey: string
+  size?: 'sm' | 'md' | 'lg'
+  className?: string
+}) {
+  const theme = getTheme(sportKey)
+  const kind = sportObjectKind(sportKey)
+
+  return (
+    <span
+      className={`sport-object sport-object-${kind} sport-object-${size} ${className}`}
+      style={{ '--sport-object-primary': theme.colors.primary, '--sport-object-accent': theme.colors.accent } as CSSProperties}
+      aria-hidden="true"
+    >
+      <span className="sport-object-core" />
+      <span className="sport-object-detail detail-one" />
+      <span className="sport-object-detail detail-two" />
+    </span>
+  )
+}
+
 export function TournamentCapsule({
   title,
   kicker = 'Global tournament capsule',
@@ -156,15 +195,26 @@ export function TournamentCapsule({
   )
 }
 
-function EventPosterCard({ event, index }: { event: PosterEvent; index: number }) {
+function EventPosterCard({
+  event,
+  index,
+  active = false,
+  onFocus,
+}: {
+  event: PosterEvent
+  index: number
+  active?: boolean
+  onFocus?: () => void
+}) {
   const theme = getTheme(event.sportKey)
-  const sport = getSport(event.sportKey) ?? getSport('soccer')
-  const Icon = sport?.icon
   const card = (
-    <article className="event-poster-card" style={{ '--poster-primary': theme.colors.primary, '--poster-accent': theme.colors.accent } as CSSProperties}>
+    <article
+      className={`event-poster-card ${active ? 'is-active' : ''}`}
+      style={{ '--poster-primary': theme.colors.primary, '--poster-accent': theme.colors.accent } as CSSProperties}
+    >
       <div className="event-poster-art" aria-hidden="true">
         <span className="event-poster-number">{String(index + 1).padStart(2, '0')}</span>
-        {Icon && <Icon size={54} strokeWidth={1.65} />}
+        <SportObjectIcon sportKey={event.sportKey} />
       </div>
       <div>
         <p>{event.label}</p>
@@ -175,7 +225,7 @@ function EventPosterCard({ event, index }: { event: PosterEvent; index: number }
   )
 
   return event.href ? (
-    <Link to={event.href} className="block min-w-[190px]">
+    <Link to={event.href} className="block min-w-[190px]" onFocus={onFocus} onMouseEnter={onFocus}>
       {card}
     </Link>
   ) : (
@@ -184,16 +234,66 @@ function EventPosterCard({ event, index }: { event: PosterEvent; index: number }
 }
 
 export function GlobalEventBoard({ events, variant = 'compact' }: { events: PosterEvent[]; variant?: 'compact' | 'room' }) {
+  const [activeIndex, setActiveIndex] = useState(0)
+  const activeEvent = events[activeIndex] ?? events[0]
+  const activeTheme = getTheme(activeEvent?.sportKey ?? 'neutral')
+
   return (
     <section className={`global-event-board ${variant === 'room' ? 'global-event-board-room' : ''}`}>
       <div className="poster-orbit poster-orbit-one" aria-hidden="true" />
       <div className="poster-orbit poster-orbit-two" aria-hidden="true" />
       <div className="poster-globe" aria-hidden="true" />
+      <div className="globe-signal-layer" aria-label="Today's sport signals">
+        {events.slice(0, 5).map((event, index) => {
+          const position = signalPositions[index % signalPositions.length]
+          const theme = getTheme(event.sportKey)
+          const isActive = index === activeIndex
+          return (
+            <button
+              key={event.title}
+              type="button"
+              className={`globe-signal ${isActive ? 'is-active' : ''} orbit-${position.orbit}`}
+              style={
+                {
+                  left: `${position.x}%`,
+                  top: `${position.y}%`,
+                  '--signal-color': theme.colors.primary,
+                  '--signal-accent': theme.colors.accent,
+                  '--signal-delay': position.delay,
+                } as CSSProperties
+              }
+              aria-pressed={isActive}
+              aria-label={`${position.label}: ${event.title}`}
+              onClick={() => setActiveIndex(index)}
+              onFocus={() => setActiveIndex(index)}
+              onMouseEnter={() => setActiveIndex(index)}
+            >
+              <SportObjectIcon sportKey={event.sportKey} size="sm" />
+              <span>{event.label}</span>
+            </button>
+          )
+        })}
+      </div>
 
       <div className="relative z-[1] flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="board-label text-neon-magenta">Tonight's world board</p>
           <h2>{variant === 'room' ? 'Enter the live sports room.' : "Tonight's poster board."}</h2>
+          {activeEvent && (
+            <div className="globe-signal-preview" style={{ '--signal-preview-color': activeTheme.colors.primary } as CSSProperties}>
+              <SportObjectIcon sportKey={activeEvent.sportKey} size="md" />
+              <div>
+                <p>{activeEvent.label}</p>
+                <strong>{activeEvent.title}</strong>
+                <span>{activeEvent.detail}</span>
+              </div>
+              {activeEvent.href && (
+                <Link to={activeEvent.href} aria-label={`Open ${activeEvent.title}`}>
+                  <ArrowRight size={18} />
+                </Link>
+              )}
+            </div>
+          )}
         </div>
         <div className="room-tabs" aria-label="Room channels">
           {['Front', 'Tonight', 'Sync desk', 'Poster packs'].map((room) => (
@@ -205,7 +305,7 @@ export function GlobalEventBoard({ events, variant = 'compact' }: { events: Post
 
       <div className="poster-stack">
         {events.slice(0, 4).map((event, index) => (
-          <EventPosterCard key={event.title} event={event} index={index} />
+          <EventPosterCard key={event.title} event={event} index={index} active={index === activeIndex} onFocus={() => setActiveIndex(index)} />
         ))}
       </div>
     </section>

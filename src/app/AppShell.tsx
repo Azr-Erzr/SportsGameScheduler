@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { CalendarDays, Compass, Home, Moon, Share2, Sun, Users } from 'lucide-react'
+import { CalendarDays, Compass, Home, ListChecks, Moon, Share2, Sun, Users } from 'lucide-react'
 import { NavLink, Outlet, useLocation, useParams } from 'react-router-dom'
 import { AuthButton } from '../components/AuthButton'
 import { SportSwitcher } from '../components/SportSwitcher'
@@ -12,7 +12,7 @@ import { SportThemeProvider } from '../theme/SportThemeProvider'
 
 const navItems = [
   { to: '/', labelKey: 'nav.home', mobileLabel: 'Home', icon: Home },
-  { to: '/my-schedule', labelKey: 'nav.mySchedule', mobileLabel: 'Schedule', icon: Home },
+  { to: '/my-schedule', labelKey: 'nav.mySchedule', mobileLabel: 'Schedule', icon: ListChecks },
   { to: '/explore', labelKey: 'nav.explore', mobileLabel: 'Picks', icon: Compass },
   { to: '/calendar', labelKey: 'nav.calendar', mobileLabel: 'Sync', icon: CalendarDays },
   { to: '/exports', labelKey: 'nav.exports', mobileLabel: 'Packs', icon: Share2 },
@@ -58,9 +58,9 @@ function MobileNav() {
   return (
     <nav
       aria-label="Primary mobile navigation"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-primary/15 bg-surface/95 px-2 pb-[calc(env(safe-area-inset-bottom)+0.45rem)] pt-1.5 shadow-[0_-10px_28px_rgba(15,23,42,0.08)] backdrop-blur-xl md:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-primary/15 bg-surface/95 px-2 pb-[calc(env(safe-area-inset-bottom)+0.55rem)] pt-2 shadow-[0_-10px_28px_rgba(15,23,42,0.08)] backdrop-blur-xl md:hidden"
     >
-      <div className="mx-auto grid max-w-md grid-cols-6 gap-1">
+      <div className="mx-auto flex max-w-md items-center justify-between gap-1">
         {navItems.map(({ to, labelKey, mobileLabel, icon: Icon }) => (
           <NavLink
             key={to}
@@ -68,13 +68,19 @@ function MobileNav() {
             end={to === '/'}
             aria-label={t(labelKey)}
             className={({ isActive }) =>
-              `flex min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-1 py-1.5 text-[10px] font-bold leading-none transition-colors ${
-                isActive ? 'bg-primary text-void shadow-sm' : 'text-ink/55 hover:bg-primary/10 hover:text-primary'
+              `group flex h-12 min-w-12 items-center justify-center gap-1.5 rounded-2xl px-2 text-[10px] font-bold leading-none transition-all ${
+                isActive
+                  ? 'min-w-[5.35rem] bg-primary text-void shadow-[0_0_22px_color-mix(in_srgb,var(--mp-primary)_28%,transparent)]'
+                  : 'text-ink/55 hover:bg-primary/10 hover:text-primary'
               }`
             }
           >
-            <Icon size={18} strokeWidth={2.35} className="shrink-0" />
-            <span className="max-w-full truncate">{mobileLabel}</span>
+            {({ isActive }) => (
+              <>
+                <Icon size={19} strokeWidth={2.25} className="shrink-0" />
+                <span className={`${isActive ? 'block max-w-[4rem]' : 'sr-only'} truncate`}>{mobileLabel}</span>
+              </>
+            )}
           </NavLink>
         ))}
       </div>
@@ -96,7 +102,7 @@ export function AppShell() {
       <div className={`min-h-svh bg-page text-ink motif-${theme.motifs.background}`}>
         <div className="broadcast-air" aria-hidden="true" />
         <header className="sticky top-0 z-40 border-b border-primary/15 bg-surface/85 backdrop-blur-lg">
-          <div className="mx-auto flex w-full max-w-[1460px] items-center justify-between gap-4 px-4 py-2.5">
+          <div className="mx-auto flex w-full max-w-[1460px] items-center justify-between gap-2 px-3 py-2.5 sm:gap-4 sm:px-4">
             <SportSwitcher />
 
             <DesktopNav />

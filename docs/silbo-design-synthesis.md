@@ -86,9 +86,11 @@ Approved motif families:
 | Broadcast color bars | Page corners, export footers, channel cards, tiny dividers | Use as accents, not full-width clutter on dense pages. |
 | Program-guide rails | My Schedule, day filters, event pips, status strips | Functional first: must communicate count, date, or status. |
 | Capsule rings and orbit lines | Tournament heroes, global event board, homepage art | One hero-scale orbital surface per viewport max. |
+| Interactive globe signal pips | Homepage "live sports room", today/tournament discovery, sport-card focus | Pips must be real buttons with hover/tap/keyboard states, not only decoration. |
 | Kit/league stripe blocks | Team picker, sport chips, poster cards | Avoid real team trade dress unless licensed. |
 | Halftone, paper grain, scanlines | Big art panels, empty states, exports | Never under small text or forms. |
 | Split-flap status language | TBD, moved, confirmed, live soon, source testing | Must remain readable in light and dark modes. |
+| Collectible 3D sport objects | Sport tiles, pack covers, export covers, onboarding, empty states | Use for large personality surfaces; avoid tiny nav badges until readability is proven. |
 
 ### Design rules borrowed from the references
 
@@ -109,6 +111,15 @@ Approved motif families:
 7. **Motion should explain state.** Sheen can imply selectable cards, arcs can imply live
    signal, flap movement can imply status change, and carousel motion can imply discovery.
    Motion should not be required to understand the page.
+8. **Functional icons and personality icons are separate systems.** The small UI shell needs
+   simple vector marks. Larger editorial surfaces can use 3D/illustrated sport objects,
+   souvenir badges, sticker textures, and richer retro treatment.
+9. **The globe is navigation, not wallpaper.** If the homepage globe contains orbiting dots,
+   sport symbols, or signal lines, they should reveal today's sports, focus related cards,
+   or move the user into a schedule/sport page.
+10. **Small-size logo wins first.** The whistle mark must work in the nav, channel grid,
+   favicon/social avatar, and export footer before extra loops, chrome, shadows, or sport
+   detail are added back.
 
 ### Component/tooling guidance
 
@@ -122,6 +133,14 @@ Approved motif families:
   code-native SVG, licensed SVG assets, or Figma-authored vector exports.
 - Maintain a future `asset_registry` or documentation table with: asset name, source,
   license, modified_by, route/component usage, and replacement plan.
+- Treat Dribbble and similar galleries as inspiration only unless an asset is explicitly
+  licensed or commissioned.
+- Candidate 3D workflow: start from open/vector sport symbols, redraw or model in
+  Figma/Blender/Spline, export transparent PNG/WebP for large UI art and SVG/vector fallbacks
+  where possible.
+- Candidate 3D asset sources to evaluate: IconScout sports 3D packs, licensed marketplace
+  packs, commissioned custom pack, or internally generated Blender/Spline objects. Do not mix
+  unrelated packs unless lighting, camera angle, material, and color are unified.
 
 ## Production sequencing — status (June 13, 2026)
 
@@ -137,17 +156,24 @@ Silbo module naming in master-plan-3); warm the void a hair (now `#0B0A08`).
 3. ✅ Status flaps + board-label vocabulary in `tailwind.css` (`.flap-ok/tbd/chg`).
 4. ✅ Channel dial (CH numbers, ON AIR/SOON) + redrawn whistle (`SilboMark.tsx`):
    clock-pea brand mark, sport icon inside the barrel for channels, signal arcs animated
-   and reduced-motion-safe. Mark shape still open for workshop per user feedback.
+   and reduced-motion-safe. June 13 tune-up simplified the small badge silhouette: one main
+   whistle contour, no extra loop/top dot/thick chamber ring, thinner glyph strokes, and
+   more breathing room for sport symbols. Mark direction remains open for a later A/B test.
 5. ✅ Memorabilia layer on the soccer page: tournament capsule hero (ring geometry, flag
    blocks, mono stat strip from real data), host-city skyline capsules with real venue
    counts, kit-stripe team wall ("The kit wall").
-6. ✅ World clock strip on Home; ✅ YOUR WORLD rail with per-pick counts + unfollow on
-   My Schedule; ✅ "Tracking N knockout slots" TBD strip. ⏳ TONIGHT/where-to-watch rail
-   waits on broadcast data (the `broadcasts` table is live but unpopulated).
+6. ✅ World clock strip on Home; ✅ interactive globe signal board v1 (hover/focus/tap
+   sport pips, active preview, connected poster-card highlight); ✅ YOUR WORLD rail with
+   per-pick counts + unfollow on My Schedule; ✅ "Tracking N knockout slots" TBD strip.
+   ⏳ TONIGHT/where-to-watch rail waits on broadcast data (the `broadcasts` table is live
+   but unpopulated).
 7. ✅ Reduced-motion for arcs; chrome poster export (`posterChromeTheme`, both call sites);
    paper share page. ⏳ Full contrast audit + user-facing light-mode toggle (surface rule
    shipped instead: broadcast for live surfaces, paper for share/exports). ⏳ QR stub
    (needs a QR dependency). ⏳ Whistle mark shape workshop (user feedback: clearer drawing).
+8. ✅ Collectible sport-object art v1: code-native retro-3D-inspired objects are now used on
+   large poster cards and globe pips. Final licensed/generated 3D pack remains a future asset
+   pipeline decision.
 
 ## Open questions for the user to call
 

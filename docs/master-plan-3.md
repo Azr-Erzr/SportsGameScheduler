@@ -19,6 +19,16 @@ data/provider system so the app can scale without wasting API calls.
   under Basketball and NFL/CFL/NCAA under American Football.
 - Schedule image exports now render at higher resolution with larger type and cleaner geometry
   so saved PNGs have more zoom headroom inside a phone photo library.
+- The homepage global event board now behaves as an interactive "live sports room": sport
+  signal pips sit over the globe, can be hovered/focused/tapped, update a preview, and
+  highlight the matching poster card.
+- Larger poster cards now use a first-pass collectible sport-object art system instead of
+  only generic line icons. These are code-native, retro-3D-inspired placeholders for the
+  future licensed/generated asset pack.
+- The mobile bottom navigation now uses a compact dock pattern: active item expands with a
+  label, inactive items stay icon-forward, reducing cramped text/icon collisions.
+- The small whistle/channel badge has been simplified for readability: fewer nested outlines,
+  thinner detail, reduced glow, and more room for the sport symbol.
 
 ## Brand Direction: Silbo vs MatchPulse
 
@@ -43,6 +53,10 @@ MatchPulse.
 The current layout is functional but too clean in a way that can read as generic. The next
 visual pass should add sport-specific personality without sacrificing scanability.
 
+Canonical design references now live in `docs/silbo-design-synthesis.md`. Keep this section
+as the implementation checklist, and use the synthesis doc for the approved motif grammar,
+logo/whistle rules, reference-pass notes, and open visual-direction decisions.
+
 ### Direction
 
 - Use bright, confident accent colors, stronger selected states, visible outlines, and sharper
@@ -55,6 +69,15 @@ visual pass should add sport-specific personality without sacrificing scanabilit
   carousel movement, "next event" countdown pulse, live fight-card progression.
 - Use sport-specific motifs in exports: pitch ticket, race weekend board, fight-card poster,
   tennis draw strip, golf tee sheet, Olympic session board.
+- Add an interactive homepage "live sports room" / globe surface: orbiting signal pips,
+  sport markers, hover/tap previews, and links into the matching cards or sport pages.
+- Explore a separate collectible 3D sport-object icon system for larger surfaces: sport
+  cards, pack covers, empty states, export covers, onboarding, and homepage art. Keep tiny
+  functional UI badges simple and vector-first.
+- Treat the whistle/channel badge as a small-size mark first: simple silhouette, minimal
+  internal linework, clipped sheen, and enough breathing room for the sport glyph.
+- Keep the current whistle direction open for A/B testing after the simplified mark has been
+  judged in the real UI.
 
 Research cues:
 
@@ -71,10 +94,27 @@ Research cues:
 ### Acceptance Criteria
 
 - The homepage has one memorable visual moment above the fold.
+- The globe/signal-board moment is interactive, not just decorative: hover/tap previews reveal
+  what is happening today and connect to the cards below.
 - Every sport family has a distinct accent palette and one subtle motif.
 - Interactive states are obvious: selected, pressed, expanded, disabled, live, TBD.
 - No dense schedule text sits on decorative imagery.
 - Mobile remains the source of truth for layout quality.
+- Motion has a reduced-motion equivalent and never becomes required to understand navigation.
+- Third-party or generated art has source/license notes before it ships.
+
+### New Design Implementation Backlog
+
+| Item | Priority | Status | Goal | Notes |
+|---|---:|---|---|---|
+| Whistle badge simplification | P0 | Shipped v1 | Make sport-channel icons readable at 32-48px | Current pass removed extra loop/top dot/thick chamber ring and reduced glow. Continue small-size testing. |
+| Whistle direction A/B | P1 | Not started | Decide whether the whistle should face toward or away from the wordmark | Test in nav, channel grid, favicon, export footer, and social preview before changing. |
+| Interactive globe signal board | P1 | Shipped v1 | Turn the homepage globe into a playful navigation/control surface | Sport markers, preview, selected-card highlight, keyboard/touch states, and reduced-motion support are in. Future: real event counts and richer orbit paths. |
+| 3D sport object system | P1 | Shipped v1 | Add charm without crowding core UI | Code-native collectible objects now appear in large poster cards and globe pips. Future: licensed/generated final pack. |
+| Icon sourcing pipeline | P1 | Planned | Prevent random asset sprawl | Compare IconScout, Iconify-derived custom 3D, Figma/Blender/Spline generated assets, and commissioned packs. Track source/license. |
+| Poster-card refinement | P1 | Partial | Make carousel cards feel intentionally designed, not tossed in | Active states and sport-object art are in. Future: richer card composition, sticker/ticket edges, and final art assets. |
+| Mobile top bar/nav cleanup | P1 | Partial | Stop icons/text from feeling squished on small screens | Bottom dock now expands only the active label; top row spacing tightened. Future: test alternate header/sport selector if needed. |
+| Light/dark presentation modes | P2 | Partial | Offer broadcast-dark and program-paper experiences | Current theme mode exists. Future: full contrast audit and deeper program-mode polish. |
 
 ## Schedule Image Export Direction
 
