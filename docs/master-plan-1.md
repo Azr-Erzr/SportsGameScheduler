@@ -1,6 +1,148 @@
-# MatchPulse Full Product And Technical Plan
+# Master Plan 1: Original Product And Technical Plan
 
-Last updated: June 11, 2026
+Last updated: June 12, 2026 (revised after architecture/design review)
+
+> Name note: Silbo Sports is now the visible in-app direction. "MatchPulse" remains legacy
+> wording in older notes and internal/package cleanup only. Final legal, domain, and asset
+> lock still needs to happen before the first public deploy.
+
+## Decision Log
+
+Decisions locked during the June 11, 2026 review:
+
+- **Scope:** stay broad multi-sport. Keep the generic data model and the multi-sport UI on
+  the roadmap. Soccer/World Cup remains the first polished vertical and the launch wedge
+  (the tournament is live now), but other sports are not deferred out of the plan.
+- **Frontend stack:** Tailwind CSS v4 + a *thin* subset of shadcn/ui (only components
+  actually used), aligning the codebase with the design team's Figma Make output so handoffs
+  are near-paste. The current hand-rolled `App.css` is retired during the refactor.
+- **Visual direction:** bright/light theme (white + translucent panels, pitch-green), per
+  Objective 2 and the Figma export. The shipped dark "stadium night" `App.css` is *not* the
+  target look and is being replaced. High-energy accent color is reserved for export CTAs.
+- **Reminder channels:** Email **and** Web Push (PWA service worker). SMS stays excluded.
+- **Critical schema corrections vs. the first draft:** n-ary `event_competitors` join table
+  (so F1/golf/tennis fields work, not just home/away), a `broadcasts` table (the "where to
+  watch" wedge), and visibility-gated RLS on `events` so private custom-league events cannot
+  leak through the public read policy.
+
+## Status Audit — June 12, 2026
+
+Objective-by-objective state of this plan against the shipped codebase and the live
+Supabase project (`gcnbgdpicgeahxscpsfc`).
+
+### Latest Audit Correction - June 12, 2026
+
+The table below predates the latest implementation pass. Treat these corrections as the
+current state until the full table is cleaned up:
+
+- Objective 2 and 8: poster export now uses sport theme tokens, high-resolution PNG output,
+  Silbo branding, and page-safe layout. Remaining work is committed mobile/a11y visual tests.
+- Objective 3: auth UI for magic link and Google exists. Remaining work is remote Supabase
+  apply/verification and wiring frontend reads/writes to user-scoped server tables.
+- Objective 5: My Schedule now has expanded match cards, where-to-watch placeholders, and
+  region/language/hour-format preferences. Remaining work is server follows,
+  anonymous-to-account migration, attend/track intents, and finals-only filters.
+- Objective 6: Calendar feed UI now supports local preview feeds, TBD/broadcast flags, copy
+  URL, and `webcal://` opening. Remaining work is server-backed feed creation, production
+  domain/proxy, token-hash verification, and full TBD/TENTATIVE feed rendering.
+- Objective 7: the frontend now uses sport families rather than league tiles, including NFL/
+  CFL/NCAA under American football, plus combat, track and field, and Olympic-sports staging.
+  Remaining work is real event/league/team detail views and live provider data previews.
+- Objective 9: custom leagues now have local share enable/disable, token rotation, and
+  private-by-default controls. Remaining work is server-backed ownership, cross-device share
+  resolution, and bulk import.
+- Objective 14: message-key shell, soccer/football terminology, region picker, language
+  picker, and 12/24-hour preference exist. Remaining work is full translations, onboarding,
+  anonymous-to-account migration, and live personal share links.
+
+| Objective | Status | What's left |
+|---|---|---|
+| 1. Product foundation (nav, sport switcher, WC view, empty states) | ✅ Done | Switcher is now the brand block with per-sport icons; sport vs league split applied. |
+| 2. Design system + sport themes | 🟢 ~90% | Per-sport themes + tokens + provider live (soccer/F1/NHL/NBA/tennis/golf/custom). **Gap:** the canvas poster still hardcodes the green palette — acceptance criterion "export images use the same theme tokens" not yet met. Multi-width visual QA partial. |
+| 3. Supabase backend foundation | 🟢 ~85% | All 5 migrations + hardening applied to the live project; RLS verified by advisors; seeded (104 events, 48 competitors). **Gap:** auth UI (magic link + Google) not built, so user-scoped tables are unused. |
+| 4. Provider sync + normalization | 🟡 ~60% | Adapter interface + `worldcup_json` adapter + diff-before-version-bump sync function deployed. **Gaps:** cron not scheduled, raw payload snapshots not stored, freshness UI is a simple Live/Bundled badge (no "updated X min ago"), no second provider. |
+| 5. Follows + personal schedule | 🟡 ~60% | Local follows, My Schedule with ranges/hide-finished/conflict flags work; `user_follows` + `get_my_schedule` deployed. **Gaps:** no auth → server follows unused; intents (attend/track) and finals-only filter not in UI. |
+| 6. Calendar feeds | 🟡 ~55% | `calendar-feed` Edge Function deployed (stable UID/SEQUENCE, RFC 5545 escaping/folding); snapshot `.ics` works; platform instructions in UI. **Gaps:** feed creation is localStorage-only with placeholder URLs (needs auth); no `webcal://` button; TBD/all-day/TENTATIVE rendering not implemented (see cross-doc review). |
+| 7. Multi-sport frontend | 🟢 ~80% | App shell, My Schedule, Explore, sport pages, Calendar, Export Studio, Custom Leagues + admin, share pages all live. **Gaps:** no Event Detail page, no League/Team pages (routes `/leagues/:id`, `/teams/:id`, `/events/:id`), no mocked F1/NHL data previews. |
+| 8. Export Studio | 🟢 ~90% | Templates, pagination (page X of Y), preview, share-sheet fallbacks, Notes export. **Gap:** poster theme tokens (same as Obj 2). |
+| 9. Custom leagues | 🟡 ~65% | Full local CRUD + share page + ICS/notes exports; backend tables + private-event RLS + owner trigger deployed. **Gaps:** cross-device sharing needs auth + server resolution; no share disable/rotate UI; no bulk paste import. |
+| 10. Notifications (email + push) | 🟡 ~50% | Queue, idempotent materializer, atomic claimer, channel-dispatching worker all deployed. **Gaps:** no alert-settings UI, `RESEND_API_KEY` not set, Web Push needs VAPID keys + send implementation, cron not scheduled. |
+| 11. Admin + observability | 🔴 ~25% | `provider_sync_runs` + indexes live; security advisors run and acted on. **Gaps:** no admin dashboard, no support tooling, no rate limiting on public endpoints. |
+| 12. Deployment + CI | 🔴 ~20% | Migrations/functions in repo; env vars documented. **Gaps:** no public frontend deploy, no GitHub Actions workflow, no SEO/social previews. |
+| 13. Quality + security | 🟡 ~50% | 19 unit tests (time/ICS/pagination/conflicts) green; DEFINER functions locked down. **Gaps:** no RLS tests, no feed-token tests, no a11y pass, no Playwright smoke. |
+| 14. Wedge features (added in review) | 🟡 ~30% | Conflict detection shipped. **Gaps:** onboarding/first-run, anonymous→account migration (specced in auth doc), live share links for personal schedules, 12/24h toggle + full i18n. |
+
+**Shortest path to "testable in public":** auth UI + anon→account migration → server-backed
+feeds/custom leagues → deploy frontend + CI → set notification secrets + cron. Everything
+else is enhancement.
+
+## Cross-Document Review — June 12, 2026
+
+The companion docs have been consolidated into [Master Plan 2](./master-plan-2.md). They were
+strong and largely consistent with this plan. The following gaps and conflicts need a
+decision before implementation; flagged here for team review.
+
+1. **`calendar_feeds` schema drift (conflict).** Migration `0003` (deployed) stores a plain
+   `token` and has none of the columns the calendar doc specifies (`token_hash`, `locale`,
+   `include_placeholders`, `include_broadcasts`, `default_alarm_minutes`,
+   `last_accessed_at`). Needs a `0006` migration to reconcile. Note the token-hash design
+   changes UX: the raw URL can only be shown once at creation (current UI displays it
+   forever). Recommend: adopt the doc's schema, hash with SHA-256, and add a "copy now —
+   shown once" creation step.
+2. **`event_status_history` vs `event_change_log` (conflict).** The TBD doc replaces the
+   deployed status-history table with a broader change log carrying
+   `significance: silent | calendar | notify`. The deployed sync function writes the old
+   table. Recommend: adopt `event_change_log`, keep `event_status_history` as a view or
+   drop it in the same migration, and update `provider-sync` in lockstep — otherwise
+   notifications (which the TBD doc keys off `notify` rows) will have two sources of truth.
+3. **Certainty model is not in the deployed schema (gap, expected).** `certainty`,
+   `starts_at_precision`, `decision_*`, `event_dependencies`, `schedule_watch_requests` are
+   all additive and fit cleanly. But note the knock-on: the deployed `calendar-feed`
+   function renders only timed `VEVENT`s — it must learn all-day (`VALUE=DATE` +
+   `TRANSP:TRANSPARENT`), `STATUS:TENTATIVE`, and `watch_only` exclusion when these land.
+   Sequence the migration and the function update together.
+4. **`get_shared_league` exposure (conflict).** The auth doc says privileged token lookup
+   should move behind an Edge Function rather than a public SECURITY DEFINER RPC. The
+   deployed RPC is narrow (token-gated, limited columns) and was accepted in the advisor
+   review. Recommendation: keep the RPC while share pages are local-only; replace it with a
+   `share-page` Edge Function in the same PR that makes shares server-backed. Don't carry
+   both into production.
+5. **Sport vs league taxonomy (conflict, partially fixed).** The catalog conflated leagues
+   (NHL, NBA, F1) with sports. The UI now distinguishes sport (`Hockey`) from flagship
+   league (`NHL`), per the consolidated regionalization rule. **Open item:** the seeded
+   `sports` rows still use keys `nhl`/`nba`/`f1`; before adding WNBA/CFL/UFC, re-key sports
+   to true sports (`hockey`, `basketball`, `motorsport`, `mma`) and hang leagues off the
+   existing `leagues` table — otherwise WNBA would need its own fake "sport". URL keys can
+   stay as-is per the regionalization rule (URLs stable, labels localized).
+6. **Route conflict for `/`.** Master Plan 2: `/` = neutral multi-sport homepage.
+   Auth doc: `/` or `/schedule` = personal schedule. Current app: `/` redirects to
+   `/my-schedule`. Recommend the Master Plan 2 position: `/` becomes the homepage
+   (track-intent hero + spotlight carousel), `/my-schedule` stays the signed-in/returning
+   default via a "Continue your schedule" path. Also adopt `/sports/:sportKey/:leagueKey`
+   before league pages are built.
+7. **Feed URL domain.** Current preview UI prints `feeds.silbosports.com/calendar/:token.ics`;
+   older docs may still reference `matchpulse.app/calendar/:token.ics`. The deployed
+   function lives at `<project>.functions.supabase.co/calendar-feed/...`. Decide the public
+   domain + proxy (and whether name change affects it — see naming doc) before the
+   Calendar page prints real URLs. Until then the UI must keep labeling them as previews.
+8. **UFC/fight cards (gap).** The consolidated bout model (card sections, corner
+   competitors, bout order) is not representable in `event_competitors` alone. Plan a
+   `event_bouts` child table when MMA is staged; `metadata` JSON is fine for the staged
+   preview but not for following a fighter.
+9. **i18n timing (risk).** Master Plan 2 correctly says to add the message-key
+   layer *before* more copy hardens. Copy is hardening now (this sprint added more English
+   strings). Recommend pulling the `t()` layer + terminology keys forward, ahead of the
+   homepage build.
+10. **Ads policy lives in two docs (minor).** Auth doc (custom-league ad rules, children
+    caution) and homepage sponsorship rules should be merged
+    into one ads/monetization policy section so the kids-privacy constraints provably apply
+    to every surface, including sponsored spotlight cards.
+11. **Email-capture-without-account (decision needed).** The TBD doc's "Email me when set"
+    allows a lighter-than-account email capture, while the auth doc routes everything
+    through magic-link accounts. These are different consent/storage paths
+    (`schedule_watch_requests.email` + verification + unsubscribe tokens vs `auth.users`).
+    Recommend: magic-link-only at MVP (it *is* the email capture), revisit standalone
+    capture only if conversion data demands it.
 
 ## Purpose
 
@@ -36,7 +178,19 @@ The current repo contains a React/Vite prototype with:
 - High-resolution readable PNG export.
 - Phone share/download behavior.
 - Notes-friendly copied schedule.
-- Bright football-forward styling.
+
+Known issues in the prototype carried into the refactor:
+
+- The shipped `App.css` is a dark "stadium night" theme, which conflicts with the bright
+  direction in Objective 2 and the Figma export. `index.css` is already bright; the dark
+  `App.css` is the odd one out and is being replaced.
+- The alert form still renders an SMS/"Text" channel even though SMS is excluded. Removed
+  during the refactor.
+- Kickoff parsing only handles whole-hour `UTC±H` offsets; half-hour zones (e.g. India
+  `UTC+5:30`) are mangled. Latent for WC2026 (all whole-hour Americas offsets) but a real
+  bug once the model goes global. Fixed during the refactor.
+- All export logic (ICS, canvas poster, Notes text) lives inline in a single ~750-line
+  `App.tsx`. Extracted into testable `src/lib/*` modules during the refactor.
 
 ### Figma Make Result
 
@@ -60,7 +214,15 @@ The Figma design uses mock data and some generated characters that need cleanup,
 
 ### External Docs To Re-check Before Implementation
 
-These links are planning references. Providers and platform terms can change, so verify before signing up or deploying:
+These links are planning references. Providers and platform terms can change, so verify before signing up or deploying.
+
+> **Licensing is a launch-blocking risk, not a footnote.** This product *redistributes*
+> schedule data as public `.ics` feeds, shareable public links, and downloadable images.
+> Most commercial sports-data APIs (API-Sports, Sportradar, SportsDataIO) **prohibit
+> redistribution** in their default terms. Confirm per-provider redistribution rights
+> *before* building sync against any of them. TheSportsDB and official open feeds (e.g.
+> OpenF1) are more permissive but thinner. [Master Plan 2](./master-plan-2.md) now carries
+> the provider evaluation, redistribution questions, and small-league sourcing notes.
 
 - Supabase Scheduled Functions: https://supabase.com/docs/guides/functions/schedule-functions
 - Supabase Cron: https://supabase.com/docs/guides/cron
@@ -88,6 +250,15 @@ These links are planning references. Providers and platform terms can change, so
 8. RLS is mandatory for any user-owned or private data.
 9. No scraping of FotMob or other apps. Use licensed APIs, public official feeds, or user-entered custom schedules.
 10. The first production version should be useful even with limited live provider coverage.
+11. The event model is n-ary from day one: an event has a list of competitors with roles,
+    not a hardcoded home/away pair. Home/away is an optional convenience for 1v1 sports.
+12. Anything that can be exported or shared publicly must only ever contain data the owner
+    intended to be public. Private (custom-league, personal) data and public schedule data
+    never share a permissive read policy.
+13. Reminders use Email and Web Push only. No SMS. Web Push is the primary near-real-time
+    channel; email is for digests and schedule-change notices.
+14. "Where to watch" (broadcast/stream info) is a first-class part of the wedge, not a
+    metadata afterthought.
 
 ## High-Level Architecture
 
@@ -167,13 +338,30 @@ type ScheduleEvent = {
   startsAtTbd: boolean;
   timezone: string | null;
   venueId: string | null;
+  // Generic n-ary participation. A soccer match has two (home, away); an F1 race has a
+  // full grid; a golf round has a field; a custom kids game has two custom teams.
+  competitors: Array<{
+    competitorId: string;
+    role: 'home' | 'away' | 'driver' | 'player' | 'field' | 'participant';
+    position?: number | null;
+  }>;
+  // Optional denormalized convenience for the 1v1 case only. Never the source of truth for
+  // multi-competitor sports.
   homeCompetitorId: string | null;
   awayCompetitorId: string | null;
+  // Where-to-watch, resolved for the user's region. Drives the "what do I need to watch" UI.
+  broadcasts?: Array<{ country: string; channel: string; streamUrl?: string | null }>;
+  visibility: 'public' | 'private';
   title: string;
   shortTitle: string;
   metadata: Record<string, unknown>;
 };
 ```
+
+> Why this matters: the first draft modeled participation as `homeCompetitorId` /
+> `awayCompetitorId` only. That cannot represent an F1 grid, a golf field, or a tennis draw,
+> and it makes "events featuring driver X" unanswerable. The `event_competitors` table
+> (Objective 3) is the source of truth; home/away columns are an optional 1v1 shortcut.
 
 ## Objective 1: Product Foundation
 
@@ -184,6 +372,7 @@ Reframe the app from a one-off World Cup scheduler into a multi-sport scheduling
 ### Frontend Work
 
 - Add top-level product navigation:
+  - Home
   - My Schedule
   - Explore
   - Calendar
@@ -198,6 +387,9 @@ Reframe the app from a one-off World Cup scheduler into a multi-sport scheduling
   - Golf
   - Custom
 - Keep current World Cup view as the first soccer/tournament demo.
+- Add a neutral `/` homepage that asks what the user wants to track across sports before
+  sending them to My Schedule, Explore, a sport page, or Custom Leagues. See
+  [Master Plan 2](./master-plan-2.md#phase-5-neutral-homepage-and-discovery).
 - Replace hardcoded copy like "World Cup local-time watch planner" with context-aware titles.
 - Add empty/loading states for unsupported sports while backend integrations are pending.
 
@@ -243,9 +435,22 @@ const sports = [
 
 Create one consistent MatchPulse design system that can change mood by sport, league, tournament, or race country without becoming seven separate products.
 
+### Stack And Tooling (locked)
+
+- **Tailwind CSS v4** as the styling engine, using the `@theme` token layer to back the
+  design tokens below. This replaces the hand-rolled `App.css`.
+- **A thin subset of shadcn/ui** — copy in only the primitives actually used (button, card,
+  input, checkbox, select, dialog/sheet, tabs, badge, tooltip). The Figma Make export ships
+  ~50 shadcn components; do **not** import them all. `sidebar.tsx`, `chart.tsx`, `menubar`,
+  etc. are dead weight until a screen needs them.
+- **The Figma export is a visual reference, not a code source.** Its `App.tsx` is inline-hex
+  spaghetti (`style={{ color: '#156b44' }}` everywhere), which is the opposite of the token
+  system below. Reuse its layout (sticky header, 3-12-3 grid, poster preview) and palette;
+  rewrite the implementation against tokens.
+
 ### Design Direction
 
-Base design:
+Base design (bright is the locked direction — the shipped dark `App.css` is being retired):
 
 - Bright, clean, mobile-first.
 - White and translucent panels.
@@ -458,14 +663,48 @@ create table public.events (
   starts_at timestamptz,
   starts_at_tbd boolean not null default false,
   timezone text,
+  -- Optional 1v1 convenience only. Source of truth is public.event_competitors below.
   home_competitor_id uuid references public.competitors(id),
   away_competitor_id uuid references public.competitors(id),
+  -- Gates the public read policy. Custom-league/personal events are 'private'.
+  visibility text not null default 'public' check (visibility in ('public', 'private')),
+  -- custom_league_id FK is added in the custom-leagues migration (Objective 9) to avoid a
+  -- forward reference; events created there are inserted with visibility = 'private'.
+  custom_league_id uuid,
   metadata jsonb not null default '{}'::jsonb,
   version integer not null default 1,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   unique (provider_key, provider_event_id)
 );
+
+-- N-ary participation. THIS is the source of truth for who is in an event.
+-- A soccer match has 2 rows; an F1 race has ~20; a golf round has the field.
+create table public.event_competitors (
+  id uuid primary key default gen_random_uuid(),
+  event_id uuid not null references public.events(id) on delete cascade,
+  competitor_id uuid not null references public.competitors(id) on delete cascade,
+  role text not null check (role in ('home', 'away', 'driver', 'player', 'field', 'participant')),
+  position integer,
+  unique (event_id, competitor_id)
+);
+
+create index event_competitors_competitor_idx on public.event_competitors (competitor_id);
+create index event_competitors_event_idx on public.event_competitors (event_id);
+
+-- Where-to-watch. The differentiated answer to "what do I need to watch?".
+create table public.broadcasts (
+  id uuid primary key default gen_random_uuid(),
+  event_id uuid not null references public.events(id) on delete cascade,
+  country text not null,
+  channel text not null,
+  stream_url text,
+  kind text not null default 'tv' check (kind in ('tv', 'stream', 'radio')),
+  created_at timestamptz not null default now(),
+  unique (event_id, country, channel)
+);
+
+create index broadcasts_event_idx on public.broadcasts (event_id);
 
 create table public.event_status_history (
   id uuid primary key default gen_random_uuid(),
@@ -496,11 +735,68 @@ on public.leagues for select
 to anon, authenticated
 using (is_public = true);
 
+-- CRITICAL: must be gated on visibility, NOT `using (true)`. Custom-league and personal
+-- events live in this same table; a blanket true policy would expose every private
+-- kids'-league schedule to the public. Private events are reached through the
+-- custom-league policies (Objective 9) instead.
 create policy "public events are readable"
 on public.events for select
 to anon, authenticated
-using (true);
+using (visibility = 'public');
+
+-- event_competitors / broadcasts inherit the same exposure as their parent event.
+alter table public.event_competitors enable row level security;
+alter table public.broadcasts enable row level security;
+
+create policy "competitors of public events are readable"
+on public.event_competitors for select
+to anon, authenticated
+using (
+  exists (
+    select 1 from public.events e
+    where e.id = event_competitors.event_id and e.visibility = 'public'
+  )
+);
+
+create policy "broadcasts of public events are readable"
+on public.broadcasts for select
+to anon, authenticated
+using (
+  exists (
+    select 1 from public.events e
+    where e.id = broadcasts.event_id and e.visibility = 'public'
+  )
+);
 ```
+
+> This was the most dangerous bug in the first draft: a `using (true)` policy on `events`
+> combined with "store custom events in the same `events` table" (Objective 9) would have
+> made every private custom-league schedule world-readable.
+
+Private events also need an explicit *positive* read path for the people who should see
+them — custom-league owners and members. Without this, even the league owner cannot read
+their own events through PostgREST:
+
+```sql
+create policy "custom league members read their private events"
+on public.events for select
+to authenticated
+using (
+  visibility = 'private'
+  and custom_league_id is not null
+  and exists (
+    select 1 from public.custom_league_members m
+    where m.custom_league_id = events.custom_league_id
+      and m.user_id = auth.uid()
+  )
+);
+```
+
+(The league owner is always inserted as a `custom_league_members` row with role `owner`, so
+one membership-based policy covers owners, admins, and viewers.) `get_my_schedule` runs as
+`security invoker`, so this policy automatically extends the personal schedule to private
+events the caller is allowed to see — no separate query logic needed, but the function's
+follow-join must also accept `target_type = 'custom_league'` matching `e.custom_league_id`.
 
 ### Acceptance Criteria
 
@@ -618,6 +914,23 @@ Deno.serve(async (req) => {
 });
 ```
 
+### Upsert And Versioning Rule
+
+`upsertNormalizedEvent` must **diff before it writes**. Bumping `version` (and therefore the
+calendar `SEQUENCE`) on every sync run — even when nothing changed — makes every calendar
+client re-notify the user on every poll. The rule:
+
+- Match the existing row by `(provider_key, provider_event_id)`.
+- Update fields unconditionally **except** `version`.
+- Increment `version` when **any calendar-visible field** changes — not just `starts_at` and
+  `status`. That includes `title` (SUMMARY), venue (LOCATION), description text,
+  cancellation notes, and broadcast info that is rendered into DESCRIPTION. If a subscribed
+  calendar would render differently, SEQUENCE must bump; if not, it must not.
+- Only `starts_at`/`status` changes *additionally* insert an `event_status_history` row —
+  that table drives user-facing change notifications (Objective 10), and users should not
+  be notified about a venue-name typo fix.
+- Replace `event_competitors` / `broadcasts` for the event transactionally.
+
 ### Acceptance Criteria
 
 - One provider can sync events into Postgres.
@@ -708,9 +1021,17 @@ as $$
   join public.user_follows f
     on f.user_id = auth.uid()
    and (
-     (f.target_type = 'league' and f.target_id = e.league_id)
-     or (f.target_type = 'team' and f.target_id in (e.home_competitor_id, e.away_competitor_id))
-     or (f.target_type = 'sport' and f.target_id = e.sport_id)
+     (f.target_type = 'sport' and f.target_id = e.sport_id)
+     or (f.target_type = 'league' and f.target_id = e.league_id)
+     -- team / competitor / player / driver all resolve through event_competitors, so this
+     -- works for F1 grids, golf fields, and tennis draws, not just 1v1 home/away.
+     or (
+       f.target_type in ('team', 'competitor', 'player')
+       and exists (
+         select 1 from public.event_competitors ec
+         where ec.event_id = e.id and ec.competitor_id = f.target_id
+       )
+     )
    )
   where e.starts_at >= start_at
     and e.starts_at < end_at
@@ -792,7 +1113,7 @@ with check (auth.uid() = user_id);
 
 ```ts
 function eventToIcs(event: ScheduleEvent) {
-  const uid = `${event.id}@matchpulse.app`;
+  const uid = `${event.id}@silbosports.com`;
   const sequence = event.version ?? 1;
   const dtstamp = formatIcsDate(new Date());
   const lastModified = formatIcsDate(new Date(event.updatedAt));
@@ -844,6 +1165,19 @@ Deno.serve(async (req) => {
 - Updated event times are reflected in the feed.
 - Deleted/disabled feed returns 404.
 - Instructions exist for Apple, Google, and Outlook.
+
+### Companion Detail
+
+See [Master Plan 2](./master-plan-2.md#phase-7-tbd-fixtures-change-tracking-and-notifications)
+for how the product handles participant TBD, time TBD, date TBD, bracket placeholders,
+watch requests, email/push updates, subscribed calendar refresh limits, and later
+Google/Outlook direct-sync integrations.
+
+See [Master Plan 2](./master-plan-2.md#phase-3-server-backed-calendar-feeds-and-custom-league-shares)
+and [Phase 8](./master-plan-2.md#phase-8-direct-calendar-integrations-later) for the
+implementation-grade frontend/backend plan covering snapshot exports, live feed tokens,
+iCalendar rendering, platform-specific setup UX, change/versioning rules, and later
+Google/Microsoft direct calendar sync.
 
 ## Objective 7: Multi-Sport Frontend Experience
 
@@ -1098,11 +1432,23 @@ with check (auth.uid() = owner_user_id);
 - Calendar subscription works for custom league.
 - Image and Notes exports work for custom league.
 
-## Objective 10: Email Alerts
+### Companion Detail
+
+See [Master Plan 2](./master-plan-2.md#phase-2-auth-anonymous-migration-and-user-owned-data)
+and [Phase 4](./master-plan-2.md#phase-4-custom-league-imports-admin-and-family-privacy) for
+the full account strategy, anonymous-to-account migration flow, custom-league editor shape,
+public share/export model, hosting plan, ad-slot guidance, privacy guardrails, and the
+implementation checklist for this product area.
+
+## Objective 10: Notifications — Email And Web Push
 
 ### Goal
 
-Send useful email reminders and change notifications without SMS.
+Send useful reminders and change notifications over **Email and Web Push**, without SMS.
+Web Push (via a PWA service worker, supported on Chrome/Firefox/Edge and on iOS 16.4+ for
+installed web apps) is the primary near-real-time channel — it is free, instant, and the
+natural fit for "kickoff in 30 minutes." Email covers digests, schedule-change notices, and
+users who never install the PWA.
 
 ### Frontend Work
 
@@ -1138,43 +1484,111 @@ create table public.alert_preferences (
   updated_at timestamptz not null default now()
 );
 
-create table public.email_notifications (
+-- Web Push subscriptions (one per browser/device the user installs).
+create table public.push_subscriptions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  endpoint text not null unique,
+  p256dh text not null,
+  auth text not null,
+  created_at timestamptz not null default now()
+);
+
+alter table public.push_subscriptions enable row level security;
+create policy "users manage their push subscriptions"
+on public.push_subscriptions for all to authenticated
+using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- Channel-agnostic delivery queue (email + push share one table and one worker).
+create table public.notification_deliveries (
   id uuid primary key default gen_random_uuid(),
   user_id uuid references auth.users(id) on delete set null,
   event_id uuid references public.events(id) on delete cascade,
-  kind text not null,
+  channel text not null check (channel in ('email', 'push')),
+  kind text not null check (kind in ('reminder', 'time_change', 'cancellation', 'new_event')),
   scheduled_for timestamptz not null,
   sent_at timestamptz,
-  status text not null default 'pending',
-  error text
+  status text not null default 'pending' check (status in ('pending', 'sending', 'sent', 'failed', 'skipped')),
+  error text,
+  -- Idempotency: a given user gets at most one delivery of a given kind per event per channel.
+  unique (user_id, event_id, channel, kind)
 );
+
+create index notification_deliveries_due_idx
+  on public.notification_deliveries (scheduled_for)
+  where status = 'pending';
 ```
 
-### Reminder Function Concept
+### Materializing Reminders (the missing step)
+
+The first draft had a send-loop and a preferences table but nothing that *created* the rows
+to send. A Cron-driven "materializer" closes the gap:
+
+1. For each user with `email_enabled`/push enabled, expand `alert_preferences × upcoming
+   events (from follows) × lead time` into `notification_deliveries` rows with
+   `scheduled_for = starts_at - remind_minutes_before`.
+2. The `unique (user_id, event_id, channel, kind)` constraint makes the materializer
+   idempotent — re-running never double-queues.
+3. The send worker (below) picks up due `pending` rows and dispatches via the row's channel.
+4. `time_change` / `cancellation` deliveries are created off `event_status_history` rows
+   written by the sync diff (Objective 4), so users are only notified on real changes.
+
+### Send Worker Concept
+
+The worker must (a) dispatch by the row's `channel`, not assume email, and (b) **claim rows
+atomically** so overlapping cron runs cannot double-send. Claiming uses
+`FOR UPDATE SKIP LOCKED` inside a SQL function so two workers never pick up the same row:
+
+```sql
+create or replace function public.claim_due_notifications(batch_size int default 100)
+returns setof public.notification_deliveries
+language sql
+security definer
+as $$
+  update public.notification_deliveries d
+  set status = 'sending'
+  where d.id in (
+    select id from public.notification_deliveries
+    where status = 'pending' and scheduled_for <= now()
+    order by scheduled_for
+    limit batch_size
+    for update skip locked
+  )
+  returning d.*;
+$$;
+```
 
 ```ts
 Deno.serve(async () => {
-  const dueNotifications = await loadDueNotifications();
+  const claimed = await claimDueNotifications();
 
-  for (const notification of dueNotifications) {
+  for (const notification of claimed) {
     try {
-      await sendReminderEmail(notification);
+      if (notification.channel === 'push') {
+        // Web Push can fail per-subscription (expired endpoint). 404/410 from the push
+        // service means the subscription is gone: delete it and mark the row 'skipped'
+        // rather than 'failed' so it is not retried forever.
+        await sendPushNotification(notification);
+      } else {
+        await sendReminderEmail(notification);
+      }
       await markNotificationSent(notification.id);
     } catch (error) {
       await markNotificationFailed(notification.id, String(error));
     }
   }
 
-  return Response.json({ ok: true, count: dueNotifications.length });
+  return Response.json({ ok: true, count: claimed.length });
 });
 ```
 
 ### Acceptance Criteria
 
-- Users can opt into email reminders.
-- Due reminders are queued and sent.
-- Time change notifications are sent only when meaningful.
-- Unsubscribe/manage link exists.
+- Users can opt into email and/or Web Push reminders.
+- Due reminders are materialized into the delivery queue and sent on the right channel.
+- Re-running the materializer never double-queues (idempotency constraint holds).
+- Time change / cancellation notifications fire only off real `event_status_history` changes.
+- Unsubscribe/manage link exists in every email; push can be revoked from settings.
 - No SMS implementation.
 
 ## Objective 11: Admin, Observability, And Operations
@@ -1354,6 +1768,62 @@ test('calendar events keep stable UID after time change', () => {
 - Exports remain readable.
 - Build and core tests pass before deploy.
 
+## Objective 14: Wedge-Sharpening Features (added in review)
+
+These were missing from the first draft and directly serve the "what do I need to watch,
+attend, save, or share?" thesis. None require new infrastructure beyond what Objectives 1–13
+already establish.
+
+### 14.1 Onboarding / first run
+
+- First-run flow: pick country (→ default timezone **and** broadcast region) → pick a few
+  teams/competitors → instant personal schedule. The app currently drops users straight into
+  a populated view with no acquisition funnel.
+- Anonymous by default; prompt to save only when the user has something worth saving.
+
+### 14.2 Anonymous → account follow migration
+
+- Anonymous follows live in `localStorage`. On sign-up/sign-in, merge them into
+  `user_follows` (dedupe on the existing unique constraint), then clear local state.
+- Without this, users lose their selections at the exact moment of conversion — the worst
+  possible time.
+
+### 14.3 Schedule conflict / simultaneity detection
+
+- Compute overlapping events in the personal schedule and surface them: "3 of your matches
+  kick off at once — here's the one to prioritize." Pure client-side computation over the
+  already-loaded schedule. This is core to the watch-decision wedge and nearly free.
+
+### 14.4 Shareable schedule links (not just images)
+
+- Generalize the tokenized-URL pattern already used for calendar feeds and custom-league
+  public pages into a read-only **public schedule link**, so a user can text a *live* link
+  instead of a stale PNG. Backed by a token row + a public read-only render route
+  (`/s/:publicShareToken`, already in the route table).
+
+### 14.5 Internationalization basics
+
+- The audience is global (World Cup). At minimum: locale-aware date/time formatting, a
+  12h/24h toggle, and timezone as a first-class profile value (already planned). Defer full
+  translation, but do not hardcode `en-US` formatting in the UI or in exports.
+
+### Acceptance Criteria
+
+- New users reach a populated schedule within the first interaction without an account.
+- Signing up preserves anonymous follows.
+- Overlapping events are visibly flagged.
+- A user can share a live, login-free read-only link to their schedule.
+- Dates/times respect locale and the 12h/24h preference everywhere, including exports.
+
+### Companion Detail
+
+See [Master Plan 2](./master-plan-2.md#phase-5-neutral-homepage-and-discovery),
+[Phase 6](./master-plan-2.md#phase-6-regionalization-i18n-sport-expansion-and-where-to-watch),
+and [Phase 9](./master-plan-2.md#phase-9-provider-sourcing-and-small-league-data) for the
+region-aware soccer/football terminology layer, multi-language localization, secondary
+sports expansion, combat-sports event model, homepage tournament radar, and where-to-watch
+sponsorship/affiliate strategy.
+
 ## Suggested Milestones
 
 ### Milestone 0: Planning And Design Lock
@@ -1448,13 +1918,23 @@ Deliverables:
 
 ## Immediate Next Implementation Steps
 
-1. Create GitHub issues from this plan.
-2. Refactor frontend data types into `src/domain`.
-3. Add theme system from Objective 2.
-4. Add sport switcher with mocked sport states.
-5. Add `docs/api-provider-evaluation.md` comparing TheSportsDB, API-Sports, OpenF1, and SportsDataIO.
-6. Decide whether to create/upgrade Supabase project.
-7. Add `supabase/` migration scaffold when project is ready.
+(Items 1–7 of the original list are complete: refactor, Tailwind migration, sport switcher,
+provider evaluation doc, Supabase project + migrations + seed + Edge Functions are all live.
+See the Status Audit above.)
+
+1. **Auth UI + anonymous→account migration** (auth doc, Phase 1): magic link + Google,
+   `AuthGate` with intent preservation, idempotent local→server merge.
+2. **Resolve cross-doc conflicts 1, 2, and 6 above** (calendar_feeds schema, change log
+   model, `/` route) — these block the next backend migration and the homepage build.
+3. **Server-backed feeds + custom-league shares** once auth lands; replace placeholder feed
+   URLs and the `get_shared_league` RPC in the same pass (conflict 4).
+4. **Deploy the frontend + CI workflow** (Objective 12) so the team can test on real devices.
+5. **Run `supabase/cron.sql`** and set `RESEND_API_KEY` to turn on sync + email reminders.
+6. **Pull the i18n message-key layer forward** (conflict 9) before homepage copy hardens.
+7. **Neutral `/` homepage** per Master Plan 2, with staged sport states.
+8. Connect the auth/custom-league path in [Master Plan 2](./master-plan-2.md): sign-in
+   modal, Supabase store adapter, anonymous-to-account migration, backend-resolved share
+   pages, live custom-league calendar feeds, and ad-slot placeholders.
 
 ## Definition Of Completion
 
@@ -1464,13 +1944,15 @@ MatchPulse is complete for this plan when:
 - Users can view a personal schedule across supported sports.
 - Users can subscribe to live-updating calendar feeds.
 - Users can export readable schedule images, paginated when needed.
-- Users can copy/share Notes-friendly schedule text.
-- Users can create and share custom leagues.
-- Email reminders work.
-- At least two live data sources are integrated.
+- Users can copy/share Notes-friendly schedule text, and share a live read-only link.
+- Users can create and share custom leagues — without leaking private events publicly.
+- Email **and** Web Push reminders work.
+- The event model is n-ary (F1/golf/tennis fields supported, not just home/away).
+- "Where to watch" broadcast info is shown for events that have it.
+- Overlapping events in a personal schedule are flagged.
+- At least two live data sources are integrated, each with confirmed redistribution rights.
 - Soccer has FotMob-inspired polish without using FotMob data.
 - F1, NHL, NBA, Tennis, Golf, and Custom are supported at least at the model/UI level.
 - Mobile is excellent.
 - Supabase RLS protects private data.
 - CI and deployment are documented and working.
-

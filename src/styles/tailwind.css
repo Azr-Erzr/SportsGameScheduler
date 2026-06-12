@@ -1,0 +1,1064 @@
+/*
+ * Tailwind v4 entry + Silbo Sports "Channel S" design tokens.
+ *
+ * Direction (locked in docs/silbo-design-synthesis.md):
+ *   - Dark BROADCAST surfaces for live/action pages: warm void field, cream type,
+ *     one neon accent per sport, CRT-soft atmosphere. Neon is for UI.
+ *   - Light PROGRAM-PAPER surfaces for reading/sharing (share pages, exports).
+ *     Chrome/gold finishes are reserved for export posters.
+ *
+ * Theming model (unchanged mechanics):
+ *   - SportThemeProvider sets the runtime --mp-* variables on its subtree per sport.
+ *   - @theme maps Tailwind color names onto those variables, so bg-surface / text-ink /
+ *     border-primary restyle per sport without touching component code.
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Bungee&family=Archivo+Black&family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;700&display=swap');
+@import 'tailwindcss';
+
+@theme {
+  /* Surface tokens — broadcast defaults (warm void: a hair warmer than pure black). */
+  --color-page: var(--mp-bg, #0b0a08);
+  --color-surface: var(--mp-surface, #16130f);
+  --color-ink: var(--mp-text, #f4ead8);
+  --color-primary: var(--mp-primary, #54ff9f);
+  --color-secondary: var(--mp-secondary, #f4ead8);
+  --color-accent: var(--mp-accent, #46e8ff);
+  --color-export: var(--mp-export, #ffc24b);
+  --color-ticket-stub: var(--mp-ticket-stub, #0b6f44);
+  --color-ticket-stub-text: var(--mp-ticket-stub-text, #fff3d7);
+
+  /* Fixed system colors (not per-sport). */
+  --color-void: #0b0a08;          /* text on neon fills */
+  --color-paper: #f4ead8;         /* ticket/program paper */
+  --color-paper-ink: #1d1812;     /* ink on paper */
+  --color-flap-ok: #54ff9f;
+  --color-flap-tbd: #ffd34d;
+  --color-flap-chg: #ff6a55;
+  --color-neon-magenta: #ff4fd8;
+  --color-neon-cyan: #46e8ff;
+
+  --font-display: 'Bungee', 'Archivo Black', sans-serif;
+  --font-head: 'Archivo Black', ui-sans-serif, sans-serif;
+  --font-sans: 'Space Grotesk', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', 'SF Mono', Monaco, Consolas, monospace;
+
+  --radius-card: 0.85rem;
+}
+
+@layer base {
+  html {
+    min-width: 320px;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100svh;
+    background: var(--mp-bg, #0b0a08);
+    color: var(--mp-text, #f4ead8);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  #root {
+    min-height: 100svh;
+  }
+
+  ::selection {
+    color: #0b0a08;
+    background: var(--mp-primary, #54ff9f);
+  }
+}
+
+@layer components {
+  /* CRT atmosphere: corner glow + faint scanlines. Sits behind content; the data-paper
+     subtree (share pages/exports) turns it off. Disabled under prefers-reduced-motion
+     stays static anyway — it does not animate. */
+  .broadcast-air {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(1100px 500px at 85% -10%, color-mix(in srgb, var(--mp-primary) 9%, transparent), transparent 60%),
+      radial-gradient(900px 480px at -10% 110%, color-mix(in srgb, var(--mp-accent) 7%, transparent), transparent 60%),
+      repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.02) 0 1px, transparent 1px 3px);
+  }
+
+  [data-paper] .broadcast-air {
+    background:
+      radial-gradient(900px 420px at 85% -10%, color-mix(in srgb, var(--mp-primary) 7%, transparent), transparent 60%),
+      repeating-linear-gradient(90deg, color-mix(in srgb, var(--mp-primary) 9%, transparent) 0 1px, transparent 1px 112px),
+      repeating-linear-gradient(0deg, color-mix(in srgb, var(--mp-primary) 7%, transparent) 0 1px, transparent 1px 92px);
+    opacity: 0.5;
+  }
+
+  /* Chrome display type — UI keeps it subtle; export posters use the loud variant. */
+  .chrome-text {
+    font-family: var(--font-head);
+    text-transform: uppercase;
+    line-height: 0.95;
+    letter-spacing: -0.015em;
+    background: linear-gradient(180deg, #fff8e6 0%, var(--color-paper) 46%, color-mix(in srgb, var(--mp-text) 70%, var(--mp-primary)) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.45));
+  }
+
+  [data-paper] .chrome-text {
+    background: none;
+    color: var(--mp-primary);
+    filter: none;
+  }
+
+  .neon-text {
+    color: var(--mp-primary);
+    text-shadow: 0 0 18px color-mix(in srgb, var(--mp-primary) 45%, transparent);
+  }
+
+  .silbo-mark,
+  .silbo-channel-badge svg {
+    overflow: visible;
+    filter:
+      drop-shadow(0 0 5px color-mix(in srgb, var(--silbo-color, var(--mp-primary)) 45%, transparent))
+      drop-shadow(0 0 14px color-mix(in srgb, var(--silbo-color, var(--mp-primary)) 18%, transparent));
+  }
+
+  .silbo-channel-badge {
+    --silbo-color: var(--mp-primary);
+    border-radius: 999px;
+    overflow: hidden;
+    transform-origin: center;
+  }
+
+  .silbo-channel-badge::after {
+    content: '';
+    position: absolute;
+    inset: -8%;
+    border-radius: inherit;
+    background: radial-gradient(circle, color-mix(in srgb, var(--silbo-color) 20%, transparent), transparent 64%);
+    opacity: 0;
+    transform: scale(0.78);
+    transition: opacity 180ms ease, transform 180ms ease;
+  }
+
+  .silbo-channel-badge:hover::after,
+  button:hover .silbo-channel-badge::after,
+  a:hover .silbo-channel-badge::after {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  .silbo-whistle-line {
+    vector-effect: non-scaling-stroke;
+  }
+
+  .silbo-glyph {
+    filter: drop-shadow(0 0 5px color-mix(in srgb, currentColor 34%, transparent));
+    transform-box: fill-box;
+    transform-origin: center;
+    transform: scale(0.7);
+  }
+
+  .silbo-sheen {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background: linear-gradient(110deg, transparent 28%, rgba(255, 255, 255, 0.42) 45%, transparent 62%);
+    mix-blend-mode: screen;
+    opacity: 0;
+    transform: translateX(-105%) rotate(8deg);
+  }
+
+  .silbo-channel-badge:hover .silbo-sheen,
+  button:hover .silbo-channel-badge .silbo-sheen,
+  a:hover .silbo-channel-badge .silbo-sheen {
+    animation: silbo-sheen 900ms ease-out;
+  }
+
+  .signal-arc {
+    opacity: 0.9;
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: silbo-signal 1.9s ease-in-out infinite;
+  }
+
+  .signal-arc.s2 {
+    animation-delay: 0.32s;
+  }
+
+  .silbo-clock-hand {
+    transform-box: fill-box;
+    transform-origin: 43.5px 32.5px;
+    animation: silbo-clock-tick 7s steps(12) infinite;
+  }
+
+  @keyframes silbo-sheen {
+    0% {
+      opacity: 0;
+      transform: translateX(-105%) rotate(8deg);
+    }
+    22% {
+      opacity: 0.55;
+    }
+    100% {
+      opacity: 0;
+      transform: translateX(105%) rotate(8deg);
+    }
+  }
+
+  @keyframes silbo-signal {
+    0%, 100% {
+      opacity: 0.55;
+      transform: translateY(0);
+    }
+    50% {
+      opacity: 1;
+      transform: translateY(-1px);
+    }
+  }
+
+  @keyframes silbo-clock-tick {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  /* Broadcast color bars (test-pattern accent). */
+  .color-bars {
+    background: repeating-linear-gradient(
+      -55deg,
+      var(--color-neon-cyan) 0 14px,
+      var(--color-neon-magenta) 14px 28px,
+      var(--color-export) 28px 42px,
+      transparent 42px 68px
+    );
+  }
+
+  /* Split-flap status chips (departure-board language). */
+  .flap {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    padding: 4px 8px;
+    border-radius: 2px;
+    border: 1px solid currentColor;
+  }
+  .flap-ok { color: var(--color-flap-ok); background: color-mix(in srgb, var(--color-flap-ok) 12%, transparent); }
+  .flap-tbd { color: var(--color-flap-tbd); background: color-mix(in srgb, var(--color-flap-tbd) 12%, transparent); }
+  .flap-chg { color: var(--color-flap-chg); background: color-mix(in srgb, var(--color-flap-chg) 12%, transparent); }
+
+  /* Ticket paper: the schedule card, the poster, and the share card are the same object. */
+  .ticket-paper {
+    background: var(--color-paper);
+    color: var(--color-paper-ink);
+    border-radius: var(--radius-card);
+    border: 1px solid color-mix(in srgb, var(--mp-ticket-stub) 18%, transparent);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.28);
+  }
+  .ticket-paper.is-standby {
+    background: repeating-linear-gradient(-45deg, var(--color-paper) 0 14px, #ecdfc4 14px 28px);
+  }
+
+  .board-label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+  }
+
+  .paper-grain {
+    background-image:
+      radial-gradient(circle at 20% 15%, rgba(29, 24, 18, 0.08) 0 1px, transparent 1.5px),
+      radial-gradient(circle at 75% 35%, rgba(29, 24, 18, 0.06) 0 1px, transparent 1.6px),
+      linear-gradient(0deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.08));
+    background-size: 11px 11px, 17px 17px, auto;
+  }
+
+  .art-kicker {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: #9e2d22;
+  }
+
+  .art-capsule {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(160px, 230px) minmax(0, 1.25fr) minmax(240px, 0.8fr) minmax(170px, 260px);
+    gap: 24px;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--mp-ticket-stub) 30%, #1d1812);
+    border-radius: 4px;
+    background-color: #f4ead8;
+    color: #1d1812;
+    padding: 18px;
+    box-shadow: 0 18px 44px rgba(0, 0, 0, 0.28);
+  }
+
+  .art-capsule::after {
+    content: '';
+    position: absolute;
+    inset: auto 0 0;
+    height: 5px;
+    background: linear-gradient(90deg, var(--mp-ticket-stub), var(--mp-accent), var(--mp-export), #9e2d22);
+  }
+
+  .art-capsule-panel {
+    min-height: 160px;
+    border: 1px solid rgba(29, 24, 18, 0.18);
+    background:
+      linear-gradient(135deg, transparent 0 52%, color-mix(in srgb, var(--mp-accent) 85%, white) 52% 58%, transparent 58%),
+      repeating-linear-gradient(90deg, color-mix(in srgb, var(--mp-ticket-stub) 92%, black) 0 1px, transparent 1px 38px),
+      repeating-linear-gradient(0deg, color-mix(in srgb, var(--mp-ticket-stub) 28%, transparent) 0 1px, transparent 1px 34px),
+      var(--mp-ticket-stub);
+  }
+
+  .poster-glyph {
+    position: relative;
+    display: grid;
+    height: 100%;
+    min-height: 160px;
+    place-items: center;
+    overflow: hidden;
+    color: var(--mp-primary);
+  }
+
+  .poster-glyph svg {
+    position: relative;
+    z-index: 1;
+    color: #f4ead8;
+    filter: drop-shadow(6px 5px 0 rgba(0, 0, 0, 0.22));
+  }
+
+  .poster-glyph-stripes {
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(135deg, transparent 0 48%, #f4ead8 48% 52%, #ff5247 52% 57%, #46e8ff 57% 62%, transparent 62%),
+      radial-gradient(circle at 80% 20%, color-mix(in srgb, currentColor 65%, transparent) 0 42px, transparent 43px);
+  }
+
+  .poster-glyph-soccer {
+    background:
+      repeating-linear-gradient(90deg, rgba(244, 234, 216, 0.08) 0 1px, transparent 1px 34px),
+      linear-gradient(90deg, #07734f, #075a3e);
+  }
+
+  .poster-field-arc {
+    position: absolute;
+    right: 22px;
+    top: 24px;
+    height: 92px;
+    width: 92px;
+    border: 4px solid rgba(244, 234, 216, 0.72);
+    border-left-color: transparent;
+    border-bottom-color: transparent;
+    border-radius: 999px;
+    opacity: 0.5;
+  }
+
+  .poster-soccer-ball {
+    position: relative;
+    z-index: 2;
+    height: 78px;
+    width: 78px;
+    border: 4px solid #f4ead8;
+    border-radius: 999px;
+    background: #f4ead8;
+    box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.22);
+  }
+
+  .poster-soccer-ball::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    height: 23px;
+    width: 23px;
+    translate: -50% -50%;
+    background: #111;
+    clip-path: polygon(50% 0, 100% 38%, 82% 100%, 18% 100%, 0 38%);
+  }
+
+  .poster-soccer-ball::after {
+    content: '';
+    position: absolute;
+    inset: 10px;
+    border-radius: inherit;
+    background:
+      radial-gradient(circle at 18% 24%, #111 0 8px, transparent 9px),
+      radial-gradient(circle at 82% 24%, #111 0 8px, transparent 9px),
+      radial-gradient(circle at 24% 80%, #111 0 8px, transparent 9px),
+      radial-gradient(circle at 76% 80%, #111 0 8px, transparent 9px);
+  }
+
+  .art-capsule-copy h1 {
+    max-width: 620px;
+    font-family: var(--font-head);
+    font-size: clamp(2.65rem, 7vw, 6.4rem);
+    line-height: 0.82;
+    letter-spacing: -0.02em;
+    text-transform: uppercase;
+    color: var(--mp-ticket-stub);
+    text-shadow: 0 2px 0 rgba(29, 24, 18, 0.18);
+  }
+
+  .art-stat-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 18px;
+    margin-top: 16px;
+  }
+
+  .art-stat-row span {
+    display: grid;
+    grid-template-columns: auto auto;
+    align-items: center;
+    gap: 0 6px;
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+  }
+
+  .art-stat-row svg {
+    color: var(--mp-ticket-stub);
+    grid-row: span 2;
+  }
+
+  .art-stat-row strong {
+    font-size: 18px;
+    line-height: 1;
+  }
+
+  .art-stat-row em {
+    font-size: 10px;
+    font-style: normal;
+    letter-spacing: 0.14em;
+  }
+
+  .art-capsule-side {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    justify-content: center;
+    gap: 16px;
+    border-left: 1px solid rgba(29, 24, 18, 0.18);
+    padding-left: 22px;
+  }
+
+  .art-capsule-side p {
+    max-width: 32ch;
+    font-size: 15px;
+    line-height: 1.55;
+  }
+
+  .art-capsule-city {
+    position: relative;
+    min-height: 160px;
+    align-self: stretch;
+  }
+
+  .art-sun {
+    position: absolute;
+    right: 28px;
+    top: 18px;
+    height: 112px;
+    width: 112px;
+    border-radius: 999px;
+    opacity: 0.92;
+    mix-blend-mode: multiply;
+  }
+
+  .poster-skyline {
+    position: absolute;
+    bottom: 0;
+    right: -10px;
+    display: flex;
+    align-items: end;
+    gap: 2px;
+    width: min(280px, 100%);
+  }
+
+  .poster-skyline span {
+    width: 10px;
+    opacity: 0.9;
+    box-shadow: inset 0 0 0 1px rgba(244, 234, 216, 0.16);
+  }
+
+  .global-event-board {
+    position: relative;
+    min-height: 420px;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--mp-primary) 22%, transparent);
+    border-radius: var(--radius-card);
+    background:
+      radial-gradient(circle at 55% 15%, color-mix(in srgb, var(--mp-accent) 18%, transparent), transparent 42%),
+      linear-gradient(180deg, #07100f 0%, #0b0a08 100%);
+    padding: 24px;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.035), 0 22px 55px rgba(0, 0, 0, 0.28);
+  }
+
+  .global-event-board-room {
+    min-height: 660px;
+    padding: clamp(20px, 4vw, 42px);
+    background:
+      radial-gradient(circle at 52% 26%, color-mix(in srgb, var(--mp-accent) 22%, transparent), transparent 35%),
+      radial-gradient(circle at 82% 12%, color-mix(in srgb, var(--color-neon-magenta) 12%, transparent), transparent 30%),
+      linear-gradient(180deg, #07100f 0%, #0b0a08 100%);
+  }
+
+  .global-event-board h2 {
+    max-width: 11ch;
+    font-family: var(--font-head);
+    font-size: clamp(2rem, 3vw, 3.35rem);
+    line-height: 0.9;
+    text-transform: uppercase;
+    color: var(--color-paper);
+  }
+
+  .global-event-board-room h2 {
+    max-width: 12ch;
+    font-size: clamp(3.2rem, 7vw, 7.8rem);
+  }
+
+  .room-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    max-width: 430px;
+  }
+
+  .room-tabs span {
+    border: 1px solid color-mix(in srgb, var(--mp-primary) 32%, transparent);
+    border-radius: 2px;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent),
+      rgba(6, 41, 30, 0.76);
+    padding: 7px 10px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-paper);
+    box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.25);
+  }
+
+  .poster-globe {
+    position: absolute;
+    left: 50%;
+    top: 44%;
+    height: 350px;
+    width: 350px;
+    translate: -50% -50%;
+    border-radius: 999px;
+    background:
+      radial-gradient(circle at 35% 35%, color-mix(in srgb, var(--mp-primary) 60%, transparent), transparent 12%),
+      radial-gradient(circle at 64% 40%, color-mix(in srgb, var(--color-neon-magenta) 52%, transparent), transparent 18%),
+      radial-gradient(circle at 55% 62%, color-mix(in srgb, var(--mp-export) 45%, transparent), transparent 14%),
+      repeating-linear-gradient(90deg, rgba(244, 234, 216, 0.1) 0 1px, transparent 1px 28px),
+      repeating-linear-gradient(0deg, rgba(244, 234, 216, 0.08) 0 1px, transparent 1px 28px),
+      radial-gradient(circle, #143938 0%, #071817 66%, transparent 67%);
+    box-shadow: 0 0 65px color-mix(in srgb, var(--mp-accent) 28%, transparent);
+    opacity: 0.92;
+  }
+
+  .global-event-board-room .poster-globe {
+    top: 42%;
+    height: min(58vw, 680px);
+    width: min(58vw, 680px);
+  }
+
+  .poster-globe::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.04) 0 2px, transparent 2px 5px);
+    mix-blend-mode: screen;
+  }
+
+  .poster-orbit {
+    position: absolute;
+    left: 50%;
+    top: 38%;
+    width: 560px;
+    height: 150px;
+    translate: -50% -50%;
+    border: 2px dashed color-mix(in srgb, var(--mp-export) 60%, transparent);
+    border-radius: 50%;
+    transform: rotate(-12deg);
+    opacity: 0.58;
+  }
+
+  .poster-orbit-two {
+    width: 620px;
+    height: 190px;
+    border-color: color-mix(in srgb, var(--mp-accent) 55%, transparent);
+    transform: rotate(19deg);
+  }
+
+  .global-event-board-room .poster-orbit {
+    top: 43%;
+    width: min(88vw, 1060px);
+    height: 260px;
+  }
+
+  .global-event-board-room .poster-orbit-two {
+    width: min(92vw, 1160px);
+    height: 340px;
+  }
+
+  .poster-stack {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+    margin-top: 66px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+
+  .global-event-board-room .poster-stack {
+    justify-content: center;
+    gap: clamp(10px, 2vw, 24px);
+    margin-top: clamp(110px, 18vw, 220px);
+  }
+
+  .global-event-board-room .event-poster-card {
+    min-width: clamp(190px, 19vw, 265px);
+    min-height: 345px;
+    grid-template-rows: 190px 1fr;
+  }
+
+  .global-event-board-room .event-poster-card h3 {
+    font-size: clamp(1.25rem, 2vw, 2rem);
+  }
+
+  .event-poster-card {
+    position: relative;
+    display: grid;
+    grid-template-rows: 145px 1fr;
+    min-height: 274px;
+    min-width: 190px;
+    overflow: hidden;
+    border: 2px solid #f4ead8;
+    border-radius: 3px 3px 12px 12px;
+    background: #f4ead8;
+    color: #1d1812;
+    box-shadow: 0 16px 35px rgba(0, 0, 0, 0.4);
+    transform: rotate(var(--tilt, -1deg));
+    transition: transform 180ms ease, box-shadow 180ms ease;
+  }
+
+  .event-poster-card:hover {
+    transform: translateY(-4px) rotate(0deg);
+    box-shadow: 0 22px 44px rgba(0, 0, 0, 0.45);
+  }
+
+  .poster-stack a:nth-child(2n) .event-poster-card { --tilt: 1.5deg; }
+  .poster-stack a:nth-child(3n) .event-poster-card { --tilt: -2deg; }
+
+  .event-poster-art {
+    position: relative;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    color: #f4ead8;
+    background:
+      linear-gradient(135deg, var(--poster-primary) 0 48%, var(--poster-accent) 48% 58%, #1d1812 58%),
+      repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.12) 0 1px, transparent 1px 5px);
+  }
+
+  .event-poster-art svg {
+    filter: drop-shadow(8px 7px 0 rgba(0, 0, 0, 0.2));
+  }
+
+  .event-poster-number {
+    position: absolute;
+    right: 10px;
+    top: 8px;
+    font-family: var(--font-head);
+    font-size: 42px;
+    line-height: 1;
+    color: rgba(244, 234, 216, 0.42);
+  }
+
+  .event-poster-card div:last-child {
+    padding: 12px;
+  }
+
+  .event-poster-card p {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--poster-primary);
+  }
+
+  .event-poster-card h3 {
+    margin-top: 4px;
+    font-family: var(--font-head);
+    font-size: 20px;
+    line-height: 0.95;
+    text-transform: uppercase;
+  }
+
+  .event-poster-card span {
+    display: block;
+    margin-top: 8px;
+    font-size: 12px;
+    line-height: 1.35;
+    color: rgba(29, 24, 18, 0.68);
+  }
+
+  .feature-ribbon {
+    display: grid;
+    grid-template-columns: 96px repeat(4, minmax(0, 1fr)) 128px 58px;
+    align-items: center;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--mp-primary) 28%, transparent);
+    border-radius: 3px;
+    background: #06291e;
+    color: #f4ead8;
+    box-shadow: 0 14px 38px rgba(0, 0, 0, 0.25);
+  }
+
+  .feature-ribbon-stripes {
+    align-self: stretch;
+    min-height: 104px;
+    background:
+      linear-gradient(135deg, transparent 0 32%, #54ff9f 32% 38%, #f4ead8 38% 44%, #ff5247 44% 50%, #46e8ff 50% 56%, transparent 56%),
+      var(--mp-ticket-stub);
+  }
+
+  .feature-ribbon-cell {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 12px;
+    min-height: 104px;
+    align-items: center;
+    border-left: 1px dashed rgba(244, 234, 216, 0.18);
+    padding: 16px;
+  }
+
+  .feature-ribbon-cell svg {
+    color: var(--mp-export);
+  }
+
+  .feature-ribbon-cell h3 {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #ffd34d;
+  }
+
+  .feature-ribbon-cell p {
+    margin-top: 3px;
+    font-size: 12px;
+    line-height: 1.3;
+    color: rgba(244, 234, 216, 0.78);
+  }
+
+  .feature-barcode {
+    height: 72px;
+    margin-inline: 14px;
+    background: repeating-linear-gradient(90deg, #f4ead8 0 2px, transparent 2px 5px, #f4ead8 5px 9px, transparent 9px 14px);
+    opacity: 0.9;
+  }
+
+  .manifesto-poster {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 24px;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--mp-primary) 24%, transparent);
+    border-radius: var(--radius-card);
+    background:
+      radial-gradient(circle at 85% 20%, color-mix(in srgb, var(--mp-primary) 16%, transparent), transparent 40%),
+      #08111a;
+    padding: 24px;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.24);
+  }
+
+  .manifesto-bars {
+    display: flex;
+    align-items: stretch;
+    gap: 7px;
+    min-height: 170px;
+  }
+
+  .manifesto-bars span {
+    width: 12px;
+  }
+
+  .manifesto-poster h2 {
+    max-width: 760px;
+    font-family: var(--font-head);
+    font-size: clamp(2.2rem, 6vw, 5rem);
+    line-height: 0.88;
+    text-transform: uppercase;
+    color: #f4ead8;
+  }
+
+  .manifesto-poster h2 em {
+    display: block;
+    margin-top: 6px;
+    font-family: var(--font-sans);
+    font-size: clamp(1.8rem, 4vw, 3.6rem);
+    font-style: italic;
+    font-weight: 800;
+    line-height: 1;
+    text-transform: lowercase;
+    color: #54ff9f;
+    text-decoration: underline;
+    text-decoration-thickness: 4px;
+    text-underline-offset: 6px;
+  }
+
+  .manifesto-poster p {
+    margin-top: 22px;
+    max-width: 560px;
+    color: rgba(244, 234, 216, 0.78);
+  }
+
+  .sport-identity-tile {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 18px;
+    align-items: center;
+    border: 1px solid rgba(29, 24, 18, 0.18);
+    border-radius: 4px;
+    background-color: #f4ead8;
+    color: #1d1812;
+    padding: 20px;
+  }
+
+  .sport-identity-tile h2 {
+    font-family: var(--font-head);
+    font-size: clamp(1.8rem, 4vw, 3.4rem);
+    line-height: 0.9;
+    text-transform: uppercase;
+    color: var(--mp-ticket-stub);
+  }
+
+  .sport-identity-tile p:last-child {
+    margin-top: 6px;
+    color: rgba(29, 24, 18, 0.68);
+  }
+
+  @media (max-width: 1100px) {
+    .art-capsule {
+      grid-template-columns: 170px minmax(0, 1fr);
+    }
+
+    .art-capsule-side {
+      border-left: 0;
+      border-top: 1px solid rgba(29, 24, 18, 0.18);
+      padding-left: 0;
+      padding-top: 18px;
+    }
+
+    .art-capsule-city {
+      min-height: 150px;
+    }
+
+    .feature-ribbon {
+      display: flex;
+      overflow-x: auto;
+      align-items: stretch;
+    }
+
+    .feature-ribbon-cell {
+      min-width: 260px;
+    }
+
+    .feature-ribbon-stripes {
+      min-width: 84px;
+    }
+
+    .feature-barcode {
+      min-width: 110px;
+    }
+  }
+
+  @media (max-width: 700px) {
+    .art-capsule {
+      grid-template-columns: 1fr;
+      gap: 18px;
+      padding: 14px;
+    }
+
+    .art-capsule-panel,
+    .poster-glyph {
+      min-height: 136px;
+    }
+
+    .art-capsule-city {
+      display: none;
+    }
+
+    .art-capsule-copy h1 {
+      font-size: clamp(2.2rem, 16vw, 4rem);
+    }
+
+    .art-stat-row {
+      gap: 10px 14px;
+    }
+
+    .global-event-board {
+      min-height: 520px;
+      padding: 18px;
+    }
+
+    .global-event-board-room {
+      min-height: 620px;
+    }
+
+    .global-event-board h2 {
+      font-size: clamp(2rem, 13vw, 3.3rem);
+    }
+
+    .global-event-board-room h2 {
+      font-size: clamp(2.55rem, 15vw, 4.25rem);
+    }
+
+    .room-tabs {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      width: 100%;
+      max-width: none;
+    }
+
+    .poster-globe {
+      top: 42%;
+      height: 280px;
+      width: 280px;
+    }
+
+    .global-event-board-room .poster-globe {
+      top: 48%;
+      height: 330px;
+      width: 330px;
+    }
+
+    .poster-orbit {
+      width: 360px;
+    }
+
+    .global-event-board-room .poster-orbit {
+      top: 48%;
+      width: 440px;
+      height: 126px;
+    }
+
+    .global-event-board-room .poster-orbit-two {
+      width: 480px;
+      height: 156px;
+    }
+
+    .poster-stack {
+      margin-top: 120px;
+    }
+
+    .global-event-board-room .poster-stack {
+      justify-content: flex-start;
+      margin-top: 120px;
+    }
+
+    .global-event-board-room .event-poster-card {
+      min-width: 190px;
+      min-height: 286px;
+      grid-template-rows: 138px 1fr;
+    }
+
+    .event-poster-card {
+      min-width: 172px;
+      grid-template-rows: 130px 1fr;
+    }
+
+    .manifesto-poster {
+      grid-template-columns: 1fr;
+      gap: 16px;
+      padding: 18px;
+    }
+
+    .manifesto-bars {
+      min-height: 12px;
+      height: 12px;
+    }
+
+    .manifesto-bars span {
+      flex: 1;
+      width: auto;
+    }
+
+    .sport-identity-tile {
+      grid-template-columns: 1fr;
+    }
+  }
+}
+
+/* Sport background motifs: texture lives behind panels, never under dense body copy. */
+@layer components {
+  .motif-pitch {
+    background-image: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 96px,
+      color-mix(in srgb, var(--mp-primary) 4%, transparent) 96px,
+      color-mix(in srgb, var(--mp-primary) 4%, transparent) 98px
+    );
+  }
+
+  .motif-track {
+    background-image: repeating-linear-gradient(
+      -35deg,
+      transparent,
+      transparent 56px,
+      color-mix(in srgb, var(--mp-primary) 5%, transparent) 56px,
+      color-mix(in srgb, var(--mp-primary) 5%, transparent) 60px
+    );
+  }
+
+  .motif-ice {
+    background-image:
+      linear-gradient(90deg, color-mix(in srgb, var(--mp-accent) 6%, transparent) 2px, transparent 2px),
+      linear-gradient(color-mix(in srgb, var(--mp-primary) 3%, transparent) 2px, transparent 2px);
+    background-size: 140px 140px;
+  }
+
+  .motif-court {
+    background-image: repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 110px,
+      color-mix(in srgb, var(--mp-primary) 4%, transparent) 110px,
+      color-mix(in srgb, var(--mp-primary) 4%, transparent) 112px
+    );
+  }
+
+  .motif-fairway,
+  .motif-rings,
+  .motif-neutral {
+    background-image: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .signal-arc { animation: none !important; opacity: 1 !important; }
+  .silbo-clock-hand,
+  .silbo-channel-badge .silbo-sheen {
+    animation: none !important;
+  }
+}

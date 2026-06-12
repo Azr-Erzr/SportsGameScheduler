@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Silbo Sports — mockup / my schedule</title>
+<link href="https://fonts.googleapis.com/css2?family=Bungee&family=Archivo+Black&family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="./silbo.css" />
+<style>
+  /* page-specific: program-guide day rail + filter deck */
+  .day-rail { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; }
+  .day {
+    min-width: 86px; text-align: center; padding: 10px 8px; border: 2px solid var(--line);
+    border-radius: 8px; background: var(--panel); font-family: var(--font-board);
+    color: var(--cream-dim); cursor: pointer;
+  }
+  .day b { display: block; font-family: var(--font-head); font-size: 18px; color: var(--cream); }
+  .day small { font-size: 9px; letter-spacing: 2px; }
+  .day.today { border-color: var(--gold); color: var(--gold); box-shadow: 0 0 18px rgba(255,194,75,0.2); }
+  .day.today b { color: var(--gold); }
+  .day .pips { display: flex; justify-content: center; gap: 3px; margin-top: 5px; }
+  .day .pips i { width: 5px; height: 5px; border-radius: 50%; background: var(--cyan); }
+
+  .filters { display: flex; gap: 8px; flex-wrap: wrap; }
+  .chip { font-family: var(--font-board); font-size: 10px; letter-spacing: 2px; padding: 7px 12px;
+    border: 1px solid var(--line); border-radius: 999px; color: var(--cream-dim); cursor: pointer; }
+  .chip.on { background: var(--cream); color: var(--void); border-color: var(--cream); font-weight: 700; }
+
+  .day-divider { display: flex; align-items: center; gap: 14px; margin: 30px 0 14px;
+    font-family: var(--font-board); font-size: 11px; letter-spacing: 4px; color: var(--magenta); }
+  .day-divider::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+
+  .sync-deck { position: sticky; bottom: 18px; margin-top: 44px; display: flex; gap: 10px; justify-content: center; }
+  .sync-deck .btn { font-size: 12px; padding: 12px 18px; }
+  .btn-gold { background: var(--gold); color: #2b1d04; box-shadow: 0 0 24px rgba(255,194,75,0.35); }
+  .btn-magenta { background: var(--magenta); color: #2b0a22; box-shadow: 0 0 24px rgba(255,79,216,0.3); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="masthead">
+    <a class="brand" href="./home.html">
+      <span class="whistle-badge">
+        <svg width="38" height="38" viewBox="0 0 48 48" fill="none">
+          <path d="M6 16 h17 a13 13 0 1 1 -13 17 L6 24 Z" stroke="#f4ead8" stroke-width="3" stroke-linejoin="round"/>
+          <circle cx="27" cy="29" r="6" stroke="#46e8ff" stroke-width="2.5"/>
+          <path d="M27 23.5 l2 3.4 -1.2 3.6 h-3.6 l-1.2 -3.6 Z" fill="#46e8ff"/>
+          <path class="signal-arc" d="M40 10 a9 9 0 0 1 4 7" stroke="#ffc24b" stroke-width="2.5" stroke-linecap="round"/>
+          <path class="signal-arc s2" d="M37 6 a14 14 0 0 1 7 11" stroke="#ff4fd8" stroke-width="2.5" stroke-linecap="round"/>
+          <path class="signal-arc s3" d="M34 2 a19 19 0 0 1 10 15" stroke="#46e8ff" stroke-width="2.5" stroke-linecap="round"/>
+        </svg>
+      </span>
+      <span class="brand-name">SILBO<small>SPORTS NETWORK</small></span>
+    </a>
+    <nav class="nav">
+      <a href="./home.html">TONIGHT</a>
+      <a class="on" href="#">MY SCHEDULE</a>
+      <a href="#">CHANNELS</a>
+      <a href="#">TICKETS</a>
+      <a href="#">YOUR LEAGUE</a>
+    </nav>
+    <span class="live-pill"><span class="dot"></span>4 TEAMS · 23 EVENTS</span>
+  </header>
+
+  <!-- title row -->
+  <section style="margin-top: 40px; display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex-wrap: wrap;">
+    <div>
+      <p class="kicker">Program guide · America/Toronto</p>
+      <h1 class="mega" style="font-size: clamp(36px, 5vw, 64px); margin-top: 10px;">My Schedule</h1>
+    </div>
+    <div class="filters">
+      <span class="chip on">ALL</span>
+      <span class="chip">⚽ SOCCER</span>
+      <span class="chip">★ YOUR LEAGUE</span>
+      <span class="chip">WATCHING</span>
+      <span class="chip">GOING</span>
+      <span class="chip on">HIDE FINISHED</span>
+    </div>
+  </section>
+
+  <!-- day rail -->
+  <section class="section" style="margin-top: 28px;">
+    <div class="day-rail">
+      <div class="day today"><small>FRI</small><b>12</b><small>JUN</small><span class="pips"><i></i><i></i></span></div>
+      <div class="day"><small>SAT</small><b>13</b><small>JUN</small><span class="pips"><i></i></span></div>
+      <div class="day"><small>SUN</small><b>14</b><small>JUN</small><span class="pips"></span></div>
+      <div class="day"><small>MON</small><b>15</b><small>JUN</small><span class="pips"></span></div>
+      <div class="day"><small>TUE</small><b>16</b><small>JUN</small><span class="pips"><i></i><i></i><i></i></span></div>
+      <div class="day"><small>WED</small><b>17</b><small>JUN</small><span class="pips"></span></div>
+      <div class="day"><small>THU</small><b>18</b><small>JUN</small><span class="pips"><i></i></span></div>
+      <div class="day"><small>FRI</small><b>19</b><small>JUN</small><span class="pips"><i></i></span></div>
+    </div>
+  </section>
+
+  <!-- tickets by day -->
+  <section>
+    <div class="day-divider">TODAY — FRIDAY JUNE 12</div>
+
+    <div class="ticket">
+      <div class="stub bg-cyan">
+        <span class="day">FRI · JUN 12</span>
+        <span class="time">3:00 PM</span>
+        <span class="zone">EDT · TORONTO</span>
+      </div>
+      <div class="body">
+        <span class="fixture">Canada vs Bosnia &amp; Herzegovina</span>
+        <span class="meta">WORLD CUP 26 · GROUP B · MATCHDAY 2 · BMO FIELD, TORONTO · TSN/CTV</span>
+      </div>
+      <div class="side">
+        <span>ADMIT: WATCHING</span>
+        <span class="barcode"></span>
+        <span>SILBO·SYNCED ✓</span>
+      </div>
+    </div>
+
+    <div class="ticket is-conflict" style="position: relative;">
+      <span class="conflict-tag">⚠ OVERLAPS CANADA MATCH</span>
+      <div class="stub bg-green">
+        <span class="day">FRI · JUN 12</span>
+        <span class="time">4:30 PM</span>
+        <span class="zone">EDT · RINK 2</span>
+      </div>
+      <div class="body">
+        <span class="fixture">U10 Hockey — Practice</span>
+        <span class="meta">MAPLE RIDGE LEAGUE · ARRIVE 4:00 · WHITE KIT · BRING BOTTLES</span>
+      </div>
+      <div class="side">
+        <span>ADMIT: GOING</span>
+        <span class="barcode"></span>
+        <span>COACH ★</span>
+      </div>
+    </div>
+
+    <div class="ticket">
+      <div class="stub bg-magenta">
+        <span class="day">FRI · JUN 12</span>
+        <span class="time">9:00 PM</span>
+        <span class="zone">EDT · LOS ANGELES</span>
+      </div>
+      <div class="body">
+        <span class="fixture">USA vs Paraguay</span>
+        <span class="meta">WORLD CUP 26 · GROUP D · MATCHDAY 2 · SOFI STADIUM · FOX</span>
+      </div>
+      <div class="side">
+        <span>ADMIT: WATCHING</span>
+        <span class="barcode"></span>
+        <span>SILBO·SYNCED ✓</span>
+      </div>
+    </div>
+
+    <div class="day-divider">SATURDAY JUNE 13</div>
+
+    <div class="ticket">
+      <div class="stub bg-gold">
+        <span class="day">SAT · JUN 13</span>
+        <span class="time">6:00 PM</span>
+        <span class="zone">EDT · EAST RUTHERFORD</span>
+      </div>
+      <div class="body">
+        <span class="fixture">Brazil vs Morocco</span>
+        <span class="meta">WORLD CUP 26 · GROUP C · MATCHDAY 3 · METLIFE STADIUM</span>
+      </div>
+      <div class="side">
+        <span>ADMIT: WATCHING</span>
+        <span class="barcode"></span>
+        <span>SILBO·SYNCED ✓</span>
+      </div>
+    </div>
+
+    <div class="ticket is-tbd">
+      <div class="stub bg-gold">
+        <span class="day">SAT · JUN 27</span>
+        <span class="time">TBD</span>
+        <span class="zone">TIME SET SOON</span>
+      </div>
+      <div class="body">
+        <span class="fixture">Round of 32 — If Canada advance</span>
+        <span class="meta">WORLD CUP 26 · KNOCKOUT SLOT W-74 · WE'LL WHISTLE WHEN IT'S SET</span>
+      </div>
+      <div class="side">
+        <span>WATCH REQUEST</span>
+        <span class="barcode"></span>
+        <span>NOTIFY ME ◌</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- sync deck -->
+  <div class="sync-deck">
+    <a class="btn btn-primary" href="#">⟳ Live calendar</a>
+    <a class="btn btn-gold" href="#">▣ Save as poster</a>
+    <a class="btn btn-magenta" href="#">✉ Copy for chat</a>
+  </div>
+
+  <footer style="margin-top: 56px; border-top: 2px solid var(--line); padding-top: 18px; display:flex; justify-content:space-between; font-family: var(--font-board); font-size: 10px; letter-spacing: 2px; color: var(--cream-dim);">
+    <span>SILBO PROGRAM GUIDE — TICKETS UPDATE WHEN TIMES CHANGE</span>
+    <span>SNAPSHOT ≠ SUBSCRIPTION · KEEP ALERTS ON</span>
+  </footer>
+</div>
+</body>
+</html>

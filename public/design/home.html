@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Silbo Sports — mockup / home</title>
+<link href="https://fonts.googleapis.com/css2?family=Bungee&family=Archivo+Black&family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="./silbo.css" />
+</head>
+<body>
+<div class="page">
+
+  <!-- masthead -->
+  <header class="masthead">
+    <a class="brand" href="#">
+      <span class="whistle-badge">
+        <!-- THE MARK: pea whistle, soccer-ball pea, signal arcs -->
+        <svg width="38" height="38" viewBox="0 0 48 48" fill="none">
+          <path d="M6 16 h17 a13 13 0 1 1 -13 17 L6 24 Z" stroke="#f4ead8" stroke-width="3" stroke-linejoin="round"/>
+          <circle cx="27" cy="29" r="6" stroke="#46e8ff" stroke-width="2.5"/>
+          <path d="M27 23.5 l2 3.4 -1.2 3.6 h-3.6 l-1.2 -3.6 Z" fill="#46e8ff"/>
+          <path class="signal-arc" d="M40 10 a9 9 0 0 1 4 7" stroke="#ffc24b" stroke-width="2.5" stroke-linecap="round"/>
+          <path class="signal-arc s2" d="M37 6 a14 14 0 0 1 7 11" stroke="#ff4fd8" stroke-width="2.5" stroke-linecap="round"/>
+          <path class="signal-arc s3" d="M34 2 a19 19 0 0 1 10 15" stroke="#46e8ff" stroke-width="2.5" stroke-linecap="round"/>
+        </svg>
+      </span>
+      <span class="brand-name">SILBO<small>SPORTS NETWORK</small></span>
+    </a>
+    <nav class="nav">
+      <a class="on" href="#">TONIGHT</a>
+      <a href="#">MY SCHEDULE</a>
+      <a href="#">CHANNELS</a>
+      <a href="#">TICKETS</a>
+      <a href="#">YOUR LEAGUE</a>
+    </nav>
+    <span class="live-pill"><span class="dot"></span>WC26 · LIVE</span>
+  </header>
+
+  <!-- hero -->
+  <section class="section grid-2" style="margin-top: 64px;">
+    <div>
+      <p class="kicker">Whistle to whistle · in your timezone</p>
+      <h1 class="mega" style="margin: 18px 0 22px;">Every game.<br /><span class="accent">Your time.</span></h1>
+      <p class="deck">
+        Pick your teams, drivers, fighters, and leagues. Silbo turns the world's scattered
+        fixtures into one broadcast-grade schedule — synced to your calendar, printed to your
+        Photos, pasted to the family chat.
+      </p>
+      <div style="display:flex; gap:14px; margin-top: 30px; flex-wrap: wrap;">
+        <a class="btn btn-primary" href="#">▸ Build my schedule</a>
+        <a class="btn btn-ghost" href="#">Browse channels</a>
+      </div>
+      <p style="font-family: var(--font-board); font-size: 11px; letter-spacing: 2px; color: var(--cream-dim); margin-top: 26px;">
+        NO ACCOUNT NEEDED · WORKS IN 9 LANGUAGES · FREE
+      </p>
+    </div>
+
+    <!-- tonight board -->
+    <div class="board">
+      <div class="board-head"><span>■ ON AIR NEXT — TORONTO TIME</span><span>JUN 12 · 20:51</span></div>
+      <div class="board-row">
+        <span class="t">15:00</span>
+        <span class="m">Canada vs Bosnia &amp; Herzegovina<small>WORLD CUP · GROUP B · TORONTO</small></span>
+        <span class="v">GATE: BMO FIELD</span>
+        <span class="flap ok">CONFIRMED</span>
+      </div>
+      <div class="board-row">
+        <span class="t">21:00</span>
+        <span class="m">USA vs Paraguay<small>WORLD CUP · GROUP D · LOS ANGELES</small></span>
+        <span class="v">GATE: SOFI</span>
+        <span class="flap ok">CONFIRMED</span>
+      </div>
+      <div class="board-row">
+        <span class="t">--:--</span>
+        <span class="m">Round of 32 — Slot 74<small>WORLD CUP · TEAMS DECIDED JUN 27</small></span>
+        <span class="v">GATE: TBA</span>
+        <span class="flap tbd">TIME TBD</span>
+      </div>
+      <div class="board-row">
+        <span class="t">18:00</span>
+        <span class="m">U10 Practice — Maple Ridge<small>YOUR LEAGUE · ARRIVE 17:30 · WHITE KIT</small></span>
+        <span class="v">RINK 2</span>
+        <span class="flap chg">MOVED +1H</span>
+      </div>
+    </div>
+  </section>
+
+  <div class="stripes" style="margin-top: 56px;"></div>
+
+  <!-- channel dial -->
+  <section class="section">
+    <div class="section-head">
+      <h2>Pick your channel</h2>
+      <span class="rule"></span>
+      <a class="more" href="#">ALL SPORTS ▸</a>
+    </div>
+    <div class="dial">
+      <a class="channel c-cyan on-air" href="#">
+        <span class="num">CH 01</span>
+        <!-- whistle w/ soccer pea -->
+        <svg width="34" height="34" viewBox="0 0 48 48" fill="none"><path d="M6 16 h17 a13 13 0 1 1 -13 17 L6 24 Z" stroke="#46e8ff" stroke-width="3" stroke-linejoin="round"/><circle cx="27" cy="29" r="6" stroke="#f4ead8" stroke-width="2.2"/><path d="M27 24.6 l1.7 2.9 -1 3.1 h-3.1 l-1 -3.1 Z" fill="#f4ead8"/></svg>
+        <span class="sport">Soccer</span>
+        <span class="sub">WORLD CUP · EPL · LIGA MX</span>
+      </a>
+      <a class="channel c-gold soon" href="#">
+        <span class="num">CH 02</span>
+        <!-- whistle w/ basketball pea -->
+        <svg width="34" height="34" viewBox="0 0 48 48" fill="none"><path d="M6 16 h17 a13 13 0 1 1 -13 17 L6 24 Z" stroke="#ffc24b" stroke-width="3" stroke-linejoin="round"/><circle cx="27" cy="29" r="6" stroke="#f4ead8" stroke-width="2.2"/><path d="M21.5 27 a8 8 0 0 1 11 0 M27 23 v12 M21.5 31 a8 8 0 0 0 11 0" stroke="#f4ead8" stroke-width="1.6"/></svg>
+        <span class="sport">Basketball</span>
+        <span class="sub">NBA · WNBA · FIBA</span>
+      </a>
+      <a class="channel c-cyan soon" href="#">
+        <span class="num">CH 03</span>
+        <!-- whistle w/ puck pea -->
+        <svg width="34" height="34" viewBox="0 0 48 48" fill="none"><path d="M6 16 h17 a13 13 0 1 1 -13 17 L6 24 Z" stroke="#9fd8ff" stroke-width="3" stroke-linejoin="round"/><ellipse cx="27" cy="28" rx="6" ry="2.6" stroke="#f4ead8" stroke-width="2"/><path d="M21 28 v3.4 a6 2.6 0 0 0 12 0 V28" stroke="#f4ead8" stroke-width="2"/></svg>
+        <span class="sport">Hockey</span>
+        <span class="sub">NHL · PWHL · IIHF</span>
+      </a>
+      <a class="channel c-magenta soon" href="#">
+        <span class="num">CH 04</span>
+        <!-- whistle w/ tennis pea -->
+        <svg width="34" height="34" viewBox="0 0 48 48" fill="none"><path d="M6 16 h17 a13 13 0 1 1 -13 17 L6 24 Z" stroke="#ff4fd8" stroke-width="3" stroke-linejoin="round"/><circle cx="27" cy="29" r="6" stroke="#f4ead8" stroke-width="2.2"/><path d="M22.4 25.4 a8.5 8.5 0 0 1 0 7.2 M31.6 25.4 a8.5 8.5 0 0 0 0 7.2" stroke="#f4ead8" stroke-width="1.6"/></svg>
+        <span class="sport">Tennis</span>
+        <span class="sub">SLAMS · ATP · WTA</span>
+      </a>
+      <a class="channel c-gold soon" href="#">
+        <span class="num">CH 05</span>
+        <!-- whistle w/ wheel pea -->
+        <svg width="34" height="34" viewBox="0 0 48 48" fill="none"><path d="M6 16 h17 a13 13 0 1 1 -13 17 L6 24 Z" stroke="#ffc24b" stroke-width="3" stroke-linejoin="round"/><circle cx="27" cy="29" r="6" stroke="#f4ead8" stroke-width="2.2"/><circle cx="27" cy="29" r="2" fill="#f4ead8"/><path d="M27 23.5 V26 M27 32 v2.5 M21.8 26 l2.1 1.4 M32.2 26 l-2.1 1.4 M22.6 32.8 l1.9 -1.6 M31.4 32.8 l-1.9 -1.6" stroke="#f4ead8" stroke-width="1.5"/></svg>
+        <span class="sport">Motorsport</span>
+        <span class="sub">F1 · NASCAR · INDY</span>
+      </a>
+      <a class="channel c-green" href="#">
+        <span class="num">CH 99</span>
+        <!-- whistle w/ star pea (community) -->
+        <svg width="34" height="34" viewBox="0 0 48 48" fill="none"><path d="M6 16 h17 a13 13 0 1 1 -13 17 L6 24 Z" stroke="#54ff9f" stroke-width="3" stroke-linejoin="round"/><path d="M27 23.6 l1.7 3.4 3.8 0.6 -2.7 2.7 0.6 3.8 -3.4 -1.8 -3.4 1.8 0.6 -3.8 -2.7 -2.7 3.8 -0.6 Z" fill="#f4ead8"/></svg>
+        <span class="sport">Your League</span>
+        <span class="sub">KIDS · PICKUP · LOCAL</span>
+      </a>
+    </div>
+  </section>
+
+  <!-- ticket strip teaser -->
+  <section class="section">
+    <div class="section-head">
+      <h2>Your next tickets</h2>
+      <span class="rule"></span>
+      <a class="more" href="#">FULL SCHEDULE ▸</a>
+    </div>
+    <div class="ticket">
+      <div class="stub bg-cyan">
+        <span class="day">FRI · JUN 12</span>
+        <span class="time">3:00 PM</span>
+        <span class="zone">EDT · TORONTO</span>
+      </div>
+      <div class="body">
+        <span class="fixture">Canada vs Bosnia &amp; Herzegovina</span>
+        <span class="meta">WORLD CUP 26 · GROUP B · MATCHDAY 2 · BMO FIELD, TORONTO</span>
+      </div>
+      <div class="side">
+        <span>SEC GRP-B / ROW 02</span>
+        <span class="barcode"></span>
+        <span>SILBO·SYNCED ✓</span>
+      </div>
+    </div>
+    <div class="ticket is-tbd">
+      <div class="stub bg-gold">
+        <span class="day">SAT · JUN 27</span>
+        <span class="time">TBD</span>
+        <span class="zone">TIME SET SOON</span>
+      </div>
+      <div class="body">
+        <span class="fixture">Round of 32 — If Canada advance</span>
+        <span class="meta">WORLD CUP 26 · KNOCKOUT · WE'LL WHISTLE WHEN IT'S SET</span>
+      </div>
+      <div class="side">
+        <span>SLOT W-74</span>
+        <span class="barcode"></span>
+        <span>WATCHING ◌</span>
+      </div>
+    </div>
+  </section>
+
+  <footer style="margin-top: 70px; border-top: 2px solid var(--line); padding-top: 18px; display:flex; justify-content:space-between; font-family: var(--font-board); font-size: 10px; letter-spacing: 2px; color: var(--cream-dim);">
+    <span>SILBO SPORTS NETWORK — MOCKUP A / "CHANNEL S" DIRECTION</span>
+    <span>EN · FR · ES · PT — ALL TIMES LOCAL</span>
+  </footer>
+</div>
+</body>
+</html>

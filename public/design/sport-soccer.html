@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Silbo Sports — mockup / soccer channel</title>
+<link href="https://fonts.googleapis.com/css2?family=Bungee&family=Archivo+Black&family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="./silbo.css" />
+<style>
+  /* Mexico-86-inspired concentric tournament header (original geometry, no IP) */
+  .capsule-hero {
+    position: relative; margin-top: 36px; border: 2px solid var(--line); border-radius: 14px;
+    overflow: hidden; background: var(--panel);
+    display: grid; grid-template-columns: 1.2fr 0.8fr; min-height: 260px;
+  }
+  .capsule-hero .copy { padding: 38px; position: relative; z-index: 2; }
+  .rings {
+    position: absolute; right: -120px; top: 50%; transform: translateY(-50%);
+    width: 520px; height: 520px; border-radius: 50%;
+    background: repeating-radial-gradient(circle,
+      var(--cyan) 0 14px, var(--panel) 14px 42px, var(--magenta) 42px 56px, var(--panel) 56px 84px,
+      var(--gold) 84px 98px, var(--panel) 98px 126px);
+    opacity: 0.55; filter: saturate(1.2);
+    mask-image: radial-gradient(circle, black 0 52%, transparent 71%);
+  }
+  .flag-blocks { display: flex; gap: 5px; margin-top: 20px; }
+  .flag-blocks i { width: 26px; height: 16px; border-radius: 2px; display: block; }
+
+  .group-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+  .gtab { font-family: var(--font-head); font-size: 13px; padding: 9px 14px; border: 2px solid var(--line);
+    border-radius: 6px; color: var(--cream-dim); cursor: pointer; }
+  .gtab.on { background: var(--cyan); color: #04222b; border-color: var(--cyan); }
+
+  .team-wall { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+  .jersey {
+    position: relative; border: 2px solid var(--line); border-radius: 10px; padding: 12px;
+    background: var(--panel); cursor: pointer; display: flex; align-items: center; gap: 10px;
+    transition: transform 0.15s ease, border-color 0.15s ease;
+  }
+  .jersey:hover { transform: translateY(-2px); border-color: var(--cream-dim); }
+  .jersey .kit { width: 30px; height: 26px; border-radius: 4px 4px 6px 6px; position: relative; flex-shrink: 0; }
+  .jersey .kit::before, .jersey .kit::after { content:''; position: absolute; top: 0; width: 8px; height: 7px; background: inherit; }
+  .jersey .kit::before { left: -6px; border-radius: 4px 0 0 2px; }
+  .jersey .kit::after { right: -6px; border-radius: 0 4px 2px 0; }
+  .jersey b { font-family: var(--font-body); font-weight: 700; font-size: 13px; }
+  .jersey small { display:block; font-family: var(--font-board); font-size: 9px; letter-spacing: 1.5px; color: var(--cream-dim); }
+  .jersey.followed { border-color: var(--signal); box-shadow: 0 0 16px rgba(84,255,159,0.18); }
+  .jersey.followed::after { content: '✓'; position: absolute; top: 6px; right: 8px; color: var(--signal); font-weight: 700; }
+
+  .kit-stripes-ca { background: repeating-linear-gradient(90deg, #d22 0 8px, #fff 8px 12px, #d22 12px 20px); }
+  .kit-stripes-br { background: linear-gradient(180deg, #ffd34d 70%, #1da45f 70%); }
+  .kit-stripes-ar { background: repeating-linear-gradient(90deg, #9fd8ff 0 6px, #fff 6px 12px); }
+  .kit-stripes-us { background: linear-gradient(180deg, #fff 55%, #1b3a6b 55%); }
+  .kit-stripes-mx { background: linear-gradient(180deg, #1da45f 100%, #1da45f); }
+  .kit-stripes-en { background: #f4f4f4; }
+  .kit-stripes-fr { background: linear-gradient(90deg, #16387c 33%, #fff 33% 66%, #d22 66%); }
+  .kit-stripes-pt { background: linear-gradient(90deg, #1da45f 35%, #c1121f 35%); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="masthead">
+    <a class="brand" href="./home.html">
+      <span class="whistle-badge">
+        <svg width="38" height="38" viewBox="0 0 48 48" fill="none">
+          <path d="M6 16 h17 a13 13 0 1 1 -13 17 L6 24 Z" stroke="#f4ead8" stroke-width="3" stroke-linejoin="round"/>
+          <circle cx="27" cy="29" r="6" stroke="#46e8ff" stroke-width="2.5"/>
+          <path d="M27 23.5 l2 3.4 -1.2 3.6 h-3.6 l-1.2 -3.6 Z" fill="#46e8ff"/>
+          <path class="signal-arc" d="M40 10 a9 9 0 0 1 4 7" stroke="#ffc24b" stroke-width="2.5" stroke-linecap="round"/>
+          <path class="signal-arc s2" d="M37 6 a14 14 0 0 1 7 11" stroke="#ff4fd8" stroke-width="2.5" stroke-linecap="round"/>
+          <path class="signal-arc s3" d="M34 2 a19 19 0 0 1 10 15" stroke="#46e8ff" stroke-width="2.5" stroke-linecap="round"/>
+        </svg>
+      </span>
+      <span class="brand-name">SILBO<small>SPORTS NETWORK</small></span>
+    </a>
+    <nav class="nav">
+      <a href="./home.html">TONIGHT</a>
+      <a href="./schedule.html">MY SCHEDULE</a>
+      <a class="on" href="#">CHANNELS</a>
+      <a href="#">TICKETS</a>
+      <a href="#">YOUR LEAGUE</a>
+    </nav>
+    <span class="live-pill"><span class="dot"></span>CH 01 · SOCCER</span>
+  </header>
+
+  <!-- tournament capsule hero -->
+  <section class="capsule-hero">
+    <div class="copy">
+      <p class="kicker">Channel 01 · Tournament capsule</p>
+      <h1 class="mega" style="font-size: clamp(34px, 4.6vw, 58px); margin: 14px 0 12px;">World Cup <span class="accent">'26</span></h1>
+      <p class="deck" style="font-size: 14px;">
+        104 matches · 16 host cities · 3 countries. Follow your nations and Silbo keeps every
+        kickoff in your local time — group stage to final, whistle to whistle.
+      </p>
+      <div class="flag-blocks" aria-hidden="true">
+        <i style="background:#d22"></i><i style="background:#fff"></i><i style="background:#1da45f"></i>
+        <i style="background:#16387c"></i><i style="background:#ffd34d"></i><i style="background:#ff4fd8"></i>
+        <i style="background:#46e8ff"></i><i style="background:#f4ead8"></i>
+      </div>
+      <div style="display:flex; gap: 12px; margin-top: 24px;">
+        <a class="btn btn-primary" href="#">⟳ Subscribe to this capsule</a>
+        <a class="btn btn-ghost" href="#">Bracket view</a>
+      </div>
+    </div>
+    <div class="rings" aria-hidden="true"></div>
+  </section>
+
+  <!-- host city capsules -->
+  <section class="section">
+    <div class="section-head">
+      <h2>Host cities</h2>
+      <span class="rule"></span>
+      <a class="more" href="#">ALL 16 ▸</a>
+    </div>
+    <div style="display:flex; gap: 10px; flex-wrap: wrap;">
+      <span class="capsule" style="color: var(--cyan);">
+        <span class="skyline"><i style="height: 10px"></i><i style="height: 22px"></i><i style="height: 26px"></i><i style="height: 15px"></i><i style="height: 8px"></i></span>
+        <span class="name">Toronto</span><span class="rule"></span><span class="games">6 MATCHES</span>
+      </span>
+      <span class="capsule" style="color: var(--magenta);">
+        <span class="skyline"><i style="height: 18px"></i><i style="height: 12px"></i><i style="height: 24px"></i><i style="height: 20px"></i><i style="height: 11px"></i></span>
+        <span class="name">Mexico City</span><span class="rule"></span><span class="games">5 MATCHES</span>
+      </span>
+      <span class="capsule" style="color: var(--gold);">
+        <span class="skyline"><i style="height: 14px"></i><i style="height: 26px"></i><i style="height: 17px"></i><i style="height: 23px"></i><i style="height: 9px"></i></span>
+        <span class="name">Los Angeles</span><span class="rule"></span><span class="games">8 MATCHES</span>
+      </span>
+      <span class="capsule" style="color: var(--signal);">
+        <span class="skyline"><i style="height: 21px"></i><i style="height: 13px"></i><i style="height: 25px"></i><i style="height: 10px"></i><i style="height: 18px"></i></span>
+        <span class="name">Vancouver</span><span class="rule"></span><span class="games">7 MATCHES</span>
+      </span>
+      <span class="capsule" style="color: var(--cyan);">
+        <span class="skyline"><i style="height: 16px"></i><i style="height: 24px"></i><i style="height: 12px"></i><i style="height: 26px"></i><i style="height: 14px"></i></span>
+        <span class="name">New York</span><span class="rule"></span><span class="games">8 MATCHES</span>
+      </span>
+    </div>
+  </section>
+
+  <!-- kit wall (team picker) -->
+  <section class="section">
+    <div class="section-head">
+      <h2>The kit wall — pick your nations</h2>
+      <span class="rule"></span>
+      <span class="more">4 FOLLOWED</span>
+    </div>
+    <div class="group-tabs" style="margin-bottom: 16px;">
+      <span class="gtab on">ALL</span><span class="gtab">GRP A</span><span class="gtab">GRP B</span>
+      <span class="gtab">GRP C</span><span class="gtab">GRP D</span><span class="gtab">···</span>
+    </div>
+    <div class="team-wall">
+      <div class="jersey followed"><span class="kit kit-stripes-ca"></span><span><b>Canada</b><small>GROUP B · HOST</small></span></div>
+      <div class="jersey followed"><span class="kit kit-stripes-us"></span><span><b>USA</b><small>GROUP D · HOST</small></span></div>
+      <div class="jersey followed"><span class="kit kit-stripes-ar"></span><span><b>Argentina</b><small>GROUP J · CHAMPIONS</small></span></div>
+      <div class="jersey followed"><span class="kit kit-stripes-br"></span><span><b>Brazil</b><small>GROUP C</small></span></div>
+      <div class="jersey"><span class="kit kit-stripes-mx"></span><span><b>Mexico</b><small>GROUP A · HOST</small></span></div>
+      <div class="jersey"><span class="kit kit-stripes-en"></span><span><b>England</b><small>GROUP L</small></span></div>
+      <div class="jersey"><span class="kit kit-stripes-fr"></span><span><b>France</b><small>GROUP I</small></span></div>
+      <div class="jersey"><span class="kit kit-stripes-pt"></span><span><b>Portugal</b><small>GROUP K</small></span></div>
+    </div>
+  </section>
+
+  <!-- the board: this week on CH01 -->
+  <section class="section">
+    <div class="section-head">
+      <h2>This week on CH 01</h2>
+      <span class="rule"></span>
+      <a class="more" href="./schedule.html">MY SCHEDULE ▸</a>
+    </div>
+    <div class="board">
+      <div class="board-head"><span>■ GROUP STAGE — YOUR NATIONS</span><span>ALL TIMES EDT</span></div>
+      <div class="board-row">
+        <span class="t">FRI 15:00</span>
+        <span class="m">Canada vs Bosnia &amp; Herzegovina<small>GROUP B · TORONTO · TSN/CTV</small></span>
+        <span class="v">BMO FIELD</span>
+        <span class="flap ok">CONFIRMED</span>
+      </div>
+      <div class="board-row">
+        <span class="t">FRI 21:00</span>
+        <span class="m">USA vs Paraguay<small>GROUP D · LOS ANGELES · FOX</small></span>
+        <span class="v">SOFI</span>
+        <span class="flap ok">CONFIRMED</span>
+      </div>
+      <div class="board-row">
+        <span class="t">SAT 18:00</span>
+        <span class="m">Brazil vs Morocco<small>GROUP C · EAST RUTHERFORD</small></span>
+        <span class="v">METLIFE</span>
+        <span class="flap ok">CONFIRMED</span>
+      </div>
+      <div class="board-row">
+        <span class="t">TUE 21:00</span>
+        <span class="m">Argentina vs Algeria<small>GROUP J · KANSAS CITY</small></span>
+        <span class="v">ARROWHEAD</span>
+        <span class="flap ok">CONFIRMED</span>
+      </div>
+      <div class="board-row">
+        <span class="t">JUN 27 --:--</span>
+        <span class="m">R32 Slot W-74 — if Canada advance<small>KNOCKOUT · TEAMS SET AFTER GROUPS</small></span>
+        <span class="v">TBA</span>
+        <span class="flap tbd">TENTATIVE</span>
+      </div>
+    </div>
+  </section>
+
+  <div class="stripes" style="margin-top: 56px;"></div>
+
+  <footer style="margin-top: 20px; padding-top: 16px; display:flex; justify-content:space-between; font-family: var(--font-board); font-size: 10px; letter-spacing: 2px; color: var(--cream-dim);">
+    <span>CH 01 — SOCCER · CAPSULE: WORLD CUP '26</span>
+    <span>DATA: OPENFOOTBALL + SILBO SYNC</span>
+  </footer>
+</div>
+</body>
+</html>
