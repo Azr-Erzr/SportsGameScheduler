@@ -69,9 +69,58 @@
     color: #0b0a08;
     background: var(--mp-primary, #54ff9f);
   }
+
+  html {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--mp-primary, #54ff9f) 62%, transparent) color-mix(in srgb, var(--mp-surface, #16130f) 92%, #000);
+  }
+
+  ::-webkit-scrollbar {
+    width: 11px;
+    height: 11px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: color-mix(in srgb, var(--mp-surface, #16130f) 92%, #000);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    border: 3px solid color-mix(in srgb, var(--mp-surface, #16130f) 92%, #000);
+    border-radius: 999px;
+    background: linear-gradient(180deg, var(--mp-primary, #54ff9f), var(--mp-accent, #46e8ff));
+  }
+
+  ::-webkit-scrollbar-corner {
+    background: color-mix(in srgb, var(--mp-surface, #16130f) 92%, #000);
+  }
 }
 
 @layer components {
+  .silbo-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--mp-primary) 62%, transparent) color-mix(in srgb, var(--mp-surface) 90%, #000);
+  }
+
+  .silbo-scrollbar::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  .silbo-scrollbar::-webkit-scrollbar-track {
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--mp-surface) 88%, #000);
+  }
+
+  .silbo-scrollbar::-webkit-scrollbar-thumb {
+    border: 2px solid color-mix(in srgb, var(--mp-surface) 88%, #000);
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--mp-primary), var(--mp-accent));
+  }
+
+  .silbo-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(90deg, var(--mp-accent), var(--mp-export));
+  }
+
   /* CRT atmosphere: corner glow + faint scanlines. Sits behind content; the data-paper
      subtree (share pages/exports) turns it off. Disabled under prefers-reduced-motion
      stays static anyway — it does not animate. */
@@ -312,6 +361,8 @@
     color: #1d1812;
     padding: 18px;
     box-shadow: 0 18px 44px rgba(0, 0, 0, 0.28);
+    content-visibility: auto;
+    contain-intrinsic-size: 230px;
   }
 
   .art-capsule::after {
@@ -507,13 +558,16 @@
     position: relative;
     min-height: 420px;
     overflow: hidden;
+    contain: layout paint;
+    content-visibility: auto;
+    contain-intrinsic-size: 620px;
     border: 1px solid color-mix(in srgb, var(--mp-primary) 22%, transparent);
     border-radius: var(--radius-card);
     background:
       radial-gradient(circle at 55% 15%, color-mix(in srgb, var(--mp-accent) 18%, transparent), transparent 42%),
       linear-gradient(180deg, #07100f 0%, #0b0a08 100%);
     padding: 24px;
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.035), 0 22px 55px rgba(0, 0, 0, 0.28);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.035), 0 16px 38px rgba(0, 0, 0, 0.24);
   }
 
   .global-event-board-room {
@@ -560,18 +614,19 @@
       color-mix(in srgb, #0b0a08 82%, var(--signal-color));
     color: var(--signal-color);
     box-shadow:
-      0 0 0 1px rgba(244, 234, 216, 0.08),
-      0 0 18px color-mix(in srgb, var(--signal-color) 36%, transparent);
+      0 0 0 1px rgba(244, 234, 216, 0.07),
+      0 0 10px color-mix(in srgb, var(--signal-color) 28%, transparent);
     padding: 5px;
     pointer-events: auto;
     translate: -50% -50%;
-    transition: transform 180ms ease, border-color 180ms ease, background 180ms ease, box-shadow 180ms ease;
-    animation: globe-signal-float 8.5s ease-in-out infinite;
+    transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+    animation: globe-signal-float 12s ease-in-out infinite;
     animation-delay: var(--signal-delay, 0s);
+    will-change: transform;
   }
 
   .globe-signal.orbit-secondary {
-    animation-duration: 10.5s;
+    animation-duration: 14s;
   }
 
   .globe-signal span:not(.sport-object, .sport-object *) {
@@ -596,8 +651,8 @@
       radial-gradient(circle at 35% 25%, rgba(255, 255, 255, 0.26), transparent 38%),
       color-mix(in srgb, #0b0a08 68%, var(--signal-color));
     box-shadow:
-      0 0 0 2px color-mix(in srgb, var(--signal-color) 24%, transparent),
-      0 0 26px color-mix(in srgb, var(--signal-color) 56%, transparent);
+      0 0 0 2px color-mix(in srgb, var(--signal-color) 20%, transparent),
+      0 0 16px color-mix(in srgb, var(--signal-color) 38%, transparent);
     transform: scale(1.08);
   }
 
@@ -624,7 +679,7 @@
       linear-gradient(135deg, color-mix(in srgb, var(--signal-preview-color) 13%, transparent), transparent 42%),
       color-mix(in srgb, var(--color-surface) 88%, #000);
     padding: 10px 12px;
-    box-shadow: 0 16px 42px rgba(0, 0, 0, 0.28);
+    box-shadow: 0 12px 26px rgba(0, 0, 0, 0.24);
   }
 
   .globe-signal-preview p {
@@ -683,7 +738,7 @@
     letter-spacing: 0.14em;
     text-transform: uppercase;
     color: var(--color-paper);
-    box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.25);
+    box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.22);
   }
 
   .poster-globe {
@@ -701,8 +756,8 @@
       repeating-linear-gradient(90deg, rgba(244, 234, 216, 0.1) 0 1px, transparent 1px 28px),
       repeating-linear-gradient(0deg, rgba(244, 234, 216, 0.08) 0 1px, transparent 1px 28px),
       radial-gradient(circle, #143938 0%, #071817 66%, transparent 67%);
-    box-shadow: 0 0 65px color-mix(in srgb, var(--mp-accent) 28%, transparent);
-    opacity: 0.92;
+    box-shadow: 0 0 34px color-mix(in srgb, var(--mp-accent) 20%, transparent);
+    opacity: 0.88;
   }
 
   .global-event-board-room .poster-globe {
@@ -717,7 +772,7 @@
     inset: 0;
     border-radius: inherit;
     background: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.04) 0 2px, transparent 2px 5px);
-    mix-blend-mode: screen;
+    opacity: 0.72;
   }
 
   .poster-orbit {
@@ -760,6 +815,7 @@
     margin-top: 66px;
     overflow-x: auto;
     padding-bottom: 4px;
+    overscroll-behavior-inline: contain;
   }
 
   .global-event-board-room .poster-stack {
@@ -789,7 +845,7 @@
     border-radius: 3px 3px 12px 12px;
     background: #f4ead8;
     color: #1d1812;
-    box-shadow: 0 16px 35px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 12px 26px rgba(0, 0, 0, 0.32);
     transform: rotate(var(--tilt, -1deg));
     transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
   }
@@ -799,8 +855,8 @@
     transform: translateY(-4px) rotate(0deg);
     border-color: var(--poster-primary);
     box-shadow:
-      0 22px 44px rgba(0, 0, 0, 0.45),
-      0 0 0 2px color-mix(in srgb, var(--poster-primary) 24%, transparent);
+      0 16px 30px rgba(0, 0, 0, 0.34),
+      0 0 0 2px color-mix(in srgb, var(--poster-primary) 20%, transparent);
   }
 
   .poster-stack a:nth-child(2n) .event-poster-card { --tilt: 1.5deg; }
@@ -824,8 +880,7 @@
     background:
       radial-gradient(circle at 30% 26%, rgba(255, 255, 255, 0.24), transparent 18%),
       repeating-linear-gradient(0deg, rgba(244, 234, 216, 0.08) 0 1px, transparent 1px 6px);
-    mix-blend-mode: screen;
-    opacity: 0.45;
+    opacity: 0.24;
     pointer-events: none;
   }
 
@@ -878,19 +933,19 @@
     height: 74px;
     flex: 0 0 auto;
     isolation: isolate;
-    filter: drop-shadow(9px 8px 0 rgba(0, 0, 0, 0.22)) drop-shadow(0 0 14px color-mix(in srgb, var(--sport-object-primary) 28%, transparent));
+    filter: none;
   }
 
   .sport-object-md {
     width: 44px;
     height: 44px;
-    filter: drop-shadow(5px 4px 0 rgba(0, 0, 0, 0.18)) drop-shadow(0 0 10px color-mix(in srgb, var(--sport-object-primary) 24%, transparent));
+    filter: none;
   }
 
   .sport-object-sm {
     width: 24px;
     height: 24px;
-    filter: drop-shadow(2px 2px 0 rgba(0, 0, 0, 0.2));
+    filter: none;
   }
 
   .sport-object-core,
@@ -908,7 +963,9 @@
       linear-gradient(135deg, var(--sport-object-primary), var(--sport-object-accent));
     box-shadow:
       inset -10px -12px 0 rgba(0, 0, 0, 0.18),
-      inset 8px 8px 0 rgba(255, 255, 255, 0.12);
+      inset 8px 8px 0 rgba(255, 255, 255, 0.12),
+      4px 4px 0 rgba(0, 0, 0, 0.18),
+      0 0 12px color-mix(in srgb, var(--sport-object-primary) 20%, transparent);
   }
 
   .sport-object-detail {
@@ -1137,7 +1194,9 @@
     border-radius: 3px;
     background: #06291e;
     color: #f4ead8;
-    box-shadow: 0 14px 38px rgba(0, 0, 0, 0.25);
+    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.22);
+    content-visibility: auto;
+    contain-intrinsic-size: 110px;
   }
 
   .feature-ribbon-stripes {
@@ -1197,6 +1256,8 @@
       #08111a;
     padding: 24px;
     box-shadow: 0 16px 40px rgba(0, 0, 0, 0.24);
+    content-visibility: auto;
+    contain-intrinsic-size: 260px;
   }
 
   .manifesto-bars {
@@ -1250,6 +1311,8 @@
     background-color: #f4ead8;
     color: #1d1812;
     padding: 20px;
+    content-visibility: auto;
+    contain-intrinsic-size: 140px;
   }
 
   .sport-identity-tile h2 {
@@ -1301,6 +1364,18 @@
   }
 
   @media (max-width: 700px) {
+    .silbo-scrollbar::-webkit-scrollbar {
+      width: 7px;
+      height: 7px;
+    }
+
+    .broadcast-air {
+      background:
+        radial-gradient(680px 330px at 80% -10%, color-mix(in srgb, var(--mp-primary) 8%, transparent), transparent 62%),
+        radial-gradient(560px 300px at -10% 105%, color-mix(in srgb, var(--mp-accent) 5%, transparent), transparent 64%);
+      opacity: 0.75;
+    }
+
     .art-capsule {
       grid-template-columns: 1fr;
       gap: 18px;
@@ -1325,12 +1400,15 @@
     }
 
     .global-event-board {
-      min-height: 520px;
+      min-height: 500px;
       padding: 18px;
+      background:
+        radial-gradient(circle at 68% 16%, color-mix(in srgb, var(--mp-accent) 12%, transparent), transparent 38%),
+        linear-gradient(180deg, #07100f 0%, #0b0a08 100%);
     }
 
     .global-event-board-room {
-      min-height: 620px;
+      min-height: 540px;
     }
 
     .global-event-board h2 {
@@ -1354,6 +1432,9 @@
     .globe-signal {
       min-width: 40px;
       min-height: 40px;
+      animation: none;
+      box-shadow: 0 0 0 1px rgba(244, 234, 216, 0.07);
+      will-change: auto;
     }
 
     .globe-signal span:not(.sport-object, .sport-object *) {
@@ -1361,16 +1442,24 @@
     }
 
     .room-tabs {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      width: 100%;
-      max-width: none;
+      display: none;
     }
 
     .poster-globe {
       top: 42%;
       height: 280px;
       width: 280px;
+      background:
+        radial-gradient(circle at 35% 36%, color-mix(in srgb, var(--mp-primary) 46%, transparent), transparent 13%),
+        radial-gradient(circle at 64% 43%, color-mix(in srgb, var(--color-neon-magenta) 38%, transparent), transparent 17%),
+        radial-gradient(circle at 55% 62%, color-mix(in srgb, var(--mp-export) 32%, transparent), transparent 14%),
+        radial-gradient(circle, #143938 0%, #071817 66%, transparent 67%);
+      box-shadow: 0 0 22px color-mix(in srgb, var(--mp-accent) 14%, transparent);
+      opacity: 0.68;
+    }
+
+    .poster-globe::after {
+      opacity: 0.22;
     }
 
     .global-event-board-room .poster-globe {
@@ -1381,6 +1470,8 @@
 
     .poster-orbit {
       width: 360px;
+      opacity: 0.26;
+      border-style: solid;
     }
 
     .global-event-board-room .poster-orbit {
@@ -1390,8 +1481,7 @@
     }
 
     .global-event-board-room .poster-orbit-two {
-      width: 480px;
-      height: 156px;
+      display: none;
     }
 
     .poster-stack {
@@ -1412,6 +1502,19 @@
     .event-poster-card {
       min-width: 172px;
       grid-template-rows: 130px 1fr;
+      box-shadow: 0 9px 18px rgba(0, 0, 0, 0.28);
+    }
+
+    .event-poster-card:hover,
+    .event-poster-card.is-active {
+      transform: translateY(-2px) rotate(0deg);
+      box-shadow:
+        0 11px 20px rgba(0, 0, 0, 0.3),
+        0 0 0 1px color-mix(in srgb, var(--poster-primary) 24%, transparent);
+    }
+
+    .event-poster-art::after {
+      display: none;
     }
 
     .sport-object {
@@ -1427,6 +1530,17 @@
     .sport-object-sm {
       width: 26px;
       height: 26px;
+    }
+
+    .sport-object-core {
+      box-shadow:
+        inset -6px -8px 0 rgba(0, 0, 0, 0.16),
+        inset 5px 5px 0 rgba(255, 255, 255, 0.1),
+        2px 2px 0 rgba(0, 0, 0, 0.2);
+    }
+
+    .feature-ribbon {
+      box-shadow: none;
     }
 
     .manifesto-poster {

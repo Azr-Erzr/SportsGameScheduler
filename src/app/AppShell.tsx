@@ -58,7 +58,7 @@ function MobileNav() {
   return (
     <nav
       aria-label="Primary mobile navigation"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-primary/15 bg-surface/95 px-2 pb-[calc(env(safe-area-inset-bottom)+0.55rem)] pt-2 shadow-[0_-10px_28px_rgba(15,23,42,0.08)] backdrop-blur-xl md:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-primary/15 bg-surface px-2 pb-[calc(env(safe-area-inset-bottom)+0.55rem)] pt-2 shadow-[0_-8px_22px_rgba(0,0,0,0.24)] md:hidden"
     >
       <div className="mx-auto flex max-w-md items-center justify-between gap-1">
         {navItems.map(({ to, labelKey, mobileLabel, icon: Icon }) => (
@@ -101,7 +101,7 @@ export function AppShell() {
     <SportThemeProvider theme={theme}>
       <div className={`min-h-svh bg-page text-ink motif-${theme.motifs.background}`}>
         <div className="broadcast-air" aria-hidden="true" />
-        <header className="sticky top-0 z-40 border-b border-primary/15 bg-surface/85 backdrop-blur-lg">
+        <header className="sticky top-0 z-40 border-b border-primary/15 bg-surface/95 md:bg-surface/85 md:backdrop-blur-lg">
           <div className="mx-auto flex w-full max-w-[1460px] items-center justify-between gap-2 px-3 py-2.5 sm:gap-4 sm:px-4">
             <SportSwitcher />
 

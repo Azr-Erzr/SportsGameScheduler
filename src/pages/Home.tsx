@@ -266,7 +266,7 @@ export function HomePage() {
             Explore all
           </Link>
         </div>
-        <div className="flex snap-x gap-3 overflow-x-auto pb-3">
+        <div className="silbo-scrollbar flex snap-x gap-3 overflow-x-auto pb-3">
           {spotlightEvents.map((event, index) => (
             <ProgramCoverCard key={event.title} event={event} index={index} />
           ))}

@@ -145,7 +145,7 @@ function WorldCupPlanner() {
       />
 
       {/* Host-city capsules (moodboard city badges) with real venue counts. */}
-      <div className="flex snap-x gap-2.5 overflow-x-auto pb-1">
+      <div className="silbo-scrollbar flex snap-x gap-2.5 overflow-x-auto pb-1">
         {hostCities.map(([city, count], index) => (
           <div
             key={city}
@@ -207,7 +207,7 @@ function WorldCupPlanner() {
             />
           </label>
 
-          <div className="grid max-h-[480px] grid-cols-1 gap-1 overflow-y-auto pr-1">
+          <div className="silbo-scrollbar grid max-h-[480px] grid-cols-1 gap-1 overflow-y-auto pr-1">
             {visibleTeams.map((team) => {
               const selected = followedTeams.includes(team)
               return (

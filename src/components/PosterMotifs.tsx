@@ -237,6 +237,7 @@ export function GlobalEventBoard({ events, variant = 'compact' }: { events: Post
   const [activeIndex, setActiveIndex] = useState(0)
   const activeEvent = events[activeIndex] ?? events[0]
   const activeTheme = getTheme(activeEvent?.sportKey ?? 'neutral')
+  const activate = (index: number) => setActiveIndex((current) => (current === index ? current : index))
 
   return (
     <section className={`global-event-board ${variant === 'room' ? 'global-event-board-room' : ''}`}>
@@ -264,9 +265,9 @@ export function GlobalEventBoard({ events, variant = 'compact' }: { events: Post
               }
               aria-pressed={isActive}
               aria-label={`${position.label}: ${event.title}`}
-              onClick={() => setActiveIndex(index)}
-              onFocus={() => setActiveIndex(index)}
-              onMouseEnter={() => setActiveIndex(index)}
+              onClick={() => activate(index)}
+              onFocus={() => activate(index)}
+              onMouseEnter={() => activate(index)}
             >
               <SportObjectIcon sportKey={event.sportKey} size="sm" />
               <span>{event.label}</span>
@@ -303,9 +304,9 @@ export function GlobalEventBoard({ events, variant = 'compact' }: { events: Post
         <Bell size={24} className="text-export max-sm:hidden" />
       </div>
 
-      <div className="poster-stack">
+      <div className="poster-stack silbo-scrollbar">
         {events.slice(0, 4).map((event, index) => (
-          <EventPosterCard key={event.title} event={event} index={index} active={index === activeIndex} onFocus={() => setActiveIndex(index)} />
+          <EventPosterCard key={event.title} event={event} index={index} active={index === activeIndex} onFocus={() => activate(index)} />
         ))}
       </div>
     </section>
@@ -314,7 +315,7 @@ export function GlobalEventBoard({ events, variant = 'compact' }: { events: Post
 
 export function PosterFeatureStrip() {
   return (
-    <section className="feature-ribbon">
+    <section className="feature-ribbon silbo-scrollbar">
       <div className="feature-ribbon-stripes" aria-hidden="true" />
       {featureItems.map(({ icon: Icon, title, body }) => (
         <div key={title} className="feature-ribbon-cell">
