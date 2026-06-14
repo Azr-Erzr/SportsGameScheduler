@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { Match } from '../domain/match'
-import { supabase } from '../lib/supabase'
+import { getSupabaseClient } from '../lib/supabase'
 import { groupMatches as bundledMatches } from './worldcup'
 
 // Live schedule source: reads public events from Supabase (RLS: visibility='public'),
@@ -23,6 +23,7 @@ let cache: { matches: Match[]; source: MatchSource } | null = null
 let inflight: Promise<{ matches: Match[]; source: MatchSource }> | null = null
 
 async function fetchLiveMatches(): Promise<{ matches: Match[]; source: MatchSource }> {
+  const supabase = await getSupabaseClient()
   if (!supabase) return { matches: bundledMatches, source: 'local' }
 
   const { data, error } = await supabase

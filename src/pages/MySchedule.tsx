@@ -1,4 +1,3 @@
-import { AnimatePresence } from 'framer-motion'
 import { CalendarDays, Copy, Download, FileImage, Globe2, Plus, X, Zap } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
@@ -223,7 +222,6 @@ export function MySchedulePage() {
 
           {exportMessage && <p className="text-sm font-medium text-primary">{exportMessage}</p>}
 
-          <AnimatePresence mode="popLayout">
             {schedule.map((match, index) => (
               <MatchCard
                 key={`${match.date}-${match.team1}-${match.team2}`}
@@ -235,7 +233,6 @@ export function MySchedulePage() {
                 hour12={prefs.hour12}
               />
             ))}
-          </AnimatePresence>
           {schedule.length === 0 && (
             <EmptyState title="No events in this range" body="Try a wider range, or follow more teams." />
           )}

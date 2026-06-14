@@ -1,11 +1,10 @@
-import { AnimatePresence } from 'framer-motion'
 import { Check, Search, Sparkles, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { useAppState } from '../app/state-context'
 import { CityPicker } from '../components/CityPicker'
 import { MatchCard } from '../components/MatchCard'
-import { PosterFeatureStrip, SportIdentityTile, TournamentCapsule } from '../components/PosterMotifs'
+import { SportChannelBanner } from '../components/SportChannelBanner'
 import { Button, EmptyState, Panel, PanelHeading } from '../components/ui'
 import { deriveTeams, filterMatchesForTeams, useMatches } from '../data/liveMatches'
 import { allMatches, featuredTeams } from '../data/worldcup'
@@ -52,13 +51,12 @@ export function SportPage() {
 function ComingSoonSportPage({ sport }: { sport: SportInfo }) {
   return (
     <div className="space-y-5">
-      <SportIdentityTile sportKey={sport.key} />
-      <TournamentCapsule
-        title={`${sport.label} channel`}
+      <SportChannelBanner
+        title={`${sport.label} Channel`}
         kicker="Source testing capsule"
         sportKey={sport.key}
         body={`${sport.flagshipLeague} will light up as soon as licensed schedule data is connected. ${sport.sourceNote ?? 'Provider coverage is being reviewed.'}`}
-        ctaLabel="Back to explore"
+        ctaLabel="Back to sports"
         ctaTo="/explore"
         stats={[
           { value: 'API', label: 'Review' },
@@ -67,15 +65,6 @@ function ComingSoonSportPage({ sport }: { sport: SportInfo }) {
           { value: 'Sync', label: 'Ready' },
         ]}
       />
-      <PosterFeatureStrip />
-      <div className="flex flex-wrap gap-2">
-        <Link to="/explore">
-          <Button variant="ghost">Back to Explore</Button>
-        </Link>
-        <Link to="/sports/soccer">
-          <Button>Open Soccer</Button>
-        </Link>
-      </div>
     </div>
   )
 }
@@ -129,7 +118,7 @@ function WorldCupPlanner() {
 
   return (
     <div className="space-y-4">
-      <TournamentCapsule
+      <SportChannelBanner
         title="World Cup '26"
         kicker={source === 'live' ? 'Channel 01 / Live tournament capsule' : 'Channel 01 / Bundled tournament capsule'}
         sportKey="soccer"
@@ -246,7 +235,6 @@ function WorldCupPlanner() {
               ? `${filteredMatches.length} matches for ${followedTeams.length} teams`
               : `All ${filteredMatches.length} confirmed group-stage matches — follow teams to narrow this down`}
           </p>
-          <AnimatePresence mode="popLayout">
             {filteredMatches.map((match, index) => (
               <MatchCard
                 key={`${match.date}-${match.team1}-${match.team2}`}
@@ -256,7 +244,6 @@ function WorldCupPlanner() {
                 highlightTeams={followedTeams}
               />
             ))}
-          </AnimatePresence>
         </section>
       </div>
     </div>

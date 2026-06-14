@@ -1,4 +1,3 @@
-import { AnimatePresence, motion } from 'framer-motion'
 import { LogIn, LogOut, Mail, UserCircle } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { useAppState } from '../app/state-context'
@@ -82,14 +81,8 @@ export function AuthButton() {
         <span className="hidden sm:inline">Sign in</span>
       </Button>
 
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0, y: -8, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -8, scale: 0.98 }}
-            className="fixed inset-x-3 top-[4.6rem] z-50 rounded-card border border-primary/15 bg-surface p-4 shadow-xl sm:absolute sm:inset-x-auto sm:right-0 sm:top-[calc(100%+10px)] sm:w-96"
-          >
+      {open && (
+          <div className="auth-popover fixed inset-x-3 top-[4.6rem] z-50 rounded-card border border-primary/15 bg-surface p-4 shadow-xl sm:absolute sm:inset-x-auto sm:right-0 sm:top-[calc(100%+10px)] sm:w-96">
             <h2 className="text-base font-bold text-primary">Back up your schedule</h2>
             <p className="mt-1 text-sm text-ink/60">
               Sign in when you want cross-device follows, live feed management, alerts, or custom-league publishing.
@@ -119,9 +112,8 @@ export function AuthButton() {
             </Button>
 
             {message && <p className="mt-3 text-sm font-medium text-primary">{message}</p>}
-          </motion.div>
+          </div>
         )}
-      </AnimatePresence>
     </div>
   )
 }

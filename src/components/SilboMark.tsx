@@ -19,20 +19,30 @@ export type SportGlyphKey =
   | 'olympic'
   | 'custom'
 
-function WhistleBody({ color, strokeWidth = 2.75 }: { color: string; strokeWidth?: number }) {
+// FILLED silhouette (MP3 P0: "simple silhouette, minimal internal linework"). A solid
+// chamber + tube union reads as a whistle at 16px where the stroked outline read as noise.
+function WhistleBody({ color }: { color: string }) {
   return (
     <>
-      <path
-        className="silbo-whistle-line"
-        d="M5.5 22.5 h29 l5 -5 h14.2 v7 h-7.6 a13.6 13.6 0 1 1 -16.2 16.4 H5.8 a3 3 0 0 1 -3 -3 V25.6 a3 3 0 0 1 2.7 -3.1 Z"
-        stroke={color}
-        strokeWidth={strokeWidth}
-        strokeLinejoin="round"
-        strokeLinecap="round"
-        fill="none"
-      />
+      {/* chamber */}
+      <circle cx="44.5" cy="32.5" r="14.5" fill={color} />
+      {/* mouthpiece tube, merging into the chamber */}
+      <rect x="2.5" y="21" width="31" height="12.5" rx="6.2" fill={color} />
+      {/* lanyard knuckle ring */}
+      <circle cx="35.5" cy="12.5" r="4" stroke={color} strokeWidth={3.4} fill="none" />
     </>
   )
+}
+
+/** Relative luminance for short/long hex colors; falls back to "dark" for CSS vars. */
+function isLightColor(color: string): boolean {
+  const hex = color.startsWith('#') ? color.slice(1) : null
+  if (!hex || (hex.length !== 3 && hex.length !== 6)) return false
+  const full = hex.length === 3 ? hex.split('').map((c) => c + c).join('') : hex
+  const r = parseInt(full.slice(0, 2), 16)
+  const g = parseInt(full.slice(2, 4), 16)
+  const b = parseInt(full.slice(4, 6), 16)
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 150
 }
 
 function SignalArcs({ size = 1 }: { size?: number }) {
@@ -161,12 +171,14 @@ export function SilboBrandMark({
   peaColor?: string
   arcs?: boolean
 }) {
+  const pea = isLightColor(color) ? '#0b0a08' : peaColor
   return (
     <svg className="silbo-mark" width={size} height={(size * 54) / 72} viewBox={VIEWBOX} fill="none" aria-hidden="true">
-      <WhistleBody color={color} strokeWidth={2.9} />
+      <WhistleBody color={color} />
       {arcs && <SignalArcs />}
-      <circle className="silbo-clock-face" cx="43.5" cy="32.5" r="6.2" stroke={peaColor} strokeWidth={1.8} fill="none" />
-      <path className="silbo-clock-hand" d="M43.5 29 v3.5 l2.7 2" stroke={peaColor} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" fill="none" />
+      {/* clock pea on the solid chamber */}
+      <circle className="silbo-clock-face" cx="44.5" cy="32.5" r="7" stroke={pea} strokeWidth={2.2} fill="none" />
+      <path className="silbo-clock-hand" d="M44.5 28.2 v4.3 l3.2 2.4" stroke={pea} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" fill="none" />
     </svg>
   )
 }
@@ -185,6 +197,9 @@ export function SilboChannelBadge({
   glyph?: SportGlyphKey | string
 }) {
   const height = (size * 54) / 72
+  // The glyph sits ON the solid chamber, so it must contrast with the FILL color, not the
+  // page: dark glyph on light sport colors (tennis lime, gold), cream on deep ones.
+  const glyphColor = isLightColor(color) ? '#0b0a08' : iconColor
   return (
     <span
       className="silbo-channel-badge relative inline-block"
@@ -193,7 +208,7 @@ export function SilboChannelBadge({
     >
       <svg width={size} height={height} viewBox={VIEWBOX} fill="none" className="absolute inset-0">
         <WhistleBody color={color} />
-        <SportGlyph glyph={glyph} fallback={Icon} color={iconColor} />
+        <SportGlyph glyph={glyph} fallback={Icon} color={glyphColor} />
       </svg>
       <span className="silbo-sheen" aria-hidden="true" />
     </span>

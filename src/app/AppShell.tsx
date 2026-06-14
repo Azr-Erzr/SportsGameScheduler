@@ -1,5 +1,4 @@
-import { motion } from 'framer-motion'
-import { CalendarDays, Compass, Home, ListChecks, Moon, Share2, Sun, Users } from 'lucide-react'
+import { Home, ListChecks, Moon, Share2, Sun, Users } from 'lucide-react'
 import { NavLink, Outlet, useLocation, useParams } from 'react-router-dom'
 import { AuthButton } from '../components/AuthButton'
 import { SportSwitcher } from '../components/SportSwitcher'
@@ -13,9 +12,7 @@ import { SportThemeProvider } from '../theme/SportThemeProvider'
 const navItems = [
   { to: '/', labelKey: 'nav.home', mobileLabel: 'Home', icon: Home },
   { to: '/my-schedule', labelKey: 'nav.mySchedule', mobileLabel: 'Schedule', icon: ListChecks },
-  { to: '/explore', labelKey: 'nav.explore', mobileLabel: 'Picks', icon: Compass },
-  { to: '/calendar', labelKey: 'nav.calendar', mobileLabel: 'Sync', icon: CalendarDays },
-  { to: '/exports', labelKey: 'nav.exports', mobileLabel: 'Packs', icon: Share2 },
+  { to: '/exports', labelKey: 'nav.exports', mobileLabel: 'Exports', icon: Share2 },
   { to: '/custom-leagues', labelKey: 'nav.customLeagues', mobileLabel: 'Local', icon: Users },
 ]
 
@@ -31,13 +28,7 @@ function DesktopNav() {
         >
           {({ isActive }) => (
             <>
-              {isActive && (
-                <motion.span
-                  layoutId="nav-pill"
-                  transition={{ type: 'spring', stiffness: 500, damping: 38 }}
-                  className="absolute inset-0 rounded-lg bg-primary"
-                />
-              )}
+              {isActive && <span className="absolute inset-0 rounded-lg bg-primary transition-colors" />}
               <span
                 className={`relative z-10 flex items-center gap-2 transition-colors ${
                   isActive ? 'text-void' : 'text-ink/70 hover:text-primary'
@@ -101,7 +92,9 @@ export function AppShell() {
     <SportThemeProvider theme={theme}>
       <div className={`min-h-svh bg-page text-ink motif-${theme.motifs.background}`}>
         <div className="broadcast-air" aria-hidden="true" />
-        <header className="sticky top-0 z-40 border-b border-primary/15 bg-surface/95 md:bg-surface/85 md:backdrop-blur-lg">
+        {/* PERF: no backdrop-blur on the sticky header — blur over a fixed gradient forces a
+            full-viewport recomposite on every scroll frame. Near-opaque surface instead. */}
+        <header className="sticky top-0 z-40 border-b border-primary/15 bg-surface/95">
           <div className="mx-auto flex w-full max-w-[1460px] items-center justify-between gap-2 px-3 py-2.5 sm:gap-4 sm:px-4">
             <SportSwitcher />
 
@@ -126,7 +119,7 @@ export function AppShell() {
           <Outlet />
         </main>
 
-        <footer className="relative z-[1] mx-auto w-full max-w-[1460px] px-4 pb-28 pt-4 md:pb-8">
+        <footer className="relative z-[1] mx-auto w-full max-w-[1460px] px-4 pb-40 pt-4 md:pb-8">
           <div className="color-bars mb-3 h-1.5 w-28 opacity-70" aria-hidden="true" />
           <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink/45">
             {brand.appName} — schedules generated locally in your browser. Times shown in your

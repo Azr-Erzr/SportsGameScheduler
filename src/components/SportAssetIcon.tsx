@@ -1,0 +1,88 @@
+import type { CSSProperties } from 'react'
+import { getSport } from '../domain/sports'
+import { getTheme } from '../theme/themes'
+
+type SportAssetIconProps = {
+  sportKey: string
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'channel' | 'poster' | 'hero'
+  variant?: 'brush' | 'plate' | 'neon3d'
+  className?: string
+  label?: string
+}
+
+const aliases: Record<string, string> = {
+  american_football: 'football',
+  f1: 'motorsport',
+  formula1: 'motorsport',
+  nba: 'basketball',
+  wnba: 'basketball',
+  fiba: 'basketball',
+  nfl: 'football',
+  cfl: 'football',
+  nhl: 'hockey',
+  ufc: 'combat',
+  pfl: 'combat',
+  mma: 'combat',
+  athletics: 'track',
+  track_field: 'track',
+  trackfield: 'track',
+  olympics: 'olympic',
+  community: 'custom',
+}
+
+function sportAssetKey(key: string) {
+  const sport = getSport(key)
+  return aliases[sport?.badgeKey ?? key] ?? sport?.badgeKey ?? aliases[key] ?? key
+}
+
+function assetPath(key: string, variant: NonNullable<SportAssetIconProps['variant']>) {
+  const assetKey = sportAssetKey(key)
+  const folder = variant === 'neon3d' ? 'neon-3d' : variant === 'plate' ? 'brushed-plates' : 'brushed-mask'
+  return `/assets/sport-icons/${folder}/${assetKey}.png`
+}
+
+export function SportAssetIcon({
+  sportKey,
+  size = 'md',
+  variant = 'brush',
+  className = '',
+  label,
+}: SportAssetIconProps) {
+  const theme = getTheme(sportKey)
+  const src = assetPath(sportKey, variant)
+  const accessible = Boolean(label)
+
+  if (variant !== 'brush') {
+    return (
+      <img
+        src={src}
+        alt={label ?? ''}
+        aria-hidden={accessible ? undefined : true}
+        className={`sport-asset-image sport-asset-${size} ${className}`}
+        draggable={false}
+        loading="lazy"
+        decoding="async"
+      />
+    )
+  }
+
+  return (
+    <span
+      className={`sport-asset-icon sport-asset-${size} ${className}`}
+      style={
+        {
+          '--sport-asset-url': `url("${src}")`,
+          '--sport-asset-primary': theme.colors.primary,
+          '--sport-asset-accent': theme.colors.accent,
+        } as CSSProperties
+      }
+      role={accessible ? 'img' : undefined}
+      aria-label={label}
+      aria-hidden={accessible ? undefined : true}
+    >
+      <span className="sport-asset-glow" />
+      <span className="sport-asset-core" />
+      <span className="sport-asset-sheen" />
+    </span>
+  )
+}

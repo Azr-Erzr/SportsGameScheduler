@@ -16,6 +16,11 @@ dist-ssr
 !.env.example
 supabase/.temp/
 
+# Local design handoff files; processed assets live in public/assets and design/.
+docs/*.zip
+docs/*icons.png
+design/incoming/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

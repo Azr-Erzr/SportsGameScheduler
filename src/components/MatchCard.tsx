@@ -1,4 +1,3 @@
-import { motion } from 'framer-motion'
 import { AlertTriangle, Bell, ChevronDown, MapPin, RadioTower, Tv } from 'lucide-react'
 import { useState } from 'react'
 import type { Match } from '../domain/match'
@@ -28,14 +27,10 @@ export function MatchCard({
   const timeOptions = { locale, hour12: hour12 ?? undefined }
 
   return (
-    <motion.article
-      layout
-      initial={{ opacity: 0, x: -18 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, scale: 0.96 }}
-      whileHover={{ y: -2 }}
-      transition={{ type: 'spring', stiffness: 420, damping: 30 }}
-      className={`ticket-paper relative overflow-hidden p-0 ${
+    // PERF: plain article + CSS transitions. Framer `layout` springs on 70+ list items
+    // measured the whole list every frame and was the main scroll-jank source.
+    <article
+      className={`ticket-paper relative overflow-hidden p-0 transition-transform duration-150 hover:-translate-y-0.5 ${
         conflicted ? 'outline outline-2 outline-offset-2 outline-neon-magenta' : ''
       }`}
     >
@@ -88,13 +83,7 @@ export function MatchCard({
       </button>
 
       {expanded && (
-        <motion.div
-          layout
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: 'auto' }}
-          exit={{ opacity: 0, height: 0 }}
-          className="mx-4 mb-3 grid gap-3 border-t border-dashed border-paper-ink/25 pt-3 text-paper-ink md:grid-cols-[1fr_280px]"
-        >
+        <div className="mx-4 mb-3 grid animate-[ticket-open_160ms_ease-out] gap-3 border-t border-dashed border-paper-ink/25 pt-3 text-paper-ink md:grid-cols-[1fr_280px]">
           <div className="grid gap-2 text-sm text-paper-ink/70 sm:grid-cols-2">
             <div className="rounded-lg bg-paper-ink/5 p-3">
               <p className="mb-1 flex items-center gap-2 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-paper-ink">
@@ -127,8 +116,8 @@ export function MatchCard({
               <Bell size={12} /> Alerts plug in here when times or providers change.
             </p>
           </div>
-        </motion.div>
+        </div>
       )}
-    </motion.article>
+    </article>
   )
 }

@@ -23,6 +23,9 @@ import { associationFootballLabel, t } from '../lib/i18n'
 import { formatLongDate, formatTime } from '../lib/time'
 import { getTheme, withSurfaceMode } from '../theme/themes'
 
+// Spotlight ordering rule (locked): always rank by expected viewership/importance, highest
+// first. `importance` is 0-100 and maps onto the future spotlight_events.global_importance
+// column, so the backend-driven version inherits the same contract.
 const spotlightEvents = [
   {
     title: 'FIFA World Cup 2026',
@@ -30,36 +33,89 @@ const spotlightEvents = [
     label: 'Live now',
     detail: 'Follow countries, bracket slots, and kickoff changes.',
     href: '/sports/soccer',
+    importance: 100,
   },
   {
     title: 'Formula 1 race weekends',
-    sportKey: 'f1',
+    sportKey: 'motorsport',
     label: 'Staged',
     detail: 'Practice, qualifying, sprint, and race sessions.',
     href: '/sports/f1',
-  },
-  {
-    title: 'WNBA schedule tracking',
-    sportKey: 'wnba',
-    label: 'Source testing',
-    detail: 'TheSportsDB premium, SportsDataIO, and Sportradar candidates.',
-    href: '/sports/wnba',
+    importance: 84,
   },
   {
     title: 'UFC / PFL fight cards',
-    sportKey: 'ufc',
+    sportKey: 'combat',
     label: 'Model ready',
     detail: 'Main cards, prelims, fighters, and late changes.',
     href: '/sports/ufc',
+    importance: 72,
+  },
+  {
+    title: 'WNBA schedule tracking',
+    sportKey: 'basketball',
+    label: 'Source testing',
+    detail: 'TheSportsDB premium, SportsDataIO, and Sportradar candidates.',
+    href: '/sports/wnba',
+    importance: 55,
   },
   {
     title: 'CFL and Grey Cup path',
-    sportKey: 'cfl',
+    sportKey: 'football',
     label: 'Canada focus',
     detail: 'Canadian kickoff times and broadcast-region fit.',
     href: '/sports/cfl',
+    importance: 45,
   },
-]
+  {
+    title: 'NHL and world hockey nights',
+    sportKey: 'hockey',
+    label: 'Model ready',
+    detail: 'Puck drops, IIHF windows, and playoff calendar testing.',
+    href: '/sports/hockey',
+    importance: 42,
+  },
+  {
+    title: 'Grand slam watch windows',
+    sportKey: 'tennis',
+    label: 'Template ready',
+    detail: 'Player follows, court order, and day/night session exports.',
+    href: '/sports/tennis',
+    importance: 39,
+  },
+  {
+    title: 'Major golf weekend board',
+    sportKey: 'golf',
+    label: 'Template ready',
+    detail: 'Rounds, tee sheets, cuts, and final-day broadcast windows.',
+    href: '/sports/golf',
+    importance: 36,
+  },
+  {
+    title: 'Diamond League and trials',
+    sportKey: 'track',
+    label: 'Source testing',
+    detail: 'Heats, finals, start lists, and athlete-follow scheduling.',
+    href: '/sports/track',
+    importance: 32,
+  },
+  {
+    title: 'Olympic sports capsule',
+    sportKey: 'olympic',
+    label: 'Source testing',
+    detail: 'Swimming, gymnastics, medal events, and federation feeds.',
+    href: '/sports/olympic',
+    importance: 30,
+  },
+  {
+    title: 'Community league schedules',
+    sportKey: 'custom',
+    label: 'On air',
+    detail: 'Create local schedules for families, teams, and clubs.',
+    href: '/custom-leagues',
+    importance: 24,
+  },
+].sort((a, b) => b.importance - a.importance)
 
 const exportPaths = [
   { icon: CalendarDays, title: 'Live calendar feeds', body: 'Subscribe once and let schedule changes update in place.' },
@@ -81,9 +137,9 @@ function ProgramCoverCard({
   const live = event.label === 'Live now'
 
   return (
-    <Link to={event.href} className="min-w-[270px] snap-start sm:min-w-[340px]">
+    <Link to={event.href} className="w-[270px] min-w-[270px] snap-start sm:w-[320px] sm:min-w-[320px]">
       <article
-        className="group relative h-full min-h-[178px] overflow-hidden rounded-card border-2 bg-surface p-4 transition-transform hover:-translate-y-1"
+        className="group relative h-[178px] overflow-hidden rounded-card border-2 bg-surface p-4 transition-transform hover:-translate-y-1"
         style={{
           borderColor: `${theme.colors.primary}55`,
           boxShadow: `inset 0 0 0 1px ${theme.colors.primary}14`,

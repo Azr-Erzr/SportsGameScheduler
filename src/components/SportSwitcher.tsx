@@ -1,11 +1,11 @@
-import { AnimatePresence, motion } from 'framer-motion'
 import { ChevronDown } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useAppState } from '../app/state-context'
 import { sports } from '../domain/sports'
 import { getTheme, withSurfaceMode } from '../theme/themes'
-import { SilboBrandMark, SilboChannelBadge } from './SilboMark'
+import { SilboBrandMark } from './SilboMark'
+import { SportAssetIcon } from './SportAssetIcon'
 
 // The brand block IS the sport selector: clicking the mark opens a themed bento
 // popover (one tile per sport, each wearing its own theme colors). Picking a sport navigates
@@ -22,6 +22,7 @@ export function SportSwitcher() {
   const activeKey = location.pathname === '/' ? 'neutral' : sportKey ?? 'soccer'
   const activeTheme = withSurfaceMode(getTheme(activeKey), prefs.themeMode)
   const activeSport = sports.find((sport) => sport.key === activeKey)
+  const sportIconVariant = prefs.themeMode === 'program' ? 'brush' : 'neon3d'
 
   useEffect(() => {
     if (!open) return
@@ -46,28 +47,19 @@ export function SportSwitcher() {
 
   return (
     <div ref={containerRef} className="relative">
-      <motion.button
+      <button
         type="button"
-        whileTap={{ scale: 0.97 }}
         onClick={() => setOpen((current) => !current)}
         aria-expanded={open}
         aria-haspopup="menu"
-        className="flex items-center gap-3 rounded-xl border border-transparent px-2 py-1.5 transition-colors hover:border-primary/20 hover:bg-primary/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        className="sport-switcher-trigger flex items-center gap-3 rounded-xl border border-transparent px-2 py-1.5 transition-colors hover:border-primary/20 hover:bg-primary/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       >
-        <motion.span
+        <span
           key={activeKey}
-          initial={{ scale: 0.6, rotate: -12, opacity: 0 }}
-          animate={{ scale: 1, rotate: 0, opacity: 1 }}
-          transition={{ type: 'spring', stiffness: 420, damping: 22 }}
-          className="flex items-center justify-center"
+          className="sport-switcher-mark flex items-center justify-center"
         >
-          {activeSport ? (
-            // The brand character lives inside every sport icon: sport object in the barrel.
-            <SilboChannelBadge icon={activeSport.icon} glyph={activeSport.badgeKey} color={activeTheme.colors.primary} size={48} />
-          ) : (
-            <SilboBrandMark size={44} color={activeTheme.colors.primary} />
-          )}
-        </motion.span>
+          <SilboBrandMark size={44} color={activeTheme.colors.primary} />
+        </span>
         <span className="text-left">
           <span className="neon-text block font-display text-base leading-tight tracking-wide">
             SILBO
@@ -76,53 +68,43 @@ export function SportSwitcher() {
             {activeSport ? `CH ${String(sports.indexOf(activeSport) + 1).padStart(2, '0')} - ${activeSport.label}` : 'Sports Network'}
           </span>
         </span>
-        <motion.span animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.25 }} className="text-ink/40">
+        <span className={`text-ink/40 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}>
           <ChevronDown size={16} />
-        </motion.span>
-      </motion.button>
+        </span>
+      </button>
 
-      <AnimatePresence>
-        {open && (
-          <motion.div
+      {open && (
+          <div
             role="menu"
-            initial={{ opacity: 0, y: -8, scale: 0.97 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -8, scale: 0.97 }}
-            transition={{ type: 'spring', stiffness: 420, damping: 30 }}
-            className="fixed inset-x-3 top-[4.2rem] z-50 origin-top rounded-2xl border border-primary/15 bg-surface p-3 shadow-xl sm:absolute sm:inset-x-auto sm:left-0 sm:top-[calc(100%+10px)] sm:w-[26rem]"
+            className="sport-switcher-menu silbo-scrollbar fixed inset-x-3 top-[4.2rem] z-50 max-h-[calc(100svh-5.2rem)] origin-top overflow-y-auto rounded-2xl border border-primary/15 bg-surface p-2.5 shadow-xl sm:absolute sm:inset-x-auto sm:left-0 sm:top-[calc(100%+10px)] sm:w-[36rem]"
           >
             <p className="board-label px-1 pb-2 text-ink/40">Pick your channel</p>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               {sports.map((sport, index) => {
                 const theme = withSurfaceMode(getTheme(sport.key), prefs.themeMode)
                 const isActive = sport.key === activeKey
                 return (
-                  <motion.button
+                  <button
                     key={sport.key}
                     type="button"
                     role="menuitem"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.04, type: 'spring', stiffness: 500, damping: 32 }}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.97 }}
                     onClick={() => pick(sport.key)}
-                    className="relative flex items-center gap-3 rounded-xl border-2 p-2.5 text-left transition-shadow hover:shadow-md"
+                    className="channel-tile relative flex min-h-[68px] items-center gap-3 rounded-xl border-2 px-3 py-2 text-left transition-[box-shadow,transform,background-color] hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
                     style={{
                       borderColor: isActive ? theme.colors.primary : `${theme.colors.primary}33`,
                       background: isActive ? `${theme.colors.primary}14` : 'transparent',
                       boxShadow: isActive ? `0 0 18px ${theme.colors.primary}30` : undefined,
                     }}
                   >
-                    <SilboChannelBadge icon={sport.icon} glyph={sport.badgeKey} color={theme.colors.primary} size={42} />
+                    <SportAssetIcon sportKey={sport.key} size="channel" variant={sportIconVariant} className="channel-tile-icon" label={`${sport.label} icon`} />
                     <span className="min-w-0 flex-1">
                       <span className="block font-mono text-[9px] tracking-[0.22em] text-ink/40">
                         CH {String(index + 1).padStart(2, '0')}
                       </span>
-                      <span className="block truncate text-sm font-bold" style={{ color: theme.colors.primary }}>
+                      <span className="block truncate text-base font-black uppercase leading-none" style={{ color: theme.colors.primary }}>
                         {sport.label}
                       </span>
-                      <span className="block truncate font-mono text-[10px] uppercase tracking-wide text-ink/50">
+                      <span className="mt-1 block truncate font-mono text-[10px] uppercase tracking-wide text-ink/60">
                         {sport.flagshipLeague}
                       </span>
                     </span>
@@ -136,13 +118,12 @@ export function SportSwitcher() {
                     >
                       {sport.enabled ? 'ON AIR' : 'SOON'}
                     </span>
-                  </motion.button>
+                  </button>
                 )
               })}
             </div>
-          </motion.div>
+          </div>
         )}
-      </AnimatePresence>
     </div>
   )
 }

@@ -1,24 +1,29 @@
 import { ArrowRight } from 'lucide-react'
+import type { CSSProperties } from 'react'
 import { Link } from 'react-router-dom'
+import { useAppState } from '../app/state-context'
+import { SportAssetIcon } from '../components/SportAssetIcon'
 import { sports } from '../domain/sports'
-import { getTheme } from '../theme/themes'
+import { getTheme, withSurfaceMode } from '../theme/themes'
 import { Badge, Panel } from '../components/ui'
 
 export function ExplorePage() {
+  const { prefs } = useAppState()
+  const iconVariant = prefs.themeMode === 'program' ? 'brush' : 'neon3d'
+
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-xl font-extrabold text-primary">Silbo Picks</h1>
+        <h1 className="text-xl font-extrabold text-primary">Sports directory</h1>
         <p className="text-sm text-ink/60">
-          One schedule across every sport you follow. Soccer is live now; more sports light up as data
-          sources come online.
+          Browse supported sport families, live coverage status, and source-readiness notes as new
+          leagues come online.
         </p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {sports.map((sport) => {
-          const theme = getTheme(sport.key)
-          const SportIcon = sport.icon
+          const theme = withSurfaceMode(getTheme(sport.key), prefs.themeMode)
           return (
             <Link key={sport.key} to={sport.key === 'custom' ? '/custom-leagues' : `/sports/${sport.key}`}>
               <Panel
@@ -27,10 +32,10 @@ export function ExplorePage() {
               >
                 <div className="flex items-start justify-between">
                   <span
-                    className="flex h-11 w-11 items-center justify-center rounded-xl text-void"
-                    style={{ background: `linear-gradient(135deg, ${theme.colors.primary}, ${theme.colors.accent})` }}
+                    className="explore-sport-mark flex h-14 w-14 items-center justify-center rounded-xl"
+                    style={{ '--explore-mark-primary': theme.colors.primary, '--explore-mark-accent': theme.colors.accent } as CSSProperties}
                   >
-                    <SportIcon size={22} strokeWidth={2.2} />
+                    <SportAssetIcon sportKey={sport.key} size="sm" variant={iconVariant} />
                   </span>
                   {sport.enabled ? (
                     <Badge tone="secondary">Live</Badge>

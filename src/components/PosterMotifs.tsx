@@ -13,9 +13,11 @@ import {
 import type { CSSProperties } from 'react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useAppState } from '../app/state-context'
 import { getSport } from '../domain/sports'
 import { getTheme } from '../theme/themes'
-import { SilboBrandMark, SilboChannelBadge } from './SilboMark'
+import { SilboBrandMark } from './SilboMark'
+import { SportAssetIcon } from './SportAssetIcon'
 import { Button } from './ui'
 
 export type PosterEvent = {
@@ -70,41 +72,41 @@ const featureItems = [
   },
 ]
 
-function Skyline({ color = 'var(--mp-primary)' }: { color?: string }) {
+// landmarks — not a random rainbow bar chart.
+function WorldRouteMap({ color = 'var(--mp-primary)' }: { color?: string }) {
   return (
-    <div className="poster-skyline" aria-hidden="true">
-      {Array.from({ length: 22 }).map((_, index) => (
-        <span
-          key={index}
-          style={{
-            height: `${28 + ((index * 19) % 82)}px`,
-            backgroundColor: index % 4 === 0 ? 'var(--mp-export)' : index % 3 === 0 ? 'var(--mp-accent)' : color,
-          }}
-        />
-      ))}
+    <div className="world-route-map" aria-hidden="true">
+      <svg viewBox="0 0 360 190">
+        <path className="route-land" d="M31 68c23-25 58-30 91-18 21 8 38 2 55-6 22-10 48-6 64 13 14 17 38 19 72 12" />
+        <path className="route-land route-land-two" d="M61 112c36-12 58-8 84 7 23 13 46 12 67-1 28-17 53-17 87-1" />
+        <path className="route-arc route-a" d="M86 125C124 78 168 62 244 75" />
+        <path className="route-arc route-b" d="M142 132c38-16 72-18 129-68" />
+        <path className="route-arc route-c" d="M218 134c-32-41-54-72-118-84" />
+        <path className="route-arc route-d" d="M251 75c25 28 42 44 73 52" />
+        <circle className="route-host" cx="254" cy="75" r="28" />
+        <circle className="route-dot" cx="86" cy="125" r="4" style={{ fill: color }} />
+        <circle className="route-dot" cx="142" cy="132" r="4" />
+        <circle className="route-dot" cx="218" cy="134" r="4" />
+        <circle className="route-dot" cx="324" cy="127" r="4" />
+      </svg>
     </div>
   )
 }
 
+// Banner art panel: every sport uses the SAME composition — diagonal stripe field with the
+// Silbo channel badge (whistle + sport glyph) centered. One badge system, no stray objects.
 function PosterGlyph({ sportKey }: { sportKey: string }) {
   const sport = getSport(sportKey) ?? getSport('soccer')
   const theme = getTheme(sportKey)
-  const Icon = sport?.icon
+  const { prefs } = useAppState()
+  const iconVariant = prefs.themeMode === 'program' ? 'brush' : 'neon3d'
 
-  if (sportKey === 'soccer') {
-    return (
-      <div className="poster-glyph poster-glyph-soccer" style={{ color: theme.colors.primary }}>
-        <div className="poster-glyph-stripes" aria-hidden="true" />
-        <div className="poster-field-arc" aria-hidden="true" />
-        <div className="poster-soccer-ball" aria-hidden="true" />
-      </div>
-    )
-  }
+  if (!sport) return null
 
   return (
-    <div className="poster-glyph" style={{ color: theme.colors.primary }}>
+    <div className="poster-glyph poster-glyph-badge" style={{ color: theme.colors.ticketStub }}>
       <div className="poster-glyph-stripes" aria-hidden="true" />
-      {Icon && <Icon size={74} strokeWidth={1.8} />}
+      <SportAssetIcon sportKey={sport.key} size="hero" variant={iconVariant} className="poster-glyph-asset" label={`${sport.label} icon`} />
     </div>
   )
 }
@@ -136,6 +138,18 @@ export function SportObjectIcon({
       <span className="sport-object-detail detail-one" />
       <span className="sport-object-detail detail-two" />
     </span>
+  )
+}
+
+function EventBlueprint({ sportKey }: { sportKey: string }) {
+  const kind = sportObjectKind(sportKey)
+  const { prefs } = useAppState()
+  const iconVariant = prefs.themeMode === 'program' ? 'brush' : 'neon3d'
+
+  return (
+    <div className={`event-blueprint event-blueprint-${kind}`}>
+      <SportAssetIcon sportKey={sportKey} size="poster" variant={iconVariant} className="event-blueprint-icon" />
+    </div>
   )
 }
 
@@ -188,8 +202,7 @@ export function TournamentCapsule({
       </div>
 
       <div className="art-capsule-city">
-        <div className="art-sun" style={{ backgroundColor: theme.colors.export }} aria-hidden="true" />
-        <Skyline color={theme.colors.ticketStub} />
+        <WorldRouteMap color={theme.colors.ticketStub} />
       </div>
     </section>
   )
@@ -214,7 +227,7 @@ function EventPosterCard({
     >
       <div className="event-poster-art" aria-hidden="true">
         <span className="event-poster-number">{String(index + 1).padStart(2, '0')}</span>
-        <SportObjectIcon sportKey={event.sportKey} />
+        <EventBlueprint sportKey={event.sportKey} />
       </div>
       <div>
         <p>{event.label}</p>
@@ -225,7 +238,7 @@ function EventPosterCard({
   )
 
   return event.href ? (
-    <Link to={event.href} className="block min-w-[190px]" onFocus={onFocus} onMouseEnter={onFocus}>
+    <Link to={event.href} className="block" onFocus={onFocus} onMouseEnter={onFocus}>
       {card}
     </Link>
   ) : (
@@ -235,8 +248,10 @@ function EventPosterCard({
 
 export function GlobalEventBoard({ events, variant = 'compact' }: { events: PosterEvent[]; variant?: 'compact' | 'room' }) {
   const [activeIndex, setActiveIndex] = useState(0)
+  const { prefs } = useAppState()
   const activeEvent = events[activeIndex] ?? events[0]
   const activeTheme = getTheme(activeEvent?.sportKey ?? 'neutral')
+  const iconVariant = prefs.themeMode === 'program' ? 'brush' : 'neon3d'
   const activate = (index: number) => setActiveIndex((current) => (current === index ? current : index))
 
   return (
@@ -269,8 +284,8 @@ export function GlobalEventBoard({ events, variant = 'compact' }: { events: Post
               onFocus={() => activate(index)}
               onMouseEnter={() => activate(index)}
             >
-              <SportObjectIcon sportKey={event.sportKey} size="sm" />
-              <span>{event.label}</span>
+              <SportAssetIcon sportKey={event.sportKey} size="xs" variant={iconVariant} />
+              <span className="globe-signal-label">{event.label}</span>
             </button>
           )
         })}
@@ -282,7 +297,7 @@ export function GlobalEventBoard({ events, variant = 'compact' }: { events: Post
           <h2>{variant === 'room' ? 'Enter the live sports room.' : "Tonight's poster board."}</h2>
           {activeEvent && (
             <div className="globe-signal-preview" style={{ '--signal-preview-color': activeTheme.colors.primary } as CSSProperties}>
-              <SportObjectIcon sportKey={activeEvent.sportKey} size="md" />
+              <SportAssetIcon sportKey={activeEvent.sportKey} size="sm" variant={iconVariant} />
               <div>
                 <p>{activeEvent.label}</p>
                 <strong>{activeEvent.title}</strong>
@@ -296,16 +311,11 @@ export function GlobalEventBoard({ events, variant = 'compact' }: { events: Post
             </div>
           )}
         </div>
-        <div className="room-tabs" aria-label="Room channels">
-          {['Front', 'Tonight', 'Sync desk', 'Poster packs'].map((room) => (
-            <span key={room}>{room}</span>
-          ))}
-        </div>
         <Bell size={24} className="text-export max-sm:hidden" />
       </div>
 
       <div className="poster-stack silbo-scrollbar">
-        {events.slice(0, 4).map((event, index) => (
+        {events.map((event, index) => (
           <EventPosterCard key={event.title} event={event} index={index} active={index === activeIndex} onFocus={() => activate(index)} />
         ))}
       </div>
@@ -352,13 +362,14 @@ export function ManifestoPoster() {
 
 export function SportIdentityTile({ sportKey }: { sportKey: string }) {
   const sport = getSport(sportKey) ?? getSport('soccer')
-  const theme = getTheme(sportKey)
+  const { prefs } = useAppState()
+  const iconVariant = prefs.themeMode === 'program' ? 'brush' : 'neon3d'
 
   if (!sport) return null
 
   return (
     <div className="sport-identity-tile paper-grain">
-      <SilboChannelBadge icon={sport.icon} glyph={sport.badgeKey} color={theme.colors.ticketStub} iconColor="#f4ead8" size={92} />
+      <SportAssetIcon sportKey={sport.key} size="hero" variant={iconVariant} className="sport-identity-icon" label={`${sport.label} icon`} />
       <div>
         <p className="art-kicker">{sport.flagshipLeague}</p>
         <h2>{sport.label}</h2>

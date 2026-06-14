@@ -9,7 +9,7 @@ import {
   type Follow,
   type Preferences,
 } from '../lib/store'
-import { supabase } from '../lib/supabase'
+import { getSupabaseClient, isSupabaseConfigured } from '../lib/supabase'
 
 // App-wide state: follows + display preferences, persisted through src/lib/store.ts.
 // When Supabase auth lands, this context keeps the same shape and the store swaps backends.
@@ -17,27 +17,32 @@ import { supabase } from '../lib/supabase'
 export function AppStateProvider({ children }: PropsWithChildren) {
   const [follows, setFollows] = useState<Follow[]>(() => getFollows())
   const [prefs, setPrefsState] = useState<Preferences>(() => getPreferences())
-  const [authReady, setAuthReady] = useState(!supabase)
+  const [authReady, setAuthReady] = useState(!isSupabaseConfigured)
   const [user, setUser] = useState<User | null>(null)
 
   useEffect(() => {
-    if (!supabase) return
-
     let mounted = true
-    supabase.auth.getSession().then(({ data }) => {
-      if (!mounted) return
-      setUser(data.session?.user ?? null)
-      setAuthReady(true)
-    })
+    let cleanup: (() => void) | undefined
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null)
-      setAuthReady(true)
+    getSupabaseClient().then((supabase) => {
+      if (!mounted || !supabase) return
+
+      supabase.auth.getSession().then(({ data }) => {
+        if (!mounted) return
+        setUser(data.session?.user ?? null)
+        setAuthReady(true)
+      })
+
+      const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+        setUser(session?.user ?? null)
+        setAuthReady(true)
+      })
+      cleanup = () => listener.subscription.unsubscribe()
     })
 
     return () => {
       mounted = false
-      listener.subscription.unsubscribe()
+      cleanup?.()
     }
   }, [])
 
@@ -56,6 +61,7 @@ export function AppStateProvider({ children }: PropsWithChildren) {
   )
 
   const signInWithMagicLink = useCallback(async (email: string) => {
+    const supabase = await getSupabaseClient()
     if (!supabase) throw new Error('Supabase is not configured')
     const { error } = await supabase.auth.signInWithOtp({
       email,
@@ -65,6 +71,7 @@ export function AppStateProvider({ children }: PropsWithChildren) {
   }, [])
 
   const signInWithGoogle = useCallback(async () => {
+    const supabase = await getSupabaseClient()
     if (!supabase) throw new Error('Supabase is not configured')
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -74,6 +81,7 @@ export function AppStateProvider({ children }: PropsWithChildren) {
   }, [])
 
   const signOut = useCallback(async () => {
+    const supabase = await getSupabaseClient()
     if (!supabase) return
     const { error } = await supabase.auth.signOut()
     if (error) throw error
@@ -89,7 +97,7 @@ export function AppStateProvider({ children }: PropsWithChildren) {
       auth: {
         ready: authReady,
         user,
-        configured: Boolean(supabase),
+        configured: isSupabaseConfigured,
         signInWithMagicLink,
         signInWithGoogle,
         signOut,

@@ -122,6 +122,14 @@ Approved motif families:
 10. **Small-size logo wins first.** The whistle mark must work in the nav, channel grid,
    favicon/social avatar, and export footer before extra loops, chrome, shadows, or sport
    detail are added back.
+11. **Channel tiles get sport-native symbols.** The sport picker should use clear neon line
+   icons for each sport family. The whistle stays the Silbo brand mark and can become a
+   larger 3D/hero asset, but small sport tiles should not force every sport into the same
+   whistle silhouette.
+12. **Large event art can be richer than UI badges.** Globe-board cards, tournament capsules,
+   export covers, and sport landing heroes may use route maps, circuit diagrams, bracket
+   boards, fight-card panels, 3D whistles, and generated/licensed imagery. Dense schedule
+   rows stay simple and text-first.
 
 ### Component/tooling guidance
 

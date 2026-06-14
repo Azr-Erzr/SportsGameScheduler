@@ -1,5 +1,6 @@
-import { Copy, Download, FileImage, Share2 } from 'lucide-react'
+import { CalendarDays, Copy, Download, FileImage, Share2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useAppState } from '../app/state-context'
 import { cityLabelFor } from '../lib/cities'
 import { Button, Panel, PanelHeading } from '../components/ui'
@@ -94,11 +95,32 @@ export function ExportStudioPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-xl font-extrabold text-primary">Silbo Packs</h1>
+        <h1 className="text-xl font-extrabold text-primary">Silbo Exports</h1>
         <p className="text-sm text-ink/60">
-          Calendar for ongoing tracking, image for quick visual sharing, plain text for family planning.
+          Choose live subscribed feeds for schedule changes, or static packs for quick saving, sharing, and no-signup downloads.
         </p>
       </div>
+
+      <Panel className="grid gap-3 md:grid-cols-2">
+        <Link to="/calendar" className="rounded-xl border border-primary/20 bg-page/60 p-4 transition-colors hover:bg-primary/5">
+          <div className="flex items-center gap-2 text-primary">
+            <CalendarDays size={18} />
+            <h2 className="font-bold">Live Sync</h2>
+          </div>
+          <p className="mt-2 text-sm text-ink/62">
+            Subscribe once and let Silbo update the calendar feed when times, TBD teams, or venues change. Calendar apps choose their own refresh timing.
+          </p>
+        </Link>
+        <div className="rounded-xl border border-export/30 bg-export/10 p-4">
+          <div className="flex items-center gap-2 text-export">
+            <FileImage size={18} />
+            <h2 className="font-bold">Static Packs</h2>
+          </div>
+          <p className="mt-2 text-sm text-ink/62">
+            Download images, .ics snapshots, or Notes text without signing up. These are yours to share, but they do not auto-update.
+          </p>
+        </div>
+      </Panel>
 
       <div className="grid gap-4 lg:grid-cols-[340px_1fr]">
         <div className="space-y-4">

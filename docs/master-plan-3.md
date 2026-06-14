@@ -1,6 +1,6 @@
 # Master Plan 3: Identity, Sport Expansion, Data Sources, And Export Craft
 
-Last updated: June 12, 2026
+Last updated: June 14, 2026
 
 This document captures the next phase after Master Plans 1 and 2: making the product feel
 less generic, expanding sport coverage intelligently, improving exports, and designing the
@@ -29,6 +29,23 @@ data/provider system so the app can scale without wasting API calls.
   label, inactive items stay icon-forward, reducing cramped text/icon collisions.
 - The small whistle/channel badge has been simplified for readability: fewer nested outlines,
   thinner detail, reduced glow, and more room for the sport symbol.
+- Homepage poster cards now have a standardized card footprint so each sport reads as part of
+  one reusable system rather than resizing around copy length.
+- The temporary homepage spotlight roster now includes a fallback card for every current sport
+  family, matching the future DB-driven `spotlight_events` shape.
+- Light/program mode now has its own visual rules: paper-safe text colors, paperified globe
+  motifs, brush/manga sport icons, and reduced neon usage instead of a simple dark-mode
+  inversion.
+- Sport-specific pages now use one reusable `SportChannelBanner` instead of a doubled
+  identity tile plus capsule. The first light-mode banner asset pass uses cropped
+  brush/manga artwork masks for all 11 sport families, colored through theme tokens so the
+  same component works across Soccer, Basketball, American Football, Hockey, Tennis, Golf,
+  Motorsport, Combat Sports, Track & Field, Olympic Sports, and Community.
+- Broadcast/dark sport banners now use the generated colorful icon/action asset family for
+  all 11 sport families. The component only points at the active mode's asset set, so program
+  mode keeps the brush masks while broadcast mode loads the WebP scene/icon pair.
+- Mobile sport banners now collapse intentionally: one icon art panel, compact type/stats,
+  hidden secondary action art, clamped copy, and no horizontal overflow.
 
 ## Brand Direction: Silbo vs MatchPulse
 
@@ -47,6 +64,21 @@ Recommendation: keep MatchPulse as the working app name until we finish the MVP 
 move the product language toward the Silbo architecture now. "Picks", "Sync", "Alerts", and
 "Packs" are clearer than generic labels and can be used even if the final name stays
 MatchPulse.
+
+### Navigation Rule
+
+Do not make every Silbo module a top-level nav item. The public nav should stay plain:
+Home, My Schedule, Exports, Community, account/theme. Product modules can live inside those
+destinations:
+
+- **Picks** is the user's saved follow graph, not a standalone sport directory.
+- **Exports** should contain the user-facing choice between **Live Sync** and **Static Packs**.
+- **Sync** means subscribed feeds controlled by Silbo that can update as schedules change.
+- **Packs** means no-signup static downloads: images, PDFs/SVG later, notes text, and `.ics`
+  snapshots. They are flexible but do not auto-update.
+- The old Explore/Picks page can remain as an internal sports directory/source-status page,
+  but it should not be promoted in the primary nav unless it becomes a richer discovery
+  product.
 
 ## Design Soul Pass
 
@@ -111,10 +143,16 @@ Research cues:
 | Whistle direction A/B | P1 | Not started | Decide whether the whistle should face toward or away from the wordmark | Test in nav, channel grid, favicon, export footer, and social preview before changing. |
 | Interactive globe signal board | P1 | Shipped v1 | Turn the homepage globe into a playful navigation/control surface | Sport markers, preview, selected-card highlight, keyboard/touch states, and reduced-motion support are in. Future: real event counts and richer orbit paths. |
 | 3D sport object system | P1 | Shipped v1 | Add charm without crowding core UI | Code-native collectible objects now appear in large poster cards and globe pips. Future: licensed/generated final pack. |
+| Neon sport line icon system | P1 | Shipped v1 | Make sport channel tiles read like dedicated sports, not one whistle shape repeated | Channel picker now uses code-native sport symbols: ball, hoop, helmet, stick/puck, racket, flag, car, glove, runner, rings, community. |
+| Broadcast blueprint poster cards | P1 | Partial | Make globe board cards feel like collectible event monitors | Homepage poster cards now use original map/route, circuit, bracket, and fight-card SVG panels. Future: deeper sport-specific templates and licensed/generated hero art. |
+| World Cup route-map capsule | P1 | Partial | Move tournament banners toward the approved route-map/mockup direction | Soccer capsule now uses original host-dot/travel-arc map art rather than a generic skyline. Future: trophy watermark and richer geographic panels without official marks. |
+| Sport-channel banner system | P1 | Shipped v1 | Replace doubled sport-page banners with one strong reusable banner per sport | `SportChannelBanner` uses source-tested brush art masks in program mode and colorful WebP icon/action scenes in broadcast mode, with theme colors, responsive collapse, and mode-specific paper/broadcast styling. Future: swap in final generated/licensed banner art without changing page structure. |
 | Icon sourcing pipeline | P1 | Planned | Prevent random asset sprawl | Compare IconScout, Iconify-derived custom 3D, Figma/Blender/Spline generated assets, and commissioned packs. Track source/license. |
 | Poster-card refinement | P1 | Partial | Make carousel cards feel intentionally designed, not tossed in | Active states and sport-object art are in. Future: richer card composition, sticker/ticket edges, and final art assets. |
 | Mobile top bar/nav cleanup | P1 | Partial | Stop icons/text from feeling squished on small screens | Bottom dock now expands only the active label; top row spacing tightened. Future: test alternate header/sport selector if needed. |
 | Light/dark presentation modes | P2 | Partial | Offer broadcast-dark and program-paper experiences | Current theme mode exists. Program mode now routes sport cards/switcher through paper-safe colors and suppresses neon glow. Future: full contrast audit across every route/export. |
+| Standardized poster card system | P1 | Partial | Make every sport/event card use a consistent size, hierarchy, and fallback art slot | Homepage poster rail now uses fixed card tracks and has fallback cards for every current sport family. Future: formalize templates for match, race, fight card, tournament, meet/session, and community schedule cards. |
+| Self-running spotlight board | P1 | Planned | Let homepage cards and globe signals update from DB data instead of hardcoded arrays | Add `spotlight_events`, ranking rules, lifecycle statuses, expiry/promotion windows, and scheduled refresh jobs so the site promotes the biggest relevant sports moments automatically. |
 
 ### Program Mode Color Rule
 
@@ -123,6 +161,147 @@ cream paper, dark ink, muted sport colors, and minimal glow. Neon greens/cyans/p
 reserved for broadcast-dark UI unless the specific foreground/background pair passes a
 contrast check on cream paper. Components that read theme colors directly must call
 `withSurfaceMode(theme, prefs.themeMode)` before rendering inline sport colors.
+
+### Program Mode Motif Rule
+
+Program/light mode needs its own motifs, not just different text colors:
+
+- Use brush/manga/calligraphy-inspired sport marks for large card and selector art.
+- Use cream paper, subtle ink texture, printed-map lines, and restrained sport accents.
+- Keep text in dark ink by default. White/cream text is allowed only on intentionally dark
+  panels and must pass contrast.
+- The homepage globe becomes an atlas/riso-style paper globe in program mode, not the dark
+  broadcast neon orb.
+- Poster cards should stay standardized in size across every sport. Copy can be clamped;
+  cards should not resize around long titles.
+- Large art variants should be conditionally rendered by active mode. Do not render both
+  3D/dark and brush/light image editions in the DOM at the same time unless there is a
+  deliberate transition requiring both.
+- First-pass light banner artifact notes: the combat icon can read as a smeared glove/face
+  cluster at small sizes, and the motorsport action panel is busy when compressed. Both are
+  acceptable for v1 page identity but should be regenerated or cleaned before brand-final
+  launch.
+- First-pass broadcast banner artifact notes: the football action crop had left-edge text
+  fragments removed. Some action scenes include embedded stat/UI labels from the mockup
+  generation pass; they currently read as intentional sports-interface texture, but final
+  art should be regenerated or manually cleaned if those labels distract.
+
+## Self-Running Homepage And Spotlight System
+
+The homepage "biggest coming up" rail and globe signal board should eventually run from
+cached event data, not a hand-edited frontend list. The current hardcoded array is only a
+front-end proving ground for the card system.
+
+### Product Goal
+
+Silbo should feel alive when a user lands on it:
+
+- Shows the biggest relevant sports moments in the next six weeks.
+- Promotes currently live or imminent events.
+- Demotes completed/stale events automatically.
+- Surfaces "source testing" or "coverage coming soon" cards only when data coverage is not
+  ready yet.
+- Changes by region, language, followed picks, and available data once the backend supports it.
+- Always has a safe fallback card for every sport family: soccer, basketball, American
+  football, hockey, tennis, golf, motorsport, combat sports, track & field, Olympic sports,
+  and community.
+
+### Backend Shape
+
+Core tables/fields to add:
+
+| Table | Purpose |
+|---|---|
+| `spotlight_events` | Editorial/computed homepage cards: title, sport_key, league_key, event_id, starts_at, ends_at, status, global_importance, region_importance, lifecycle, art_key, href, source_confidence. |
+| `sport_card_templates` | Reusable card templates per sport family: card_type, art_variant, color role, required fields, fallback copy. |
+| `event_rankings` | Computed scores for upcoming/live events by region and sport. |
+| `spotlight_rules` | Admin/config rules for promotion windows, six-week lookahead, live boosts, region boosts, and expiry. |
+| `spotlight_audit_log` | Records why a card appeared, changed, or disappeared. Useful for debugging and editorial trust. |
+
+### World Board Ranking Model
+
+The globe board should not be hand-curated forever, but it also should not blindly mirror raw
+API order. Use a transparent score:
+
+`score = global_importance + region_boost + follower_boost + urgency_boost + lifecycle_boost + editorial_boost - stale_penalty`
+
+Inputs:
+
+- `global_importance`: long-term league/event weight. World Cup and Olympics sit at the top,
+  then major international tournaments, major US/European leagues, playoffs/finals, college
+  championship windows, niche high-interest events, and community/local schedules.
+- `region_boost`: raises locally relevant events. Canada sees CFL/Grey Cup and Canadian
+  national teams; Washington state sees Seattle/regional teams and US leagues; London sees
+  EPL/UEFA/UK events.
+- `follower_boost`: the user's selected teams, countries, players, fighters, drivers, and
+  leagues should outrank generic global cards.
+- `urgency_boost`: live now, starts today, this weekend, and next seven days get boosted.
+- `lifecycle_boost`: playoffs, finals, medal events, title fights, qualifying/race sessions,
+  and bracket-clinching matches can outrank ordinary regular-season games.
+- `editorial_boost`: manual override with an expiry date for special moments or launch
+  campaigns.
+- `stale_penalty`: completed, postponed-without-new-date, or source-stale cards demote or
+  expire.
+
+The UI should explain ranking in human terms, not math: "Biggest near you", "Live now",
+"Because you follow Canada", "Major finals", "Source testing". This gives the board enough
+intelligence without making it feel arbitrary.
+
+Example TypeScript shape:
+
+```ts
+type SpotlightEvent = {
+  id: string
+  sportKey: string
+  leagueKey?: string
+  eventId?: string
+  title: string
+  label: 'Live now' | 'Coming up' | 'Source testing' | 'Model ready' | 'Staged'
+  detail: string
+  href: string
+  startsAt?: string
+  endsAt?: string
+  globalImportance: number
+  regionImportance?: Record<string, number>
+  lifecycle: 'draft' | 'scheduled' | 'live' | 'completed' | 'expired'
+  artKey?: string
+  sourceConfidence: 'official' | 'provider' | 'cached' | 'manual' | 'placeholder'
+}
+```
+
+### Automation Rules
+
+- Scheduled sync jobs ingest provider data into cached event tables.
+- A ranking job recomputes spotlight candidates after every provider sync and at least hourly.
+- Cards expire automatically after `ends_at` plus a configurable grace window.
+- "Live now" cards receive a temporary score boost.
+- Region-aware cards use locale/region where available, e.g. CFL in Canada, NBA/WNBA in the
+  US, UEFA/club football in Europe.
+- If no data-backed event exists for a sport, show a fallback "coverage coming soon/source
+  testing" card only in lower-priority positions.
+- Manual/editorial override should exist, but every override needs an expiry date so stale
+  cards do not linger.
+
+### Frontend Requirements
+
+- Replace the hardcoded `spotlightEvents` array with `useSpotlightEvents()`.
+- Render the same `GlobalEventBoard` and poster card components from backend data.
+- Keep card dimensions standardized. Long titles clamp rather than resizing the card.
+- Choose art by sport family and active surface mode:
+  - Broadcast: 3D/neon or dark poster art.
+  - Program: brush/paper art.
+- Show loading skeletons that match the card footprint.
+- Cache the spotlight response client-side briefly, but rely on backend caching for provider
+  call reduction.
+
+### Caching/API Efficiency
+
+- Provider APIs should feed our DB/cache on a schedule, not be called during a homepage view.
+- Static taxonomies like sports, leagues, venues, circuits, and common competitors should be
+  cached long term and refreshed through diff jobs.
+- Dynamic entities like event status, starts_at, participants, broadcast metadata, and live
+  fight-card/race state should refresh on shorter intervals based on sport and event phase.
+- Spotlight computation should read from our DB, not provider APIs directly.
 
 ## Schedule Image Export Direction
 
@@ -457,6 +636,24 @@ Recommendation:
   pro/college adult sports pages where legally allowed.
 - Keep "odds" as an optional module, not part of the core schedule promise.
 
+## Where To Watch And Official Source Outreach
+
+Where-to-watch should begin factual and region-aware, then accept sponsored placements only
+when clearly labeled. The event detail card can eventually show:
+
+- Local TV/streaming/radio provider links by region.
+- Official league/team source links.
+- Venue/watch-party links where relevant.
+- Sponsored provider slots clearly marked as sponsored.
+- "Report a listing" or "suggest a provider" feedback.
+
+Add a Silbo business contact once email/domain operations are set up, e.g.
+`partners@silbosports.com` or `broadcasts@silbosports.com`, for broadcasters, leagues,
+teams, and official data providers who want their listing corrected, licensed, or promoted.
+Do not expose this as a personal email. Route it through a shared inbox/helpdesk with canned
+intake fields: sport, league, region, provider URL, rights territory, contact role, and
+whether the request is factual correction, partnership, sponsorship, or data licensing.
+
 ## API Caching And Query Efficiency
 
 Yes, caching is exactly how this should work. We should not pull entire datasets repeatedly.
@@ -485,6 +682,74 @@ The backend should separate stable reference data from volatile schedule/live da
 This reduces cost because the public app reads our database/cache. Provider APIs are called by
 scheduled backend jobs, not by every visitor.
 
+## Frontend Performance And Mobile-App Path
+
+Silbo should remain a fast web product first, even as the visuals become richer. The app can
+use bold art, sport banners, and export tooling, but the default route should not pay for
+every provider client, export renderer, or future native/mobile module at startup.
+
+### Current Performance Rules
+
+- Keep the shell small: navigation, theme state, follows, and routing only.
+- Route-split page modules. Home, My Schedule, sport pages, export studio, calendar feeds,
+  custom leagues, and placeholders should load by route instead of all riding in the first
+  JavaScript chunk.
+- Feature-split heavy modules. Poster/canvas export code belongs behind the Exports route.
+  Supabase belongs behind a lazy client that loads only when public env keys are configured
+  or an auth/live-data operation actually needs it.
+- Avoid global animation runtimes in always-mounted chrome. Header, auth, and sport-switcher
+  motion should be CSS-first unless a future interaction truly needs a library.
+- Use `content-visibility`, fixed card dimensions, clamped copy, and paginated/lazy rendered
+  lists where schedule density grows.
+- Do not render both program/light and broadcast/dark large art systems at the same time.
+  The active mode chooses its assets; the other mode waits off-DOM.
+- Provider APIs never run from public page views. The browser reads bundled fallback data or
+  our cached database responses.
+
+### Mobile Web First
+
+The near-term "app" path should be a polished PWA/mobile web experience before a separate
+native codebase:
+
+- Add a web app manifest with Silbo icons, theme colors, display mode, and install metadata.
+- Add a small service worker only when it has clear value: app shell caching, offline export
+  access, stale-while-revalidate schedule data, and safe update prompts.
+- Keep mobile layouts as first-class responsive screens, not a shrunken desktop site:
+  simplified nav, fewer simultaneous panels, no horizontal overflow, readable export previews,
+  and touch targets at least 44px.
+- Keep image/export flows mobile-native where possible: Web Share API for images/text/.ics,
+  downloadable files as fallback, and clear "live feed vs static snapshot" language.
+
+### Native Wrapper Decision
+
+Use the web/PWA path until we need native-only capabilities. If those become important, the
+preferred first wrapper is **Capacitor** because it can package the existing React app for
+iOS/Android while keeping the Cloudflare/Supabase web stack intact.
+
+Capacitor becomes worthwhile if we need:
+
+- Native push notifications with deeper reliability than web push.
+- Better local file handling for poster packs, PDFs, and recurring downloads.
+- Native calendar integration beyond subscribed `.ics`/webcal links.
+- App-store presence for credibility or paid upgrades.
+
+If Silbo eventually needs a deeply native mobile experience with complex offline databases,
+native widgets, or highly custom push/calendar flows, evaluate **Expo React Native** as a
+separate client. That should come after the web product and API contracts stabilize, not
+before.
+
+### Mobile App Backend Implications
+
+- Auth must be token-safe across web, PWA, and native wrapper clients.
+- Calendar feeds remain server-owned URLs; native clients can add convenience buttons but
+  should not become the source of truth.
+- Exports should come from shared rendering contracts so web, PWA, and native clients produce
+  matching packs.
+- Push/email/SMS alert preferences should be device-agnostic, with per-device push tokens
+  added only after native/web push is implemented.
+- Asset budgets must be enforced per route and per mode. Sport banners, icon packs, and
+  poster art should have compressed variants and lazy loading rules before app-store work.
+
 ## New Database/API Work Needed
 
 - Add `sport_families` or expand canonical sports for `combat_sports`, `athletics`, and
@@ -495,19 +760,24 @@ scheduled backend jobs, not by every visitor.
 - Add `broadcasts` / `watch_links` region matching and rights metadata.
 - Add `ad_slots` with safety profiles and surface restrictions.
 - Add `export_templates` if we want user-selectable designs stored server-side.
+- Add `spotlight_league_weights` and `regional_interest_weights` to support automatic world
+  board ranking without hardcoding Canada/US/UK assumptions in the frontend.
 
 ## Next Implementation Order
 
 1. Browser-test the new expanded cards, Popular Picks toggle, sport switcher, and high-res PNG
    export.
-2. Add visual identity polish: stronger outlines, sport-specific texture layers, better active
+2. Finish the Exports IA: one public Exports destination with segmented Live Sync vs Static
+   Packs flows, clear auto-update caveats, and no redundant top-level module tabs.
+3. Add visual identity polish: stronger outlines, sport-specific texture layers, better active
    states, and one homepage hero/image treatment.
-3. Add a committed Playwright mobile smoke test for homepage, sport page, expanded match card,
+4. Add a committed Playwright mobile smoke test for homepage, sport page, expanded match card,
    export studio, and custom leagues.
-4. Update backend taxonomy migration to match sport families or document the display/backend
+5. Update backend taxonomy migration to match sport families or document the display/backend
    mapping explicitly.
-5. Build provider-adapter test scripts for TheSportsDB, API-SPORTS, OpenF1, and one combat
+6. Build provider-adapter test scripts for TheSportsDB, API-SPORTS, OpenF1, and one combat
    source.
-6. Build the server cache/diff tables before plugging more UI into live APIs.
-7. Prototype fight-card page and fight-card export template.
-8. Decide whether Silbo replaces MatchPulse before final public branding and logo work.
+7. Build the server cache/diff tables before plugging more UI into live APIs.
+8. Add the spotlight ranking tables/jobs and region-aware world-board query.
+9. Prototype fight-card page and fight-card export template.
+10. Decide whether Silbo replaces MatchPulse before final public branding and logo work.
