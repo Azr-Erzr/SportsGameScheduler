@@ -1,15 +1,19 @@
-import { Check, Search, Sparkles, X } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { Check, Search, Sparkles, Users, X } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useAppState } from '../app/state-context'
 import { CityPicker } from '../components/CityPicker'
 import { MatchCard } from '../components/MatchCard'
 import { SportChannelBanner } from '../components/SportChannelBanner'
-import { Button, EmptyState, Panel, PanelHeading } from '../components/ui'
+import { Badge, Button, EmptyState, Panel, PanelHeading } from '../components/ui'
 import { deriveTeams, filterMatchesForTeams, useMatches } from '../data/liveMatches'
+import { useSportRoster, useSportSchedule, type LiveEvent } from '../data/liveSport'
 import { allMatches, featuredTeams } from '../data/worldcup'
 import { getSport, type SportInfo } from '../domain/sports'
 import { findConflicts } from '../lib/conflicts'
+import { formatDate, formatLongDate, formatTime } from '../lib/time'
+
+const INDIVIDUAL_SPORTS = ['tennis', 'golf', 'athletics', 'combat_sports']
 
 // Kit-wall memorabilia: each team row carries a jersey-stripe bar — deterministic two-color
 // pattern from the team name (kit culture without anyone's actual kit).
@@ -41,30 +45,55 @@ export function SportPage() {
     return <EmptyState title="Unknown sport" body="That sport is not in the catalog yet." />
   }
 
-  if (!sport.enabled) {
-    return <ComingSoonSportPage sport={sport} />
+  // Soccer keeps the polished World Cup planner, but other soccer leagues are selectable too.
+  if (sport.canonicalSportKey === 'soccer') {
+    return <SoccerPage />
   }
 
-  return <WorldCupPlanner />
+  return <LiveSportPage sport={sport} />
 }
 
-function ComingSoonSportPage({ sport }: { sport: SportInfo }) {
+// Soccer: World Cup planner by default, with pills to switch to other live soccer leagues
+// (EPL, La Liga, UCL, …) even while the World Cup is on. Leagues arrive viewership-ordered.
+function SoccerPage() {
+  const { prefs } = useAppState()
+  const { leagues, events } = useSportSchedule('soccer')
+  const [leagueId, setLeagueId] = useState<string | null>(null) // null = World Cup planner
+
+  // Exclude the World Cup league rows (openfootball + TheSportsDB) — the planner IS the WC.
+  const otherLeagues = useMemo(() => leagues.filter((l) => !/world cup/i.test(l.name)), [leagues])
+  const leagueEvents = useMemo(
+    () => (leagueId ? events.filter((e) => e.leagueId === leagueId) : []),
+    [events, leagueId],
+  )
+  const activeLeague = otherLeagues.find((l) => l.id === leagueId)
+
   return (
-    <div className="space-y-5">
-      <SportChannelBanner
-        title={`${sport.label} Channel`}
-        kicker="Source testing capsule"
-        sportKey={sport.key}
-        body={`${sport.flagshipLeague} will light up as soon as licensed schedule data is connected. ${sport.sourceNote ?? 'Provider coverage is being reviewed.'}`}
-        ctaLabel="Back to sports"
-        ctaTo="/explore"
-        stats={[
-          { value: 'API', label: 'Review' },
-          { value: 'Feeds', label: 'Planned' },
-          { value: 'Alerts', label: 'Ready' },
-          { value: 'Sync', label: 'Ready' },
-        ]}
-      />
+    <div className="space-y-4">
+      <LeagueFilter primaryLabel="World Cup" leagues={otherLeagues} selectedId={leagueId} onSelect={setLeagueId} />
+
+      {leagueId === null ? (
+        <WorldCupPlanner />
+      ) : (
+        <section className="space-y-3">
+          <div>
+            <h1 className="text-xl font-extrabold text-primary">{activeLeague?.name}</h1>
+            <p className="text-sm text-ink/60">
+              {leagueEvents.length} upcoming - shown in {prefs.timezone}
+            </p>
+          </div>
+          {leagueEvents.length > 0 ? (
+            leagueEvents.map((event) => (
+              <EventTicket key={event.id} event={event} locale={prefs.locale} hour12={prefs.hour12} timeZone={prefs.timezone} />
+            ))
+          ) : (
+            <EmptyState
+              title="No upcoming fixtures"
+              body="This league is between seasons — its next fixtures sync in automatically as they're published."
+            />
+          )}
+        </section>
+      )}
     </div>
   )
 }
@@ -247,5 +276,308 @@ function WorldCupPlanner() {
         </section>
       </div>
     </div>
+  )
+}
+
+// Live, DB-backed page for every non-soccer sport: banner + league filter + upcoming events,
+// plus an athlete roster for individual sports (tennis/golf/athletics/combat).
+function LiveSportPage({ sport }: { sport: SportInfo }) {
+  const { prefs } = useAppState()
+  const canonical = sport.canonicalSportKey
+  const isIndividual = INDIVIDUAL_SPORTS.includes(canonical)
+  const { leagues, events, loading, configured } = useSportSchedule(canonical)
+  const roster = useSportRoster(canonical, isIndividual)
+  const [leagueId, setLeagueId] = useState<string | null>(null)
+
+  const shownEvents = useMemo(
+    () => (leagueId ? events.filter((e) => e.leagueId === leagueId) : events),
+    [events, leagueId],
+  )
+
+  const stats = [
+    { value: String(leagues.length), label: leagues.length === 1 ? 'League' : 'Leagues' },
+    { value: String(events.length), label: 'Upcoming' },
+    isIndividual
+      ? { value: roster.players.length >= 500 ? '500+' : String(roster.players.length), label: 'Players' }
+      : { value: sport.eventNoun + 's', label: 'Tracked' },
+  ]
+
+  return (
+    <div className="space-y-5">
+      <SportChannelBanner
+        kicker={`Channel · ${sport.flagshipLeague}`}
+        sportKey={sport.key}
+        body={`${sport.tagline}. Every start time in ${prefs.timezone}, synced and ready to export.`}
+        ctaLabel="Sync schedule"
+        ctaTo="/calendar"
+        stats={stats}
+      />
+
+      {!configured ? (
+        <EmptyState title="Live data not configured" body="Connect Supabase to view this sport's schedule." />
+      ) : loading ? (
+        <p className="board-label py-10 text-center text-ink/50">Tuning channel…</p>
+      ) : (
+        <>
+          {leagues.length > 1 && (
+            <LeagueFilter primaryLabel="All" leagues={leagues} selectedId={leagueId} onSelect={setLeagueId} />
+          )}
+
+          <div className={`grid gap-4 ${isIndividual ? 'lg:grid-cols-[1fr_320px]' : ''}`}>
+            <section className="min-w-0 space-y-3">
+              {shownEvents.length > 0 ? (
+                <>
+                  <p className="text-sm font-semibold text-ink/60">{shownEvents.length} upcoming</p>
+                  {shownEvents.map((event) => (
+                    <EventTicket key={event.id} event={event} locale={prefs.locale} hour12={prefs.hour12} timeZone={prefs.timezone} />
+                  ))}
+                </>
+              ) : (
+                <EmptyState
+                  title={`No upcoming ${sport.label.toLowerCase()} events`}
+                  body={
+                    isIndividual
+                      ? 'Between seasons — the next fixtures sync in automatically. Browse the players meanwhile.'
+                      : "We're tracking this sport. Upcoming events appear here as providers publish the next season."
+                  }
+                />
+              )}
+            </section>
+
+            {isIndividual && <RosterPanel players={roster.players} loading={roster.loading} noun={sport.label} />}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+function LeagueChip({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`shrink-0 rounded-full border px-3 py-1.5 font-mono text-[11px] uppercase tracking-wide transition-colors ${
+        active ? 'border-primary bg-primary text-void' : 'border-primary/25 text-ink/70 hover:bg-primary/10'
+      }`}
+    >
+      {label}
+    </button>
+  )
+}
+
+// Inline top-N league pills (viewership-ordered) plus a searchable "More" panel for sports
+// with long tails of leagues — keeps massive/hyper-local sports from overflowing the row.
+function LeagueFilter({
+  primaryLabel,
+  leagues,
+  selectedId,
+  onSelect,
+  inlineCount = 6,
+}: {
+  primaryLabel: string
+  leagues: Array<{ id: string; name: string }>
+  selectedId: string | null
+  onSelect: (id: string | null) => void
+  inlineCount?: number
+}) {
+  const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState('')
+  const ref = useRef<HTMLDivElement>(null)
+
+  const inline = leagues.slice(0, inlineCount)
+  const selected = selectedId ? leagues.find((l) => l.id === selectedId) ?? null : null
+  const selectedInOverflow = Boolean(selected && !inline.some((l) => l.id === selected.id))
+  const overflowCount = leagues.length - inline.length
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    return q ? leagues.filter((l) => l.name.toLowerCase().includes(q)) : leagues
+  }, [leagues, query])
+
+  useEffect(() => {
+    if (!open) return
+    function onPointerDown(e: PointerEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('pointerdown', onPointerDown)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [open])
+
+  function pick(id: string | null) {
+    onSelect(id)
+    setOpen(false)
+    setQuery('')
+  }
+
+  return (
+    <div ref={ref} className="relative">
+      <div className="silbo-scrollbar flex gap-2 overflow-x-auto pb-1">
+        <LeagueChip label={primaryLabel} active={selectedId === null} onClick={() => onSelect(null)} />
+        {inline.map((l) => (
+          <LeagueChip key={l.id} label={l.name} active={selectedId === l.id} onClick={() => onSelect(l.id)} />
+        ))}
+        {selectedInOverflow && selected && (
+          <LeagueChip label={selected.name} active onClick={() => onSelect(selected.id)} />
+        )}
+        {overflowCount > 0 && (
+          <button
+            type="button"
+            onClick={() => setOpen((o) => !o)}
+            aria-expanded={open}
+            className={`flex shrink-0 items-center gap-1 rounded-full border px-3 py-1.5 font-mono text-[11px] uppercase tracking-wide transition-colors ${
+              open ? 'border-primary bg-primary/10 text-primary' : 'border-primary/25 text-ink/70 hover:bg-primary/10'
+            }`}
+          >
+            <Search size={12} /> More <span className="text-ink/45">+{overflowCount}</span>
+          </button>
+        )}
+      </div>
+
+      {open && (
+        <div className="absolute z-40 mt-2 w-72 rounded-xl border border-primary/20 bg-surface p-2 shadow-xl">
+          <label className="mb-2 flex items-center gap-2 rounded-lg border border-primary/20 bg-page/60 px-3 py-2">
+            <Search size={14} className="text-ink/40" />
+            <input
+              autoFocus
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search leagues"
+              className="w-full bg-transparent text-sm text-ink outline-none placeholder:text-ink/40"
+            />
+          </label>
+          <ul className="silbo-scrollbar max-h-72 space-y-0.5 overflow-y-auto">
+            <li>
+              <button
+                type="button"
+                onClick={() => pick(null)}
+                className={`w-full truncate rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+                  selectedId === null ? 'bg-primary text-void' : 'text-ink/80 hover:bg-primary/10'
+                }`}
+              >
+                {primaryLabel}
+              </button>
+            </li>
+            {filtered.map((l) => (
+              <li key={l.id}>
+                <button
+                  type="button"
+                  onClick={() => pick(l.id)}
+                  className={`w-full truncate rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+                    selectedId === l.id ? 'bg-primary text-void' : 'text-ink/80 hover:bg-primary/10'
+                  }`}
+                >
+                  {l.name}
+                </button>
+              </li>
+            ))}
+            {filtered.length === 0 && (
+              <li className="px-3 py-2 text-sm text-ink/50">No leagues match “{query}”.</li>
+            )}
+          </ul>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function EventTicket({
+  event,
+  locale,
+  hour12,
+  timeZone,
+}: {
+  event: LiveEvent
+  locale?: string
+  hour12?: boolean | null
+  timeZone: string
+}) {
+  const opts = { locale, hour12: hour12 ?? undefined }
+  const parts = event.title.includes(' vs ') ? event.title.split(' vs ') : null
+
+  return (
+    <article className="ticket-paper flex items-stretch overflow-hidden">
+      <div
+        className="flex w-24 shrink-0 flex-col items-center justify-center bg-ticket-stub px-2 py-3 text-center text-ticket-stub-text"
+      >
+        {event.startsAt && !event.startsAtTbd ? (
+          <>
+            <span className="font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-ticket-stub-text/75">
+              {formatDate(event.startsAt, timeZone, opts)}
+            </span>
+            <strong className="font-head text-sm leading-tight">{formatTime(event.startsAt, timeZone, opts)}</strong>
+          </>
+        ) : (
+          <strong className="font-head text-sm">TBD</strong>
+        )}
+      </div>
+      <div className="min-w-0 flex-1 px-4 py-3">
+        <h3 className="truncate text-base font-bold text-paper-ink">
+          {parts ? (
+            <>
+              {parts[0]} <span className="font-mono text-[10px] not-italic text-paper-ink/40">VS</span> {parts[1]}
+            </>
+          ) : (
+            event.title
+          )}
+        </h3>
+        <p className="mt-1 flex flex-wrap gap-x-3 font-mono text-[11px] uppercase tracking-wide text-paper-ink/55">
+          {event.leagueName && <span>{event.leagueName}</span>}
+          {event.venue && <span>{event.venue}</span>}
+          {event.startsAt && !event.startsAtTbd && <span>{formatLongDate(event.startsAt, timeZone, opts)}</span>}
+        </p>
+      </div>
+      {event.status !== 'scheduled' && (
+        <span className="m-3 self-start">
+          <Badge tone={event.status === 'finished' ? 'muted' : 'warning'}>{event.status}</Badge>
+        </span>
+      )}
+    </article>
+  )
+}
+
+function RosterPanel({ players, loading, noun }: { players: Array<{ id: string; name: string; country: string | null }>; loading: boolean; noun: string }) {
+  const [query, setQuery] = useState('')
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    return q ? players.filter((p) => p.name.toLowerCase().includes(q)) : players
+  }, [players, query])
+
+  return (
+    <Panel className="h-fit lg:sticky lg:top-20">
+      <PanelHeading title={`${noun} players`} subtitle={loading ? 'Hydrating…' : `${players.length} tracked`}>
+        <Users size={18} className="text-primary" />
+      </PanelHeading>
+      {players.length === 0 ? (
+        <p className="text-sm text-ink/55">{loading ? 'Loading roster…' : 'Players appear here as rosters hydrate.'}</p>
+      ) : (
+        <>
+          <label className="mb-3 flex items-center gap-2 rounded-lg border border-primary/20 bg-page/60 px-3 py-2">
+            <Search size={15} className="text-ink/40" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search players"
+              className="w-full bg-transparent text-sm outline-none"
+            />
+          </label>
+          <ul className="silbo-scrollbar max-h-[460px] space-y-0.5 overflow-y-auto pr-1">
+            {filtered.slice(0, 200).map((p) => (
+              <li key={p.id} className="flex items-center justify-between rounded-lg px-3 py-1.5 text-sm hover:bg-primary/8">
+                <span className="min-w-0 truncate font-medium">{p.name}</span>
+                {p.country && <span className="ml-2 shrink-0 font-mono text-[10px] uppercase text-ink/45">{p.country}</span>}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </Panel>
   )
 }

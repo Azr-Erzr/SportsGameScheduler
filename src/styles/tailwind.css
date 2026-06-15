@@ -1897,14 +1897,17 @@
   .sport-channel-banner {
     --sport-channel-ink: #f4ead8;
     --sport-channel-paper-ink: color-mix(in srgb, var(--mp-primary) 68%, #1d1812);
+    --sport-channel-readable: color-mix(in srgb, var(--mp-ticket-stub) 82%, #1d1812);
+    --sport-channel-pad: clamp(18px, 2vw, 26px);
+    --sport-channel-art-height: clamp(340px, 27vw, 392px);
     position: relative;
     display: grid;
-    grid-template-columns: minmax(170px, 220px) minmax(390px, 0.82fr) minmax(230px, 0.52fr) minmax(320px, 0.8fr);
-    gap: 22px;
+    grid-template-columns: minmax(230px, 286px) minmax(330px, 0.78fr) minmax(210px, 0.42fr) minmax(340px, 0.72fr);
+    gap: 18px;
     align-items: stretch;
     overflow: hidden;
-    min-height: 260px;
-    padding: clamp(16px, 2vw, 24px);
+    min-height: calc(var(--sport-channel-art-height) + var(--sport-channel-pad) + var(--sport-channel-pad) + 2px);
+    padding: var(--sport-channel-pad);
     border: 1px solid color-mix(in srgb, var(--mp-ticket-stub) 58%, #f4ead8);
     border-radius: 10px;
     background:
@@ -1916,7 +1919,7 @@
       0 0 24px color-mix(in srgb, var(--mp-primary) 18%, transparent),
       0 18px 36px rgba(0, 0, 0, 0.3);
     content-visibility: auto;
-    contain-intrinsic-size: 280px;
+    contain-intrinsic-size: 446px;
   }
 
   .sport-channel-banner::before {
@@ -1948,14 +1951,16 @@
   }
 
   .sport-channel-panel {
-    min-height: 210px;
+    min-height: var(--sport-channel-art-height);
     overflow: hidden;
-    border: 1px solid color-mix(in srgb, var(--mp-primary) 28%, transparent);
+    border: 0;
     border-radius: 4px;
     background:
-      linear-gradient(135deg, color-mix(in srgb, var(--mp-primary) 10%, transparent) 0 34%, transparent 34%),
+      radial-gradient(ellipse at 50% 48%, color-mix(in srgb, var(--mp-primary) 12%, transparent), transparent 62%),
+      linear-gradient(135deg, color-mix(in srgb, var(--mp-primary) 9%, transparent) 0 34%, transparent 34%),
       repeating-linear-gradient(0deg, rgba(29, 24, 18, 0.035) 0 1px, transparent 1px 13px),
       color-mix(in srgb, var(--mp-primary) 7%, #fbf5e9);
+    box-shadow: none;
   }
 
   .sport-channel-panel::before {
@@ -1976,19 +1981,61 @@
     inset: 0;
     pointer-events: none;
     background:
+      linear-gradient(90deg, color-mix(in srgb, #fff8ea 70%, transparent) 0 3%, transparent 11% 89%, color-mix(in srgb, #fff8ea 74%, transparent) 97% 100%),
+      linear-gradient(180deg, color-mix(in srgb, #fff8ea 40%, transparent) 0 1%, transparent 7% 93%, color-mix(in srgb, #fff8ea 52%, transparent) 99% 100%),
       linear-gradient(135deg, transparent 0 50%, color-mix(in srgb, var(--mp-primary) 34%, transparent) 50% 54%, transparent 54%),
-      radial-gradient(circle at 22% 18%, color-mix(in srgb, var(--mp-primary) 16%, transparent), transparent 42%);
+      radial-gradient(circle at 22% 18%, color-mix(in srgb, var(--mp-primary) 18%, transparent), transparent 42%);
     mix-blend-mode: multiply;
-    opacity: 0.18;
+    opacity: 0.24;
+  }
+
+  .sport-channel-icon-panel {
+    background:
+      linear-gradient(90deg, color-mix(in srgb, #fff8ea 20%, transparent), transparent 24% 78%, color-mix(in srgb, #fff8ea 48%, transparent)),
+      radial-gradient(ellipse at 48% 54%, color-mix(in srgb, var(--mp-primary) 18%, transparent), transparent 68%),
+      repeating-linear-gradient(0deg, rgba(29, 24, 18, 0.028) 0 1px, transparent 1px 13px);
   }
 
   .sport-channel-icon-panel::before {
+    inset: 0;
     background-image: var(--sport-channel-icon-image);
+    background-size: contain;
+    -webkit-mask-image: radial-gradient(ellipse at 50% 52%, #000 0 68%, rgba(0, 0, 0, 0.92) 78%, transparent 99%);
+    mask-image: radial-gradient(ellipse at 50% 52%, #000 0 68%, rgba(0, 0, 0, 0.92) 78%, transparent 99%);
+  }
+
+  .sport-channel-icon-panel::after {
+    background:
+      radial-gradient(ellipse at 50% 50%, transparent 0 66%, color-mix(in srgb, #fff8ea 36%, transparent) 86%, color-mix(in srgb, #fff8ea 76%, transparent) 100%),
+      linear-gradient(90deg, color-mix(in srgb, #fff8ea 54%, transparent) 0 2%, transparent 13% 83%, color-mix(in srgb, #fff8ea 74%, transparent) 97% 100%),
+      repeating-linear-gradient(112deg, color-mix(in srgb, var(--mp-primary) 16%, transparent) 0 1px, transparent 1px 18px);
+    opacity: 0.42;
+  }
+
+  .sport-channel-action-panel {
+    background:
+      linear-gradient(90deg, color-mix(in srgb, #fff8ea 48%, transparent), transparent 20% 86%, color-mix(in srgb, #fff8ea 38%, transparent)),
+      radial-gradient(ellipse at 62% 48%, color-mix(in srgb, #fff8ea 28%, transparent), transparent 72%),
+      repeating-linear-gradient(0deg, rgba(29, 24, 18, 0.018) 0 1px, transparent 1px 13px);
   }
 
   .sport-channel-action-panel::before {
+    inset: 0;
     background-image: var(--sport-channel-action-image);
-    background-size: cover;
+    background-position: center;
+    background-size: contain;
+    mix-blend-mode: multiply;
+    -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 7%, #000 96%, rgba(0, 0, 0, 0.68) 100%);
+    mask-image: linear-gradient(90deg, transparent 0, #000 7%, #000 96%, rgba(0, 0, 0, 0.68) 100%);
+  }
+
+  .sport-channel-action-panel::after {
+    background:
+      linear-gradient(90deg, color-mix(in srgb, #fff8ea 82%, transparent) 0 3%, transparent 14% 88%, color-mix(in srgb, #fff8ea 70%, transparent) 98% 100%),
+      linear-gradient(180deg, color-mix(in srgb, #fff8ea 18%, transparent) 0 1%, transparent 4% 96%, color-mix(in srgb, #fff8ea 24%, transparent) 100%),
+      radial-gradient(ellipse at 52% 50%, transparent 0 70%, color-mix(in srgb, #fff8ea 32%, transparent) 100%),
+      repeating-linear-gradient(90deg, rgba(29, 24, 18, 0.025) 0 1px, transparent 1px 32px);
+    opacity: 0.36;
   }
 
   .sport-channel-title {
@@ -2006,14 +2053,14 @@
     font-weight: 700;
     letter-spacing: 0.28em;
     text-transform: uppercase;
-    color: var(--mp-accent);
+    color: var(--sport-channel-readable);
   }
 
   .sport-channel-title h1 {
     margin-top: 12px;
-    max-width: 10ch;
+    max-width: 12ch;
     font-family: var(--font-head);
-    font-size: clamp(2.35rem, 3.55vw, 3.55rem);
+    font-size: clamp(2.15rem, 3vw, 3.05rem);
     line-height: 0.86;
     text-transform: uppercase;
     color: var(--mp-ticket-stub);
@@ -2080,7 +2127,7 @@
     width: fit-content;
     align-items: center;
     gap: 8px;
-    border: 1px solid color-mix(in srgb, var(--mp-primary) 52%, transparent);
+    border: 1px solid color-mix(in srgb, var(--sport-channel-readable) 48%, transparent);
     border-radius: 4px;
     padding: 10px 14px;
     font-family: var(--font-mono);
@@ -2088,18 +2135,18 @@
     font-weight: 800;
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: var(--mp-primary);
-    background: color-mix(in srgb, var(--mp-primary) 7%, transparent);
+    color: var(--sport-channel-readable);
+    background: color-mix(in srgb, var(--mp-primary) 6%, transparent);
   }
 
   .sport-channel-cta:hover {
-    background: color-mix(in srgb, var(--mp-primary) 16%, transparent);
-    color: color-mix(in srgb, var(--mp-primary) 86%, white);
+    background: color-mix(in srgb, var(--mp-primary) 13%, transparent);
+    color: color-mix(in srgb, var(--sport-channel-readable) 90%, #1d1812);
   }
 
   [data-paper] .sport-channel-banner {
     --sport-channel-ink: var(--sport-channel-paper-ink);
-    min-height: 250px;
+    min-height: calc(var(--sport-channel-art-height) + var(--sport-channel-pad) + var(--sport-channel-pad) + 2px);
     border-color: color-mix(in srgb, var(--mp-primary) 24%, rgba(29, 24, 18, 0.12));
     background:
       radial-gradient(circle at 78% 34%, color-mix(in srgb, var(--mp-primary) 9%, transparent), transparent 38%),
@@ -2121,48 +2168,50 @@
   }
 
   [data-paper] .sport-channel-panel {
+    min-height: var(--sport-channel-art-height);
     background:
-      radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--mp-primary) 9%, transparent), transparent 62%),
+      radial-gradient(ellipse at 50% 48%, color-mix(in srgb, var(--mp-primary) 10%, transparent), transparent 64%),
       transparent;
     border-color: transparent;
     box-shadow: none;
   }
 
   [data-paper] .sport-channel-panel::before {
-    inset: 3%;
-    background: color-mix(in srgb, var(--sport-channel-ink) 58%, #17120e);
-    background-image: none;
-    opacity: 0.84;
+    inset: -2%;
+    background-color: transparent;
+    background-image: var(--sport-channel-icon);
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+    opacity: 0.9;
+    mix-blend-mode: multiply;
     filter:
-      contrast(1.18)
+      grayscale(1)
+      contrast(1.12)
+      saturate(0.82)
       drop-shadow(0 4px 0 rgba(29, 24, 18, 0.08))
-      drop-shadow(0 0 8px color-mix(in srgb, var(--mp-primary) 10%, transparent));
-    -webkit-mask-repeat: no-repeat;
-    mask-repeat: no-repeat;
-    -webkit-mask-position: center;
-    mask-position: center;
-    -webkit-mask-size: contain;
-    mask-size: contain;
+      drop-shadow(0 0 10px color-mix(in srgb, var(--mp-primary) 8%, transparent));
   }
 
   [data-paper] .sport-channel-panel::after {
+    background:
+      radial-gradient(ellipse at 50% 52%, transparent 0 58%, color-mix(in srgb, #fff8ea 44%, transparent) 84% 100%),
+      repeating-linear-gradient(112deg, color-mix(in srgb, var(--mp-primary) 13%, transparent) 0 1px, transparent 1px 18px);
     mix-blend-mode: multiply;
-    opacity: 0.1;
+    opacity: 0.22;
   }
 
   [data-paper] .sport-channel-icon-panel::before {
-    -webkit-mask-image: var(--sport-channel-icon);
-    mask-image: var(--sport-channel-icon);
+    background-image: var(--sport-channel-icon);
   }
 
   [data-paper] .sport-channel-action-panel::before {
-    inset: 0;
-    -webkit-mask-image: var(--sport-channel-action);
-    mask-image: var(--sport-channel-action);
+    inset: -2%;
+    background-image: var(--sport-channel-action);
   }
 
   [data-paper] .sport-channel-title p {
-    color: color-mix(in srgb, var(--mp-primary) 72%, #9e2d22);
+    color: var(--sport-channel-readable);
   }
 
   [data-paper] .sport-channel-title h1,
@@ -2185,7 +2234,8 @@
   }
 
   [data-paper] .sport-channel-cta {
-    color: var(--mp-primary);
+    border-color: color-mix(in srgb, var(--sport-channel-readable) 44%, transparent);
+    color: var(--sport-channel-readable);
     background: color-mix(in srgb, var(--mp-primary) 7%, transparent);
   }
 
@@ -2229,7 +2279,7 @@
 
   @media (max-width: 1320px) {
     .sport-channel-banner {
-      grid-template-columns: minmax(140px, 190px) minmax(0, 1fr);
+      grid-template-columns: minmax(180px, 250px) minmax(0, 1fr);
     }
 
     .sport-channel-copy {
@@ -2246,7 +2296,7 @@
 
     .sport-channel-action-panel {
       grid-column: 1 / -1;
-      min-height: 170px;
+      min-height: clamp(280px, 36vw, 340px);
     }
 
     .art-capsule {
@@ -2302,7 +2352,15 @@
     }
 
     .sport-channel-icon-panel {
-      min-height: 104px;
+      min-height: 156px;
+    }
+
+    .sport-channel-icon-panel::before {
+      background-size: cover;
+    }
+
+    [data-paper] .sport-channel-icon-panel {
+      min-height: 188px;
     }
 
     .sport-channel-action-panel {
@@ -2320,7 +2378,7 @@
 
     .sport-channel-title h1 {
       max-width: 12ch;
-      font-size: clamp(2.1rem, 11.5vw, 3.35rem);
+      font-size: clamp(2rem, 10.4vw, 3.05rem);
     }
 
     .sport-channel-stats {
