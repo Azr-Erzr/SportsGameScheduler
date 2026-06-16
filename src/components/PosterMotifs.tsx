@@ -11,7 +11,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import type { CSSProperties } from 'react'
-import { useState } from 'react'
+import { memo, useCallback, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAppState } from '../app/state-context'
 import { getSport } from '../domain/sports'
@@ -208,18 +208,22 @@ export function TournamentCapsule({
   )
 }
 
-function EventPosterCard({
+// Memoized so a change to the board's active index only re-renders the two cards whose
+// `active` flips — not all ~11 cards (each of which renders a sport asset). Without this,
+// sweeping the mouse across the board re-rendered the whole stack on every pointer move.
+const EventPosterCard = memo(function EventPosterCard({
   event,
   index,
   active = false,
-  onFocus,
+  onActivate,
 }: {
   event: PosterEvent
   index: number
   active?: boolean
-  onFocus?: () => void
+  onActivate?: (index: number) => void
 }) {
   const theme = getTheme(event.sportKey)
+  const focus = onActivate ? () => onActivate(index) : undefined
   const card = (
     <article
       className={`event-poster-card ${active ? 'is-active' : ''}`}
@@ -238,13 +242,55 @@ function EventPosterCard({
   )
 
   return event.href ? (
-    <Link to={event.href} className="block" onFocus={onFocus} onMouseEnter={onFocus}>
+    <Link to={event.href} className="block" onFocus={focus} onMouseEnter={focus}>
       {card}
     </Link>
   ) : (
     card
   )
-}
+})
+
+const GlobeSignal = memo(function GlobeSignal({
+  event,
+  index,
+  position,
+  isActive,
+  iconVariant,
+  onActivate,
+}: {
+  event: PosterEvent
+  index: number
+  position: (typeof signalPositions)[number]
+  isActive: boolean
+  iconVariant: 'brush' | 'neon3d'
+  onActivate: (index: number) => void
+}) {
+  const theme = getTheme(event.sportKey)
+  const activate = () => onActivate(index)
+  return (
+    <button
+      type="button"
+      className={`globe-signal ${isActive ? 'is-active' : ''} orbit-${position.orbit}`}
+      style={
+        {
+          left: `${position.x}%`,
+          top: `${position.y}%`,
+          '--signal-color': theme.colors.primary,
+          '--signal-accent': theme.colors.accent,
+          '--signal-delay': position.delay,
+        } as CSSProperties
+      }
+      aria-pressed={isActive}
+      aria-label={`${position.label}: ${event.title}`}
+      onClick={activate}
+      onFocus={activate}
+      onMouseEnter={activate}
+    >
+      <SportAssetIcon sportKey={event.sportKey} size="xs" variant={iconVariant} />
+      <span className="globe-signal-label">{event.label}</span>
+    </button>
+  )
+})
 
 export function GlobalEventBoard({ events, variant = 'compact' }: { events: PosterEvent[]; variant?: 'compact' | 'room' }) {
   const [activeIndex, setActiveIndex] = useState(0)
@@ -252,7 +298,7 @@ export function GlobalEventBoard({ events, variant = 'compact' }: { events: Post
   const activeEvent = events[activeIndex] ?? events[0]
   const activeTheme = getTheme(activeEvent?.sportKey ?? 'neutral')
   const iconVariant = prefs.themeMode === 'program' ? 'brush' : 'neon3d'
-  const activate = (index: number) => setActiveIndex((current) => (current === index ? current : index))
+  const activate = useCallback((index: number) => setActiveIndex((current) => (current === index ? current : index)), [])
 
   return (
     <section className={`global-event-board ${variant === 'room' ? 'global-event-board-room' : ''}`}>
@@ -260,35 +306,17 @@ export function GlobalEventBoard({ events, variant = 'compact' }: { events: Post
       <div className="poster-orbit poster-orbit-two" aria-hidden="true" />
       <div className="poster-globe" aria-hidden="true" />
       <div className="globe-signal-layer" aria-label="Today's sport signals">
-        {events.slice(0, 5).map((event, index) => {
-          const position = signalPositions[index % signalPositions.length]
-          const theme = getTheme(event.sportKey)
-          const isActive = index === activeIndex
-          return (
-            <button
-              key={event.title}
-              type="button"
-              className={`globe-signal ${isActive ? 'is-active' : ''} orbit-${position.orbit}`}
-              style={
-                {
-                  left: `${position.x}%`,
-                  top: `${position.y}%`,
-                  '--signal-color': theme.colors.primary,
-                  '--signal-accent': theme.colors.accent,
-                  '--signal-delay': position.delay,
-                } as CSSProperties
-              }
-              aria-pressed={isActive}
-              aria-label={`${position.label}: ${event.title}`}
-              onClick={() => activate(index)}
-              onFocus={() => activate(index)}
-              onMouseEnter={() => activate(index)}
-            >
-              <SportAssetIcon sportKey={event.sportKey} size="xs" variant={iconVariant} />
-              <span className="globe-signal-label">{event.label}</span>
-            </button>
-          )
-        })}
+        {events.slice(0, 5).map((event, index) => (
+          <GlobeSignal
+            key={event.title}
+            event={event}
+            index={index}
+            position={signalPositions[index % signalPositions.length]}
+            isActive={index === activeIndex}
+            iconVariant={iconVariant}
+            onActivate={activate}
+          />
+        ))}
       </div>
 
       <div className="relative z-[1] flex flex-wrap items-start justify-between gap-4">
@@ -316,7 +344,7 @@ export function GlobalEventBoard({ events, variant = 'compact' }: { events: Post
 
       <div className="poster-stack silbo-scrollbar">
         {events.map((event, index) => (
-          <EventPosterCard key={event.title} event={event} index={index} active={index === activeIndex} onFocus={() => activate(index)} />
+          <EventPosterCard key={event.title} event={event} index={index} active={index === activeIndex} onActivate={activate} />
         ))}
       </div>
     </section>
