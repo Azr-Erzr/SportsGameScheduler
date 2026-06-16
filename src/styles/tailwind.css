@@ -1900,6 +1900,15 @@
     --sport-channel-readable: color-mix(in srgb, var(--mp-ticket-stub) 82%, #1d1812);
     --sport-channel-pad: clamp(18px, 2vw, 26px);
     --sport-channel-art-height: clamp(340px, 27vw, 392px);
+    /* Broadcast "one continuous field": a shared warm-pale field carries the title/copy and the
+       cream-backed action art; each art panel layers its OWN feathered backing (dark for the
+       black-backed icon, dark-teal corner for the action) so nothing reads as a pasted rectangle
+       and the composition survives the 4-col → stacked → icon-only breakpoints. */
+    --scf-field: color-mix(in srgb, var(--mp-accent) 4%, #f1e8d3);
+    --scf-field-edge: color-mix(in srgb, var(--mp-accent) 9%, #ece2cb);
+    --scf-void: color-mix(in srgb, var(--mp-accent) 30%, #060a09);
+    --scf-deep: color-mix(in srgb, var(--mp-accent) 22%, #080b0a);
+    --scf-grid: color-mix(in srgb, var(--mp-accent) 22%, transparent);
     position: relative;
     display: grid;
     grid-template-columns: minmax(230px, 286px) minmax(330px, 0.78fr) minmax(210px, 0.42fr) minmax(340px, 0.72fr);
@@ -1908,29 +1917,33 @@
     overflow: hidden;
     min-height: calc(var(--sport-channel-art-height) + var(--sport-channel-pad) + var(--sport-channel-pad) + 2px);
     padding: var(--sport-channel-pad);
-    border: 1px solid color-mix(in srgb, var(--mp-ticket-stub) 58%, #f4ead8);
+    border: 1px solid color-mix(in srgb, var(--mp-accent) 30%, rgba(8, 10, 9, 0.55));
     border-radius: 10px;
     background:
-      radial-gradient(circle at 78% 34%, color-mix(in srgb, var(--mp-primary) 10%, transparent), transparent 38%),
-      repeating-linear-gradient(112deg, rgba(29, 24, 18, 0.032) 0 1px, transparent 1px 14px),
-      linear-gradient(100deg, #fff8ea, #f4ead8 78%);
+      radial-gradient(ellipse 60% 78% at 50% 46%, color-mix(in srgb, #fffaef 70%, transparent), transparent 70%),
+      linear-gradient(100deg, var(--scf-field-edge), var(--scf-field) 22% 78%, var(--scf-field-edge));
     box-shadow:
-      0 0 0 2px rgba(0, 0, 0, 0.46),
-      0 0 24px color-mix(in srgb, var(--mp-primary) 18%, transparent),
-      0 18px 36px rgba(0, 0, 0, 0.3);
+      0 0 0 1px rgba(0, 0, 0, 0.5),
+      0 0 30px color-mix(in srgb, var(--mp-accent) 16%, transparent),
+      0 18px 38px rgba(0, 0, 0, 0.42);
     content-visibility: auto;
     contain-intrinsic-size: 446px;
   }
 
+  /* Continuous overlay across all three zones: grid + plus-marks + faint scanline (painted below
+     the panels so it shows through the field and the dropped-out art backgrounds). */
   .sport-channel-banner::before {
     content: '';
     position: absolute;
     inset: 0;
     pointer-events: none;
-    background:
-      repeating-linear-gradient(0deg, rgba(29, 24, 18, 0.028) 0 1px, transparent 1px 8px),
-      radial-gradient(circle at 68% 46%, color-mix(in srgb, var(--mp-primary) 6%, transparent), transparent 44%);
-    opacity: 0.9;
+    background-image:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='132' height='132'%3E%3Cg fill='%23ffffff'%3E%3Cpath d='M30 25h11v2H30z'/%3E%3Cpath d='M35 21h2v11h-2z'/%3E%3Cpath d='M98 96h11v2H98z'/%3E%3Cpath d='M103 92h2v11h-2z'/%3E%3C/g%3E%3C/svg%3E"),
+      repeating-linear-gradient(90deg, var(--scf-grid) 0 1px, transparent 1px 48px),
+      repeating-linear-gradient(0deg, var(--scf-grid) 0 1px, transparent 1px 48px),
+      repeating-linear-gradient(0deg, rgba(6, 10, 12, 0.16) 0 1px, transparent 1px 4px);
+    background-size: 132px 132px, auto, auto, auto;
+    opacity: 0.32;
   }
 
   .sport-channel-banner::after {
@@ -1939,8 +1952,9 @@
     inset: auto 18px 12px;
     height: 3px;
     pointer-events: none;
+    z-index: 3;
     background: linear-gradient(90deg, var(--mp-primary), var(--mp-accent), var(--mp-export), transparent);
-    opacity: 0.6;
+    opacity: 0.72;
   }
 
   .sport-channel-panel,
@@ -1952,17 +1966,15 @@
 
   .sport-channel-panel {
     min-height: var(--sport-channel-art-height);
-    overflow: hidden;
+    overflow: visible;
     border: 0;
-    border-radius: 4px;
-    background:
-      radial-gradient(ellipse at 50% 48%, color-mix(in srgb, var(--mp-primary) 12%, transparent), transparent 62%),
-      linear-gradient(135deg, color-mix(in srgb, var(--mp-primary) 9%, transparent) 0 34%, transparent 34%),
-      repeating-linear-gradient(0deg, rgba(29, 24, 18, 0.035) 0 1px, transparent 1px 13px),
-      color-mix(in srgb, var(--mp-primary) 7%, #fbf5e9);
+    border-radius: 0;
+    background: transparent;
     box-shadow: none;
   }
 
+  /* Base art layer (used by the icon panel): the WebP's black background drops out of the dark
+     backing via screen, leaving only the neon linework glowing. */
   .sport-channel-panel::before {
     content: '';
     position: absolute;
@@ -1972,7 +1984,8 @@
     background-position: center;
     background-size: contain;
     opacity: 1;
-    filter: saturate(1.06) contrast(1.04) drop-shadow(0 0 18px color-mix(in srgb, var(--mp-primary) 24%, transparent));
+    mix-blend-mode: screen;
+    filter: saturate(1.08) contrast(1.05) drop-shadow(0 0 16px color-mix(in srgb, var(--mp-accent) 34%, transparent));
   }
 
   .sport-channel-panel::after {
@@ -1980,62 +1993,69 @@
     position: absolute;
     inset: 0;
     pointer-events: none;
-    background:
-      linear-gradient(90deg, color-mix(in srgb, #fff8ea 70%, transparent) 0 3%, transparent 11% 89%, color-mix(in srgb, #fff8ea 74%, transparent) 97% 100%),
-      linear-gradient(180deg, color-mix(in srgb, #fff8ea 40%, transparent) 0 1%, transparent 7% 93%, color-mix(in srgb, #fff8ea 52%, transparent) 99% 100%),
-      linear-gradient(135deg, transparent 0 50%, color-mix(in srgb, var(--mp-primary) 34%, transparent) 50% 54%, transparent 54%),
-      radial-gradient(circle at 22% 18%, color-mix(in srgb, var(--mp-primary) 18%, transparent), transparent 42%);
-    mix-blend-mode: multiply;
-    opacity: 0.24;
+    background: none;
   }
 
+  /* Icon zone: a local dark-teal backing that feathers into the field so the neon stamp emerges
+     from the dark and bleeds off the left edge — no rectangle. */
   .sport-channel-icon-panel {
     background:
-      linear-gradient(90deg, color-mix(in srgb, #fff8ea 20%, transparent), transparent 24% 78%, color-mix(in srgb, #fff8ea 48%, transparent)),
-      radial-gradient(ellipse at 48% 54%, color-mix(in srgb, var(--mp-primary) 18%, transparent), transparent 68%),
-      repeating-linear-gradient(0deg, rgba(29, 24, 18, 0.028) 0 1px, transparent 1px 13px);
+      radial-gradient(125% 108% at 30% 50%,
+        var(--scf-void) 0 40%,
+        var(--scf-deep) 58%,
+        color-mix(in srgb, var(--scf-deep) 40%, transparent) 76%,
+        transparent 100%);
   }
 
   .sport-channel-icon-panel::before {
-    inset: 0;
+    inset: 0 0 0 calc(-1 * var(--sport-channel-pad) - 8px);
     background-image: var(--sport-channel-icon-image);
-    background-size: contain;
-    -webkit-mask-image: radial-gradient(ellipse at 50% 52%, #000 0 68%, rgba(0, 0, 0, 0.92) 78%, transparent 99%);
-    mask-image: radial-gradient(ellipse at 50% 52%, #000 0 68%, rgba(0, 0, 0, 0.92) 78%, transparent 99%);
+    background-position: left center;
+    background-size: cover;
+    -webkit-mask-image:
+      linear-gradient(90deg, #000 0 60%, transparent 100%),
+      linear-gradient(180deg, transparent 0, #000 10% 90%, transparent 100%);
+    -webkit-mask-composite: source-in;
+    mask-image:
+      linear-gradient(90deg, #000 0 60%, transparent 100%),
+      linear-gradient(180deg, transparent 0, #000 10% 90%, transparent 100%);
+    mask-composite: intersect;
   }
 
   .sport-channel-icon-panel::after {
     background:
-      radial-gradient(ellipse at 50% 50%, transparent 0 66%, color-mix(in srgb, #fff8ea 36%, transparent) 86%, color-mix(in srgb, #fff8ea 76%, transparent) 100%),
-      linear-gradient(90deg, color-mix(in srgb, #fff8ea 54%, transparent) 0 2%, transparent 13% 83%, color-mix(in srgb, #fff8ea 74%, transparent) 97% 100%),
-      repeating-linear-gradient(112deg, color-mix(in srgb, var(--mp-primary) 16%, transparent) 0 1px, transparent 1px 18px);
-    opacity: 0.42;
+      radial-gradient(125% 108% at 30% 50%, transparent 0 62%, color-mix(in srgb, var(--scf-field) 70%, transparent) 92% 100%);
+    opacity: 0.6;
   }
 
+  /* Action zone: the cream-backed telemetry scene blends straight onto the matching field (normal
+     blend — no rectangle), framed by a dark-teal outer-corner vignette and bleeding off the right
+     edge so the pitch reads as part of the broadcast field. */
   .sport-channel-action-panel {
     background:
-      linear-gradient(90deg, color-mix(in srgb, #fff8ea 48%, transparent), transparent 20% 86%, color-mix(in srgb, #fff8ea 38%, transparent)),
-      radial-gradient(ellipse at 62% 48%, color-mix(in srgb, #fff8ea 28%, transparent), transparent 72%),
-      repeating-linear-gradient(0deg, rgba(29, 24, 18, 0.018) 0 1px, transparent 1px 13px);
+      radial-gradient(120% 120% at 100% 6%, var(--scf-deep) 0 8%, color-mix(in srgb, var(--scf-deep) 32%, transparent) 30%, transparent 56%),
+      radial-gradient(150% 130% at 108% 92%, color-mix(in srgb, var(--scf-deep) 60%, transparent) 0 16%, transparent 52%);
   }
 
   .sport-channel-action-panel::before {
-    inset: 0;
+    inset: 0 calc(-1 * var(--sport-channel-pad) - 6px) 0 0;
     background-image: var(--sport-channel-action-image);
-    background-position: center;
-    background-size: contain;
-    mix-blend-mode: multiply;
-    -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 7%, #000 96%, rgba(0, 0, 0, 0.68) 100%);
-    mask-image: linear-gradient(90deg, transparent 0, #000 7%, #000 96%, rgba(0, 0, 0, 0.68) 100%);
+    background-position: 38% center;
+    background-size: cover;
+    mix-blend-mode: normal;
+    filter: saturate(1.04) contrast(1.03) drop-shadow(0 0 14px color-mix(in srgb, var(--mp-accent) 22%, transparent));
+    -webkit-mask-image:
+      linear-gradient(90deg, transparent 0, #000 18%, #000 100%),
+      linear-gradient(180deg, transparent 0, #000 7% 93%, transparent 100%);
+    -webkit-mask-composite: source-in;
+    mask-image:
+      linear-gradient(90deg, transparent 0, #000 18%, #000 100%),
+      linear-gradient(180deg, transparent 0, #000 7% 93%, transparent 100%);
+    mask-composite: intersect;
   }
 
   .sport-channel-action-panel::after {
-    background:
-      linear-gradient(90deg, color-mix(in srgb, #fff8ea 82%, transparent) 0 3%, transparent 14% 88%, color-mix(in srgb, #fff8ea 70%, transparent) 98% 100%),
-      linear-gradient(180deg, color-mix(in srgb, #fff8ea 18%, transparent) 0 1%, transparent 4% 96%, color-mix(in srgb, #fff8ea 24%, transparent) 100%),
-      radial-gradient(ellipse at 52% 50%, transparent 0 70%, color-mix(in srgb, #fff8ea 32%, transparent) 100%),
-      repeating-linear-gradient(90deg, rgba(29, 24, 18, 0.025) 0 1px, transparent 1px 32px);
-    opacity: 0.36;
+    background: none;
   }
 
   .sport-channel-title {
@@ -2388,6 +2408,23 @@
     .sport-channel-action-panel {
       grid-column: 1 / -1;
       min-height: clamp(280px, 36vw, 340px);
+      background:
+        radial-gradient(80% 150% at 4% 50%, color-mix(in srgb, var(--scf-deep) 44%, transparent) 0 14%, transparent 52%),
+        radial-gradient(80% 150% at 96% 50%, color-mix(in srgb, var(--scf-deep) 44%, transparent) 0 14%, transparent 52%);
+    }
+
+    /* As a full-width bottom strip the cream-backed scene is centred and the matching field fills
+       the sides (an invisible letterbox), so it never reads as a cropped rectangle. */
+    .sport-channel-action-panel::before {
+      inset: 0;
+      background-position: center;
+      background-size: contain;
+      -webkit-mask-image:
+        linear-gradient(90deg, transparent 0, #000 12% 88%, transparent 100%),
+        linear-gradient(180deg, transparent 0, #000 8% 92%, transparent 100%);
+      mask-image:
+        linear-gradient(90deg, transparent 0, #000 12% 88%, transparent 100%),
+        linear-gradient(180deg, transparent 0, #000 8% 92%, transparent 100%);
     }
 
     .art-capsule {

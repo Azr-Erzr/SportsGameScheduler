@@ -21,7 +21,13 @@ export type LiveEvent = {
 
 export type LivePlayer = { id: string; name: string; country: string | null; logoUrl: string | null }
 
-export type SportSchedule = { leagues: LiveLeague[]; events: LiveEvent[]; loading: boolean; configured: boolean }
+export type SportSchedule = {
+  leagues: LiveLeague[]
+  events: LiveEvent[]
+  loading: boolean
+  configured: boolean
+  lastUpdated: Date | null
+}
 
 type EventRow = {
   id: string
@@ -30,22 +36,29 @@ type EventRow = {
   starts_at_tbd: boolean
   status: string
   league_id: string | null
+  updated_at: string | null
   venues: { name: string } | null
 }
 
-type ScheduleState = { forKey: string; leagues: LiveLeague[]; events: LiveEvent[]; configured: boolean }
+type ScheduleState = {
+  forKey: string
+  leagues: LiveLeague[]
+  events: LiveEvent[]
+  configured: boolean
+  lastUpdated: Date | null
+}
 
 export function useSportSchedule(canonicalSportKey: string): SportSchedule {
   // Store the key the data was loaded for; derive `loading` instead of setting state
   // synchronously in the effect (which triggers cascading renders).
-  const [state, setState] = useState<ScheduleState>({ forKey: '', leagues: [], events: [], configured: true })
+  const [state, setState] = useState<ScheduleState>({ forKey: '', leagues: [], events: [], configured: true, lastUpdated: null })
 
   useEffect(() => {
     let cancelled = false
 
     getSupabaseClient().then(async (supabase) => {
       if (!supabase) {
-        if (!cancelled) setState({ forKey: canonicalSportKey, leagues: [], events: [], configured: false })
+        if (!cancelled) setState({ forKey: canonicalSportKey, leagues: [], events: [], configured: false, lastUpdated: null })
         return
       }
 
@@ -61,7 +74,7 @@ export function useSportSchedule(canonicalSportKey: string): SportSchedule {
           .order('name'),
         supabase
           .from('events')
-          .select('id, title, starts_at, starts_at_tbd, status, league_id, venues(name), sports!inner(key)')
+          .select('id, title, starts_at, starts_at_tbd, status, league_id, updated_at, venues(name), sports!inner(key)')
           .eq('sports.key', canonicalSportKey)
           .eq('visibility', 'public')
           .gte('starts_at', nowIso)
@@ -78,7 +91,8 @@ export function useSportSchedule(canonicalSportKey: string): SportSchedule {
       }))
       const leagueNames = new Map(leagues.map((l) => [l.id, l.name]))
 
-      const events: LiveEvent[] = ((eventsRes.data ?? []) as unknown as EventRow[]).map((row) => ({
+      const rows = (eventsRes.data ?? []) as unknown as EventRow[]
+      const events: LiveEvent[] = rows.map((row) => ({
         id: row.id,
         title: row.title,
         startsAt: row.starts_at ? new Date(row.starts_at) : null,
@@ -90,7 +104,15 @@ export function useSportSchedule(canonicalSportKey: string): SportSchedule {
         venue: row.venues?.name ?? null,
       }))
 
-      setState({ forKey: canonicalSportKey, leagues, events, configured: true })
+      // Freshness: the most recent change we ingested for this sport.
+      let lastUpdated: Date | null = null
+      for (const row of rows) {
+        if (!row.updated_at) continue
+        const t = new Date(row.updated_at)
+        if (!lastUpdated || t > lastUpdated) lastUpdated = t
+      }
+
+      setState({ forKey: canonicalSportKey, leagues, events, configured: true, lastUpdated })
     })
 
     return () => {
@@ -104,6 +126,7 @@ export function useSportSchedule(canonicalSportKey: string): SportSchedule {
     events: loading ? [] : state.events,
     loading,
     configured: state.configured,
+    lastUpdated: loading ? null : state.lastUpdated,
   }
 }
 
@@ -216,6 +239,115 @@ export function useMyEvents(
 
   const loading = state.forKey !== queryKey
   return { events: loading ? [] : state.events, loading, configured: state.configured }
+}
+
+export type EventCompetitor = { id: string; name: string; country: string | null; role: string; logoUrl: string | null }
+export type EventBroadcast = { country: string; channel: string; streamUrl: string | null; kind: string }
+export type EventDetail = LiveEvent & {
+  leagueId: string | null
+  venueCity: string | null
+  venueCountry: string | null
+  competitors: EventCompetitor[]
+  broadcasts: EventBroadcast[]
+}
+
+// Full single-event read for the event detail page (the target of calendar "View" links).
+export function useEvent(eventId: string | undefined): { event: EventDetail | null; loading: boolean; configured: boolean } {
+  const [state, setState] = useState<{ forKey: string; event: EventDetail | null; configured: boolean }>({
+    forKey: 'init',
+    event: null,
+    configured: true,
+  })
+
+  useEffect(() => {
+    let cancelled = false
+    const key = eventId ?? ''
+
+    getSupabaseClient().then(async (supabase) => {
+      if (cancelled) return
+      if (!eventId) {
+        setState({ forKey: key, event: null, configured: true })
+        return
+      }
+      if (!supabase) {
+        setState({ forKey: key, event: null, configured: false })
+        return
+      }
+      const [{ data: row }, { data: comps }, { data: casts }] = await Promise.all([
+        supabase
+          .from('events')
+          .select(
+            'id, title, starts_at, starts_at_tbd, status, league_id, venues(name, city, country), sports(key), leagues(name)',
+          )
+          .eq('id', eventId)
+          .maybeSingle(),
+        supabase
+          .from('event_competitors')
+          .select('role, position, competitors(id, name, country, logo_url)')
+          .eq('event_id', eventId)
+          .order('position', { ascending: true }),
+        supabase.from('broadcasts').select('country, channel, stream_url, kind').eq('event_id', eventId),
+      ])
+      if (cancelled) return
+      if (!row) {
+        setState({ forKey: key, event: null, configured: true })
+        return
+      }
+      const r = row as unknown as {
+        id: string
+        title: string
+        starts_at: string | null
+        starts_at_tbd: boolean
+        status: string
+        league_id: string | null
+        venues: { name: string; city: string | null; country: string | null } | null
+        sports: { key: string } | null
+        leagues: { name: string } | null
+      }
+      const competitors: EventCompetitor[] = (comps ?? []).map((c) => {
+        const person = (c as unknown as { competitors: { id: string; name: string; country: string | null; logo_url: string | null } }).competitors
+        return {
+          id: person.id,
+          name: person.name,
+          country: person.country,
+          logoUrl: person.logo_url,
+          role: (c as unknown as { role: string }).role,
+        }
+      })
+      const broadcasts: EventBroadcast[] = (casts ?? []).map((b) => ({
+        country: (b as unknown as { country: string }).country,
+        channel: (b as unknown as { channel: string }).channel,
+        streamUrl: (b as unknown as { stream_url: string | null }).stream_url,
+        kind: (b as unknown as { kind: string }).kind,
+      }))
+      setState({
+        forKey: key,
+        configured: true,
+        event: {
+          id: r.id,
+          title: r.title,
+          startsAt: r.starts_at ? new Date(r.starts_at) : null,
+          startsAtTbd: r.starts_at_tbd,
+          status: r.status,
+          leagueId: r.league_id,
+          leagueName: r.leagues?.name ?? '',
+          sportKey: r.sports?.key ?? null,
+          venue: r.venues?.name ?? null,
+          venueCity: r.venues?.city ?? null,
+          venueCountry: r.venues?.country ?? null,
+          competitors,
+          broadcasts,
+        },
+      })
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [eventId])
+
+  const loading = state.forKey !== (eventId ?? '')
+  return { event: loading ? null : state.event, loading, configured: state.configured }
 }
 
 export function useSportRoster(canonicalSportKey: string, enabled: boolean): { players: LivePlayer[]; loading: boolean } {

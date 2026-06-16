@@ -102,7 +102,7 @@ export function eventToVevent(event: FeedEvent, options: RenderOptions = {}): st
     event.league_name ? `League: ${event.league_name}` : '',
     event.venue_name ? `Venue: ${event.venue_name}` : '',
     'Times shown in your calendar’s timezone.',
-    options.appUrl ? `View: ${options.appUrl}/event/${event.id}` : '',
+    options.appUrl ? `View: ${options.appUrl}/events/${event.id}` : '',
   ].filter(Boolean)
 
   const lines = [

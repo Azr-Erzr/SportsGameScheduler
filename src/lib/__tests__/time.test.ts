@@ -1,5 +1,17 @@
 import { describe, expect, test } from 'vitest'
-import { formatTimeParts, parseKickoff } from '../time'
+import { formatTimeParts, parseKickoff, relativeTimeFromNow } from '../time'
+
+describe('relativeTimeFromNow', () => {
+  const now = new Date('2026-06-15T12:00:00Z').getTime()
+  test('sub-minute reads as just now', () => {
+    expect(relativeTimeFromNow(new Date('2026-06-15T11:59:30Z'), now)).toBe('just now')
+  })
+  test('minutes / hours / days', () => {
+    expect(relativeTimeFromNow(new Date('2026-06-15T11:30:00Z'), now)).toBe('30m ago')
+    expect(relativeTimeFromNow(new Date('2026-06-15T09:00:00Z'), now)).toBe('3h ago')
+    expect(relativeTimeFromNow(new Date('2026-06-13T12:00:00Z'), now)).toBe('2d ago')
+  })
+})
 
 describe('parseKickoff', () => {
   test('parses whole-hour offsets', () => {

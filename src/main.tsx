@@ -21,7 +21,8 @@ const CustomLeagueAdminPage = lazy(() =>
 const SharePage = lazy(() => import('./pages/SharePage').then((m) => ({ default: m.SharePage })))
 const LeaguePage = lazy(() => import('./pages/EntityPlaceholder').then((m) => ({ default: m.LeaguePage })))
 const TeamPage = lazy(() => import('./pages/EntityPlaceholder').then((m) => ({ default: m.TeamPage })))
-const EventDetailPage = lazy(() => import('./pages/EntityPlaceholder').then((m) => ({ default: m.EventDetailPage })))
+const EventDetailPage = lazy(() => import('./pages/EventDetail').then((m) => ({ default: m.EventDetailPage })))
+const AlertSettingsPage = lazy(() => import('./pages/AlertSettings').then((m) => ({ default: m.AlertSettingsPage })))
 
 function lazyRoute(element: React.ReactNode) {
   return (
@@ -51,6 +52,7 @@ const router = createBrowserRouter([
       { path: '/events/:eventId', element: lazyRoute(<EventDetailPage />) },
       { path: '/calendar', element: lazyRoute(<CalendarFeedsPage />) },
       { path: '/exports', element: lazyRoute(<ExportStudioPage />) },
+      { path: '/settings/alerts', element: lazyRoute(<AlertSettingsPage />) },
       { path: '/custom-leagues', element: lazyRoute(<CustomLeaguesPage />) },
       { path: '/custom-leagues/:leagueId/admin', element: lazyRoute(<CustomLeagueAdminPage />) },
       { path: '/s/:token', element: lazyRoute(<SharePage />) },

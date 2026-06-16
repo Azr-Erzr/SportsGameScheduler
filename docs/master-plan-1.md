@@ -55,6 +55,32 @@ current state until the full table is cleaned up:
   picker, and 12/24-hour preference exist. Remaining work is full translations, onboarding,
   anonymous-to-account migration, and live personal share links.
 
+### Latest Audit Correction - June 15, 2026
+
+A large backend/wire-up pass has closed most of the June-12 gaps. Current state by objective
+(supersedes the table below where they differ; see `docs/master-plan-4-backend-and-glue.md` for
+the full writeup):
+
+- **Obj 3 / 5 / 14 (auth + follows):** auth UI is live and *functional* — follows + preferences
+  now persist to `user_follows` / `profiles` when signed in, with local→account merge on first
+  sign-in. Following leagues and athletes works from the sport pages and event detail page.
+- **Obj 4 (provider sync):** TheSportsDB hydrator runs on cron with diff-before-write change
+  detection (`event_status_history`), ~37 leagues / ~8,400 events / ~5,150 athletes; freshness UI
+  ("Live · via TheSportsDB · synced Xm ago") now shows on sport pages. Gap: raw payload snapshots.
+- **Obj 6 (calendar feeds):** server-backed, hashed-token feeds via the deployed `calendar-feed`
+  function (schema drift fixed); multi-sport filters; TBD→all-day/TENTATIVE rendering; emoji,
+  CATEGORIES, VALARM reminders, and a working `/events/:id` back-link.
+- **Obj 7 (multi-sport frontend):** real **Event Detail page** (`/events/:id`) shipped
+  (time/venue/competitors/where-to-watch/follow/export). League/Team pages still placeholders.
+- **Obj 10 (notifications):** worker is scheduled (5-min cron), the change-materializer RPC
+  exists, and an **Alert settings UI** (`/settings/alerts`) writes `alert_preferences`. Email
+  *transport* still needs `RESEND_API_KEY` + a verified domain; Web Push needs VAPID keys.
+- **Obj 12 / 13 (CI + tests):** GitHub Actions CI (lint + test + build) added; 28 unit tests
+  (ICS multi-sport builder, sport emoji, relative-time, plus the originals).
+- **Still open (largest):** custom leagues are still localStorage-only (Obj 9 server-backing /
+  cross-device shares); email/push transport secrets; League/Team detail pages; admin dashboard
+  (Obj 11); public frontend deploy automation (Obj 12).
+
 | Objective | Status | What's left |
 |---|---|---|
 | 1. Product foundation (nav, sport switcher, WC view, empty states) | ✅ Done | Switcher is now the brand block with per-sport icons; sport vs league split applied. |

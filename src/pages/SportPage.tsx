@@ -11,9 +11,19 @@ import { useSportRoster, useSportSchedule, type LiveEvent } from '../data/liveSp
 import { allMatches, featuredTeams } from '../data/worldcup'
 import { getSport, type SportInfo } from '../domain/sports'
 import { findConflicts } from '../lib/conflicts'
-import { formatDate, formatLongDate, formatTime } from '../lib/time'
+import { formatDate, formatLongDate, formatTime, relativeTimeFromNow } from '../lib/time'
 
 const INDIVIDUAL_SPORTS = ['tennis', 'golf', 'athletics', 'combat_sports']
+
+// Provider freshness line (MP1 Objective 4): source + when we last ingested a change.
+function DataFreshness({ lastUpdated }: { lastUpdated: Date | null }) {
+  return (
+    <p className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wide text-ink/45">
+      <span className="inline-block h-1.5 w-1.5 rounded-full bg-primary" />
+      Live · via TheSportsDB{lastUpdated ? ` · synced ${relativeTimeFromNow(lastUpdated)}` : ''}
+    </p>
+  )
+}
 
 // Kit-wall memorabilia: each team row carries a jersey-stripe bar — deterministic two-color
 // pattern from the team name (kit culture without anyone's actual kit).
@@ -57,7 +67,7 @@ export function SportPage() {
 // (EPL, La Liga, UCL, …) even while the World Cup is on. Leagues arrive viewership-ordered.
 function SoccerPage() {
   const { prefs, toggleFollow, followedLeagueIds } = useAppState()
-  const { leagues, events } = useSportSchedule('soccer')
+  const { leagues, events, lastUpdated } = useSportSchedule('soccer')
   const [leagueId, setLeagueId] = useState<string | null>(null) // null = World Cup planner
 
   // Exclude the World Cup league rows (openfootball + TheSportsDB) — the planner IS the WC.
@@ -70,6 +80,7 @@ function SoccerPage() {
 
   return (
     <div className="space-y-4">
+      <DataFreshness lastUpdated={lastUpdated} />
       <LeagueFilter primaryLabel="World Cup" leagues={otherLeagues} selectedId={leagueId} onSelect={setLeagueId} />
 
       {leagueId === null ? (
@@ -294,7 +305,7 @@ function LiveSportPage({ sport }: { sport: SportInfo }) {
   const { prefs, toggleFollow, followedLeagueIds, followedCompetitorIds } = useAppState()
   const canonical = sport.canonicalSportKey
   const isIndividual = INDIVIDUAL_SPORTS.includes(canonical)
-  const { leagues, events, loading, configured } = useSportSchedule(canonical)
+  const { leagues, events, loading, configured, lastUpdated } = useSportSchedule(canonical)
   const roster = useSportRoster(canonical, isIndividual)
   const [leagueId, setLeagueId] = useState<string | null>(null)
   const activeLeague = leagueId ? leagues.find((l) => l.id === leagueId) : null
@@ -329,6 +340,7 @@ function LiveSportPage({ sport }: { sport: SportInfo }) {
         <p className="board-label py-10 text-center text-ink/50">Tuning channel…</p>
       ) : (
         <>
+          <DataFreshness lastUpdated={lastUpdated} />
           {leagues.length > 1 && (
             <div className="flex flex-wrap items-center gap-2">
               <LeagueFilter primaryLabel="All" leagues={leagues} selectedId={leagueId} onSelect={setLeagueId} />

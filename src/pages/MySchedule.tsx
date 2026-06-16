@@ -1,4 +1,4 @@
-import { CalendarDays, Copy, Download, FileImage, Globe2, Plus, X, Zap } from 'lucide-react'
+import { BellRing, CalendarDays, Copy, Download, FileImage, Globe2, Plus, X, Zap } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAppState } from '../app/state-context'
@@ -170,7 +170,15 @@ export function MySchedulePage() {
             {schedule.length} events for {followedTeams.length} followed teams - shown in {timeZone}
           </p>
         </div>
-        <CityPicker />
+        <div className="flex items-center gap-2">
+          <Link
+            to="/settings/alerts"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-primary/20 px-3 py-2 text-sm font-semibold text-ink/75 hover:bg-primary/8"
+          >
+            <BellRing size={15} /> Alerts
+          </Link>
+          <CityPicker />
+        </div>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3">
