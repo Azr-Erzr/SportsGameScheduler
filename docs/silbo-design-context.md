@@ -227,3 +227,93 @@ orange on every sport.
   keep the shipped values?
 - The 52 MB mockups: out-of-repo or git-LFS?
 - Default home loudness: full poster wall (needs real non-AI imagery) vs board-first hero.
+
+---
+
+## 11. Broadcast banner v2 — "one continuous field" (priority refinement)
+
+This is the top design task. The broadcast (dark) `SportChannelBanner` currently looks "pasted
+in": the WebP art reads as dark rectangles seamed onto a cream spread. The fix is a compositing
+change, **no new art required**. Reference: the user's WORLD CUP '26 mockup (dark-teal art zones
+left & right, pale center for the title, equipment bleeding out of the dark edges, shot arc +
+`xG 0.28` telemetry on the right, continuous grid across the whole banner).
+
+### Why it looks pasted-in (root cause)
+The broadcast banner is built as a **cream editorial spread** — `.sport-channel-panel` bases use
+`#fbf5e9`, edges feather toward `#fff8ea`, and art layers use `mix-blend-mode: multiply`
+(`src/styles/tailwind.css` ~1953–2039). Multiply needs a light backing; the broadcast WebP art has
+its own near-black background, so a dark image on cream + cream feathering = a visible dark
+rectangle with seams.
+
+### Target
+One continuous broadcast capsule with a **horizontal gradient field: dark-teal (left art) → pale
+center (title/copy) → dark-teal (right art)**. Equipment emerges out of the dark edges and bleeds
+off-canvas; the right zone carries the live telemetry; one grid + plus-marks + faint scanline span
+the entire banner. No boxed panels, no parchment rectangles.
+
+### The technique (no new art)
+1. **Re-ground the field.** `.sport-channel-banner` (broadcast, not `[data-paper]`) becomes a
+   full-bleed horizontal gradient over `--mp-bg`, tinted with `--mp-accent`, darkest at ~0–22% and
+   ~78–100%, lightest in the center third. Move grid/plus-marks/scanline to span the whole banner.
+2. **Screen-blend the art.** Switch `.sport-channel-icon-panel::before` /
+   `.sport-channel-action-panel::before` from `mix-blend-mode: multiply` to **`screen`/`lighten`**
+   so the WebP's black background drops out on the dark field and only neon linework glows. This is
+   the dark-mode mirror of the light-mode masking.
+3. **Feather toward the field, not cream.** Replace cream edge-feathers with transparent-alpha
+   `mask-image` gradients so art dissolves into the dark field at its outer + inner edges; let the
+   left icon bleed off the left edge.
+4. **Title legibility band.** A soft, low-opacity light wash behind the center title only, blended
+   into the gradient (not a bordered panel), sized so green title + body pass WCAG AA.
+5. **Telemetry floats on the field.** `xG`/clock chip + stat row sit on the dark field with a thin
+   `--mp-accent` border, no parchment card. Keep the bottom colour-bar accent.
+
+Identity unchanged: title/wordmark = sport **primary** (soccer green), art/field/shot-arc = sport
+**accent** (soccer cyan). Glow on contours/contact only. One shot arc, one arrowhead at the
+destination. Real, legible numbers only. Leave `[data-paper]` (light) rules untouched — they are
+the reference for masking discipline.
+
+### Acceptance criteria
+- No rectangular seam between any art zone and the field at any width.
+- WebP black background imperceptible — only neon linework reads.
+- Left equipment bleeds off the left edge; right zone shows art + one clean shot arc + telemetry.
+- Grid/plus-marks/scanline continuous across all three zones.
+- Title/body legible on the center band; stat row legible on the field.
+- Mobile collapse (icon panel only) feathers cleanly — no rectangle.
+- Reuses existing `/assets/sport-banners/broadcast/{asset}-{icon,action}.webp`.
+
+### Ready-to-paste prompt for the design chat
+> **Context:** You're refining `SportChannelBanner` in the Silbo Sports app (React + Tailwind v4).
+> Read `docs/silbo-design-context.md` first — especially §2 (two-system→two-mode), §3 (palette),
+> §4 (token contract), §5 (the light-mode mask/wash technique), and §11 (this section). Work only
+> in `src/components/SportChannelBanner.tsx` and the `.sport-channel-*` rules in
+> `src/styles/tailwind.css`. Verify every change in the live preview (sport page → header theme
+> toggle) across soccer, basketball, motorsport, hockey, and one individual sport, desktop + mobile.
+>
+> **Goal:** Make the broadcast (dark) banner read as one continuous broadcast field instead of
+> three art panels pasted on cream — matching the WORLD CUP '26 reference: dark-teal art zones left
+> and right, a lighter center band for the title/copy, equipment bleeding out of the dark edges, a
+> shot arc + telemetry chip on the right, and a continuous grid/plus-mark/scanline overlay. **Use
+> the existing broadcast WebP assets — do not request or generate new art.**
+>
+> **Constraints & technique:**
+> - Re-ground `.sport-channel-banner` (broadcast state) as a full-bleed horizontal gradient over
+>   `--mp-bg`, tinted with `--mp-accent`, darkest at ~0–22% and ~78–100%, lightest in the center
+>   third. Move grid/plus-marks/scanline to span the whole banner.
+> - Switch broadcast art layers (`.sport-channel-icon-panel::before`,
+>   `.sport-channel-action-panel::before`) from `mix-blend-mode: multiply` to `screen`/`lighten` so
+>   the WebP black background drops out. Remove the cream (`#fff8ea`/`#fbf5e9`) parchment fills.
+> - Replace cream edge-feathers with transparent-alpha `mask-image` gradients; let the left icon
+>   bleed off the left edge.
+> - Add a soft low-opacity light wash behind the center title only, blended into the gradient (not
+>   a bordered panel), sized so green title + body copy pass WCAG AA.
+> - Keep the telemetry chip + stat row on the field with a thin `--mp-accent` border, no parchment
+>   card. Keep the bottom colour-bar accent.
+> - Preserve identity: title/wordmark = sport primary (soccer green); art/field/shot-arc = sport
+>   accent (soccer cyan). Glow on contours/contact only. One shot arc, one arrowhead at the
+>   destination. Real, legible numbers only.
+> - Do not touch `[data-paper]` (light) rules — use them as the masking reference.
+>
+> **Done when:** no rectangular seams at any width; the WebP black field is imperceptible (only
+> neon reads); left art bleeds off-edge; grid/scanline continuous across all zones;
+> title/copy/stats legible; mobile (icon-only) collapse feathers cleanly; verified in preview for
+> ≥5 sports in both modes with no console errors and a clean `npm run lint && npm run build`.
