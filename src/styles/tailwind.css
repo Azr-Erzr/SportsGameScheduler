@@ -1267,12 +1267,14 @@
     position: relative;
     z-index: 2;
     display: flex;
+    flex-wrap: nowrap;
+    justify-content: center;
     align-items: flex-end;
     gap: 12px;
+    /* Card count is computed to fit the width (GlobalEventBoard), so the stack never scrolls
+       and cards are never clipped at the board edge. */
     margin-top: 66px;
-    overflow-x: auto;
-    padding-bottom: 4px;
-    overscroll-behavior-inline: contain;
+    overflow: visible;
   }
 
   .poster-stack > a,
@@ -1284,7 +1286,7 @@
   .global-event-board-room .poster-stack {
     justify-content: center;
     gap: clamp(10px, 2vw, 24px);
-    margin-top: clamp(110px, 18vw, 220px);
+    margin-top: clamp(64px, 11vw, 132px);
   }
 
   .global-event-board-room .poster-stack > a,
@@ -1941,11 +1943,15 @@
        cream-backed action art; each art panel layers its OWN feathered backing (dark for the
        black-backed icon, dark-teal corner for the action) so nothing reads as a pasted rectangle
        and the composition survives the 4-col → stacked → icon-only breakpoints. */
-    --scf-field: color-mix(in srgb, var(--mp-accent) 2.5%, #f5eedb);
-    --scf-field-edge: color-mix(in srgb, var(--mp-accent) 7%, #efe6cf);
-    --scf-void: color-mix(in srgb, var(--mp-accent) 28%, #050807);
-    --scf-deep: color-mix(in srgb, var(--mp-accent) 20%, #070a09);
-    --scf-grid: color-mix(in srgb, var(--mp-accent) 18%, transparent);
+    /* Tint with the sport PRIMARY, not the accent: for almost every sport the art's neon colour is
+       the primary (soccer's cyan accent is the lone exception, and green reads fine there). Using
+       the accent tinted the gold-accent sports (football/motorsport/golf/olympic) dark-gold, which
+       muddied the art. The dark backing stays close to neutral black so the equipment reads clean. */
+    --scf-field: color-mix(in srgb, var(--mp-primary) 3%, #f5eedb);
+    --scf-field-edge: color-mix(in srgb, var(--mp-primary) 7%, #efe6cf);
+    --scf-void: color-mix(in srgb, var(--mp-primary) 13%, #050706);
+    --scf-deep: color-mix(in srgb, var(--mp-primary) 10%, #070a09);
+    --scf-grid: color-mix(in srgb, var(--mp-primary) 15%, transparent);
     position: relative;
     display: grid;
     grid-template-columns: minmax(230px, 286px) minmax(330px, 0.78fr) minmax(210px, 0.42fr) minmax(340px, 0.72fr);
@@ -1954,14 +1960,14 @@
     overflow: hidden;
     min-height: calc(var(--sport-channel-art-height) + var(--sport-channel-pad) + var(--sport-channel-pad) + 2px);
     padding: var(--sport-channel-pad);
-    border: 1px solid color-mix(in srgb, var(--mp-accent) 30%, rgba(8, 10, 9, 0.55));
+    border: 1px solid color-mix(in srgb, var(--mp-primary) 26%, rgba(8, 10, 9, 0.55));
     border-radius: 10px;
     background:
       radial-gradient(ellipse 60% 78% at 50% 46%, color-mix(in srgb, #fffaef 70%, transparent), transparent 70%),
       linear-gradient(100deg, var(--scf-field-edge), var(--scf-field) 22% 78%, var(--scf-field-edge));
     box-shadow:
       0 0 0 1px rgba(0, 0, 0, 0.5),
-      0 0 30px color-mix(in srgb, var(--mp-accent) 16%, transparent),
+      0 0 30px color-mix(in srgb, var(--mp-primary) 14%, transparent),
       0 18px 38px rgba(0, 0, 0, 0.42);
     content-visibility: auto;
     contain-intrinsic-size: 446px;
@@ -2022,7 +2028,7 @@
     background-size: contain;
     opacity: 1;
     mix-blend-mode: screen;
-    filter: saturate(1.08) contrast(1.05) drop-shadow(0 0 16px color-mix(in srgb, var(--mp-accent) 34%, transparent));
+    filter: saturate(1.08) contrast(1.05) drop-shadow(0 0 16px color-mix(in srgb, var(--mp-primary) 30%, transparent));
   }
 
   .sport-channel-panel::after {
@@ -2086,7 +2092,7 @@
     background-position: 38% center;
     background-size: cover;
     mix-blend-mode: normal;
-    filter: saturate(1.04) contrast(1.03) drop-shadow(0 0 14px color-mix(in srgb, var(--mp-accent) 22%, transparent));
+    filter: saturate(1.04) contrast(1.03) drop-shadow(0 0 14px color-mix(in srgb, var(--mp-primary) 20%, transparent));
     -webkit-mask-image:
       linear-gradient(90deg, transparent 0, #000 18%, #000 100%),
       linear-gradient(180deg, transparent 0, #000 7% 93%, transparent 100%);

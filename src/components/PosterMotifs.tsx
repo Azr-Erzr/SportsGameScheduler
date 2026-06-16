@@ -11,7 +11,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import type { CSSProperties } from 'react'
-import { memo, useCallback, useState } from 'react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAppState } from '../app/state-context'
 import { getSport } from '../domain/sports'
@@ -292,6 +292,15 @@ const GlobeSignal = memo(function GlobeSignal({
   )
 })
 
+// How many poster cards fit the stack at a given width — so the board never overflows into a
+// horizontal scroll. Card + gap widths mirror the CSS clamps in tailwind.css.
+function fitCount(containerWidth: number, viewportWidth: number, variant: 'compact' | 'room', total: number) {
+  const gap = variant === 'room' ? Math.min(24, Math.max(10, viewportWidth * 0.02)) : 12
+  const cardW = variant === 'room' ? Math.min(285, Math.max(230, viewportWidth * 0.19)) : 210
+  const n = Math.floor((containerWidth + gap) / (cardW + gap))
+  return Math.max(1, Math.min(n, total))
+}
+
 export function GlobalEventBoard({ events, variant = 'compact' }: { events: PosterEvent[]; variant?: 'compact' | 'room' }) {
   const [activeIndex, setActiveIndex] = useState(0)
   const { prefs } = useAppState()
@@ -300,13 +309,29 @@ export function GlobalEventBoard({ events, variant = 'compact' }: { events: Post
   const iconVariant = prefs.themeMode === 'program' ? 'brush' : 'neon3d'
   const activate = useCallback((index: number) => setActiveIndex((current) => (current === index ? current : index)), [])
 
+  // Render only the cards that fit the viewport — no horizontal scroll on any screen.
+  const stackRef = useRef<HTMLDivElement>(null)
+  const [visibleCount, setVisibleCount] = useState(variant === 'room' ? 4 : 5)
+  useEffect(() => {
+    const el = stackRef.current
+    if (!el) return
+    const recompute = () => setVisibleCount(fitCount(el.clientWidth, window.innerWidth, variant, events.length))
+    recompute()
+    const observer = new ResizeObserver(recompute)
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [variant, events.length])
+
+  const visibleEvents = events.slice(0, visibleCount)
+  const pipCount = Math.min(5, visibleCount)
+
   return (
     <section className={`global-event-board ${variant === 'room' ? 'global-event-board-room' : ''}`}>
       <div className="poster-orbit poster-orbit-one" aria-hidden="true" />
       <div className="poster-orbit poster-orbit-two" aria-hidden="true" />
       <div className="poster-globe" aria-hidden="true" />
       <div className="globe-signal-layer" aria-label="Today's sport signals">
-        {events.slice(0, 5).map((event, index) => (
+        {events.slice(0, pipCount).map((event, index) => (
           <GlobeSignal
             key={event.title}
             event={event}
@@ -342,8 +367,8 @@ export function GlobalEventBoard({ events, variant = 'compact' }: { events: Post
         <Bell size={24} className="text-export max-sm:hidden" />
       </div>
 
-      <div className="poster-stack silbo-scrollbar">
-        {events.map((event, index) => (
+      <div className="poster-stack" ref={stackRef}>
+        {visibleEvents.map((event, index) => (
           <EventPosterCard key={event.title} event={event} index={index} active={index === activeIndex} onActivate={activate} />
         ))}
       </div>
