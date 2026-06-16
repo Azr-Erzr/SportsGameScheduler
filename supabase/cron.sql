@@ -47,6 +47,8 @@ select cron.schedule(
 );
 
 -- Materialize + send notifications every 5 minutes.
+-- LIVE (gcnbgdpicgeahxscpsfc): deployed as job 'notifications-dispatch' using the anon JWT
+-- (same bootstrap pattern as provider-hydrate above).
 select cron.schedule(
   'notifications-worker',
   '*/5 * * * *',

@@ -5,9 +5,10 @@ import { useAppState } from '../app/state-context'
 import { cityLabelFor } from '../lib/cities'
 import { Button, Panel, PanelHeading } from '../components/ui'
 import { filterMatchesForTeams, useMatches } from '../data/liveMatches'
+import { useMyEvents } from '../data/liveSport'
 import { brand, exportFilename } from '../domain/brand'
 import { copyToClipboard, downloadBlob } from '../lib/clipboard'
-import { createIcsBlob } from '../lib/ics'
+import { createIcsBlob, createMultiSportIcsBlob } from '../lib/ics'
 import { createNotesText } from '../lib/notes'
 import { MAX_EVENTS_BY_TEMPLATE, paginateEvents, type ExportTemplate } from '../lib/paginate'
 import { canvasToBlob, createScheduleCanvas } from '../lib/poster'
@@ -22,7 +23,7 @@ const templates: Array<{ key: ExportTemplate; label: string; hint: string }> = [
 ]
 
 export function ExportStudioPage() {
-  const { followedTeams, prefs } = useAppState()
+  const { followedTeams, followedLeagueIds, followedCompetitorIds, prefs } = useAppState()
   const [template, setTemplate] = useState<ExportTemplate>('poster')
   const [message, setMessage] = useState('')
 
@@ -31,6 +32,17 @@ export function ExportStudioPage() {
   const { matches } = useMatches()
   const schedule = useMemo(() => filterMatchesForTeams(matches, followedTeams), [matches, followedTeams])
   const pages = useMemo(() => paginateEvents(schedule, template), [schedule, template])
+
+  // Multi-sport calendar: all upcoming events from followed leagues + competitors, any sport.
+  const myEvents = useMyEvents(followedLeagueIds, followedCompetitorIds)
+
+  function exportAllSportsIcs() {
+    downloadBlob(
+      createMultiSportIcsBlob(myEvents.events, { reminderMinutes: [60] }),
+      exportFilename('all-sports', 'ics'),
+    )
+    setMessage(`All-sports calendar downloaded — ${myEvents.events.length} events with 1-hour reminders.`)
+  }
 
   async function exportImages(share: boolean) {
     let pageNumber = 1
@@ -157,7 +169,16 @@ export function ExportStudioPage() {
               <FileImage size={15} /> Save image{pages.length > 1 ? `s (${pages.length})` : ''}
             </Button>
             <Button className="w-full" variant="ghost" onClick={exportIcs} disabled={schedule.length === 0}>
-              <Download size={15} /> Download .ics snapshot
+              <Download size={15} /> Download World Cup .ics
+            </Button>
+            <Button
+              className="w-full"
+              variant="ghost"
+              onClick={exportAllSportsIcs}
+              disabled={myEvents.events.length === 0}
+              title="Every upcoming event from the leagues and players you follow, across all sports"
+            >
+              <CalendarDays size={15} /> All-sports calendar .ics{myEvents.events.length ? ` (${myEvents.events.length})` : ''}
             </Button>
             <Button className="w-full" variant="subtle" onClick={copyNotes} disabled={schedule.length === 0}>
               <Copy size={15} /> Copy for Notes

@@ -29,7 +29,13 @@ export type CalendarFeed = {
   token: string
   name: string
   timezone: string
-  filters: { teams?: string[]; sportKey?: string }
+  filters: {
+    teams?: string[]
+    sportKey?: string
+    leagueIds?: string[]
+    competitorIds?: string[]
+    reminderMinutes?: number[]
+  }
   includePlaceholders: boolean
   includeBroadcasts: boolean
   isActive: boolean

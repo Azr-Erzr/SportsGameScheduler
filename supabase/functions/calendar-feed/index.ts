@@ -10,12 +10,28 @@ const supabase = createClient(
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
 )
 
+const APP_URL = Deno.env.get('APP_URL') ?? 'https://silbosports.app'
+
 async function sha256Hex(value: string): Promise<string> {
   const data = new TextEncoder().encode(value)
   const hash = await crypto.subtle.digest('SHA-256', data)
   return Array.from(new Uint8Array(hash))
     .map((byte) => byte.toString(16).padStart(2, '0'))
     .join('')
+}
+
+type EventRow = {
+  id: string
+  title: string
+  starts_at: string | null
+  starts_at_tbd: boolean | null
+  updated_at: string
+  version: number
+  status: string
+  metadata: Record<string, unknown> | null
+  venues: { name: string } | null
+  sports: { key: string } | null
+  leagues: { name: string } | null
 }
 
 Deno.serve(async (req) => {
@@ -39,23 +55,28 @@ Deno.serve(async (req) => {
 
   await supabase.from('calendar_feeds').update({ last_accessed_at: new Date().toISOString() }).eq('id', feed.id)
 
-  // Resolve feed filters into events. Filters: { leagueIds?, competitorIds?, customLeagueId? }
+  // Resolve feed filters into events. Filters:
+  //   { leagueIds?, competitorIds?, customLeagueId?, reminderMinutes? }
   let query = supabase
     .from('events')
-    .select('id, title, starts_at, updated_at, version, status, certainty, starts_at_precision, decision_note, metadata, venues(name)')
-    .neq('certainty', 'watch_only')
+    .select(
+      'id, title, starts_at, starts_at_tbd, updated_at, version, status, metadata, venues(name), sports(key), leagues(name)',
+    )
+    .neq('status', 'finished')
     .gte('starts_at', new Date(Date.now() - 24 * 3600_000).toISOString())
     .order('starts_at', { ascending: true })
     .limit(500)
 
+  // A "placeholder" is an event whose kickoff time is still TBD.
   if (!feed.include_placeholders) {
-    query = query.eq('certainty', 'confirmed').eq('starts_at_precision', 'exact')
+    query = query.eq('starts_at_tbd', false)
   }
 
   const filters = (feed.filters ?? {}) as {
     leagueIds?: string[]
     competitorIds?: string[]
     customLeagueId?: string
+    reminderMinutes?: number[]
   }
 
   if (filters.customLeagueId) {
@@ -65,7 +86,7 @@ Deno.serve(async (req) => {
   }
 
   let { data: events } = await query
-  events = events ?? []
+  events = (events ?? []) as EventRow[]
 
   if (filters.competitorIds?.length) {
     const { data: links } = await supabase
@@ -73,27 +94,33 @@ Deno.serve(async (req) => {
       .select('event_id')
       .in('competitor_id', filters.competitorIds)
     const allowed = new Set((links ?? []).map((row) => row.event_id))
-    events = events.filter((event) => allowed.has(event.id))
+    events = (events as EventRow[]).filter((event) => allowed.has(event.id))
   }
 
-  const feedEvents: FeedEvent[] = events.map((event) => ({
+  const feedEvents: FeedEvent[] = (events as EventRow[]).map((event) => ({
     id: event.id,
     title: event.title,
     starts_at: event.starts_at,
+    starts_at_tbd: event.starts_at_tbd ?? false,
     updated_at: event.updated_at,
     version: event.version,
     status: event.status,
-    certainty: event.certainty,
-    starts_at_precision: event.starts_at_precision,
-    decision_note: event.decision_note,
-    venue_name: (event as unknown as { venues?: { name?: string } }).venues?.name ?? null,
+    venue_name: event.venues?.name ?? null,
+    sport_key: event.sports?.key ?? null,
+    league_name: event.leagues?.name ?? null,
   }))
 
-  return new Response(renderCalendar(feed.name, feedEvents), {
-    headers: {
-      'content-type': 'text/calendar; charset=utf-8',
-      // Calendar clients poll on their own schedule; modest CDN caching takes the edge off.
-      'cache-control': 'public, max-age=300',
+  return new Response(
+    renderCalendar(feed.name, feedEvents, {
+      appUrl: APP_URL,
+      reminderMinutes: Array.isArray(filters.reminderMinutes) ? filters.reminderMinutes : [],
+    }),
+    {
+      headers: {
+        'content-type': 'text/calendar; charset=utf-8',
+        // Calendar clients poll on their own schedule; modest CDN caching takes the edge off.
+        'cache-control': 'public, max-age=300',
+      },
     },
-  })
+  )
 })

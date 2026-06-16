@@ -13,8 +13,25 @@ const supabase = createClient(
 )
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY') ?? ''
-const EMAIL_FROM = Deno.env.get('EMAIL_FROM') ?? 'MatchPulse <reminders@matchpulse.app>'
-const APP_URL = Deno.env.get('APP_URL') ?? 'https://matchpulse.app'
+const EMAIL_FROM = Deno.env.get('EMAIL_FROM') ?? 'Silbo Sports <reminders@silbosports.app>'
+const APP_URL = Deno.env.get('APP_URL') ?? 'https://silbosports.app'
+
+// Subject lines vary by why we're emailing, per the Silbo Alerts guardrails.
+function subjectFor(kind: string, title: string): string {
+  if (kind === 'cancellation') return `Schedule change: ${title}`
+  if (kind === 'time_change') return `New time: ${title}`
+  return `Reminder: ${title}`
+}
+
+function bodyFor(kind: string, title: string): string {
+  const lead =
+    kind === 'cancellation'
+      ? `${title} was cancelled or postponed.`
+      : kind === 'time_change'
+        ? `${title} has a new start time — check your calendar.`
+        : `${title} starts soon.`
+  return [lead, '', `Manage reminders or unsubscribe: ${APP_URL}/settings/alerts`].join('\n')
+}
 
 type Delivery = {
   id: string
@@ -41,12 +58,8 @@ async function sendReminderEmail(delivery: Delivery) {
     body: JSON.stringify({
       from: EMAIL_FROM,
       to: email,
-      subject: `Reminder: ${event.title}`,
-      text: [
-        `${event.title} starts soon.`,
-        '',
-        `Manage reminders or unsubscribe: ${APP_URL}/settings/alerts`,
-      ].join('\n'),
+      subject: subjectFor(delivery.kind, event.title),
+      text: bodyFor(delivery.kind, event.title),
     }),
   })
   if (!response.ok) throw new Error(`Email send failed: ${response.status} ${await response.text()}`)

@@ -11,6 +11,13 @@ type BannerStat = {
 
 type BannerStyle = CSSProperties & Record<`--sport-channel-${string}`, string>
 
+type ArtFocus = {
+  iconX: string
+  iconY: string
+  actionX: string
+  actionY: string
+}
+
 type SportChannelBannerProps = {
   sportKey: string
   title?: string
@@ -41,6 +48,20 @@ const assetKeyBySport: Record<string, string> = {
   ufc: 'combat',
 }
 
+const artFocusByAsset: Record<string, ArtFocus> = {
+  soccer: { iconX: '45%', iconY: '38%', actionX: '82%', actionY: '28%' },
+  basketball: { iconX: '45%', iconY: '36%', actionX: '58%', actionY: '28%' },
+  football: { iconX: '46%', iconY: '42%', actionX: '64%', actionY: '28%' },
+  hockey: { iconX: '44%', iconY: '70%', actionX: '34%', actionY: '72%' },
+  tennis: { iconX: '75%', iconY: '70%', actionX: '64%', actionY: '34%' },
+  golf: { iconX: '52%', iconY: '61%', actionX: '56%', actionY: '42%' },
+  motorsport: { iconX: '47%', iconY: '50%', actionX: '65%', actionY: '61%' },
+  track: { iconX: '48%', iconY: '46%', actionX: '47%', actionY: '48%' },
+  combat: { iconX: '47%', iconY: '50%', actionX: '43%', actionY: '45%' },
+  olympic: { iconX: '48%', iconY: '42%', actionX: '50%', actionY: '54%' },
+  custom: { iconX: '50%', iconY: '45%', actionX: '55%', actionY: '45%' },
+}
+
 const defaultStats: BannerStat[] = [
   { value: 'API', label: 'Review' },
   { value: 'Feeds', label: 'Planned' },
@@ -60,6 +81,7 @@ export function SportChannelBanner({
   const { prefs } = useAppState()
   const sport = getSport(sportKey) ?? getSport('soccer')
   const assetKey = assetKeyBySport[sportKey] ?? assetKeyBySport[sport?.key ?? 'soccer'] ?? 'soccer'
+  const artFocus = artFocusByAsset[assetKey] ?? artFocusByAsset.soccer
   const channelTitle = title ?? `${sport?.label ?? 'Sports'} Channel`
   const sourceBody =
     body ??
@@ -71,6 +93,10 @@ export function SportChannelBanner({
       ? {
           '--sport-channel-icon': `url("/assets/sport-banners/ink/${assetKey}-icon.png")`,
           '--sport-channel-action': `url("/assets/sport-banners/ink/${assetKey}-action.png")`,
+          '--sport-channel-icon-wash-x': artFocus.iconX,
+          '--sport-channel-icon-wash-y': artFocus.iconY,
+          '--sport-channel-action-wash-x': artFocus.actionX,
+          '--sport-channel-action-wash-y': artFocus.actionY,
         }
       : {
           '--sport-channel-icon-image': `url("/assets/sport-banners/broadcast/${assetKey}-icon.webp")`,

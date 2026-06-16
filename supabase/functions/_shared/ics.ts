@@ -1,17 +1,45 @@
 // Shared iCalendar rendering for the live feed function (RFC 5545).
+//
+// Matches the current `events` schema: time certainty is expressed by `starts_at_tbd`
+// (a TBD-time event renders all-day + tentative) and `status`; there is no separate
+// certainty/precision taxonomy. Adds Silbo polish: per-sport emoji in the title,
+// CATEGORIES, optional VALARM reminders, and a link back to the event.
 
 export type FeedEvent = {
   id: string
   title: string
   starts_at: string | null
+  starts_at_tbd?: boolean
   updated_at: string
   version: number
   status: string
-  certainty?: 'confirmed' | 'provisional' | 'watch_only'
-  starts_at_precision?: 'exact' | 'date' | 'month' | 'window' | 'unknown'
-  decision_note?: string | null
   venue_name?: string | null
+  sport_key?: string | null
+  league_name?: string | null
   description?: string | null
+}
+
+export type RenderOptions = {
+  /** Reminder lead times in minutes (each becomes a VALARM). Empty = no alarms. */
+  reminderMinutes?: number[]
+  /** Absolute base URL for "view event" links, e.g. https://silbosports.app */
+  appUrl?: string
+}
+
+// Per-sport emoji + human label, keyed by canonical sport key. Emoji render in
+// Apple/Google/Outlook event titles; the label feeds CATEGORIES.
+const SPORT_META: Record<string, { emoji: string; label: string }> = {
+  soccer: { emoji: '⚽', label: 'Soccer' },
+  basketball: { emoji: '🏀', label: 'Basketball' },
+  american_football: { emoji: '🏈', label: 'American Football' },
+  hockey: { emoji: '🏒', label: 'Hockey' },
+  tennis: { emoji: '🎾', label: 'Tennis' },
+  golf: { emoji: '⛳', label: 'Golf' },
+  motorsport: { emoji: '🏁', label: 'Motorsport' },
+  combat_sports: { emoji: '🥊', label: 'Combat Sports' },
+  athletics: { emoji: '🏃', label: 'Track & Field' },
+  olympic_sports: { emoji: '🏅', label: 'Olympic Sports' },
+  custom: { emoji: '📅', label: 'Community' },
 }
 
 export function escapeIcsText(value: string): string {
@@ -43,48 +71,73 @@ export function foldLine(line: string): string {
   return parts.join('\r\n')
 }
 
-export function eventToVevent(event: FeedEvent): string {
-  if (!event.starts_at || event.certainty === 'watch_only') return ''
+function valarm(minutes: number): string[] {
+  return [
+    'BEGIN:VALARM',
+    'ACTION:DISPLAY',
+    'DESCRIPTION:Reminder',
+    `TRIGGER:-PT${Math.max(0, Math.round(minutes))}M`,
+    'END:VALARM',
+  ]
+}
+
+export function eventToVevent(event: FeedEvent, options: RenderOptions = {}): string {
+  if (!event.starts_at) return ''
 
   const start = new Date(event.starts_at)
-  const dateOnly = event.starts_at_precision !== undefined && event.starts_at_precision !== 'exact'
+  // No confirmed time → render as an all-day, tentative entry.
+  const dateOnly = Boolean(event.starts_at_tbd)
   const end = dateOnly
     ? new Date(start.getTime() + 24 * 60 * 60 * 1000)
     : new Date(start.getTime() + 2 * 60 * 60 * 1000)
   const cancelled = event.status === 'cancelled'
-  const tentative = !cancelled && (event.certainty === 'provisional' || event.status === 'time_tbd' || dateOnly)
-  const description = [event.description, event.decision_note].filter(Boolean).join('\n')
+  const tentative = !cancelled && (dateOnly || event.status === 'postponed' || event.status === 'time_tbd')
+
+  const meta = event.sport_key ? SPORT_META[event.sport_key] : undefined
+  const summary = meta ? `${meta.emoji} ${event.title}` : event.title
+
+  const categories = [meta?.label, event.league_name].filter(Boolean) as string[]
+  const descParts = [
+    event.description,
+    event.league_name ? `League: ${event.league_name}` : '',
+    event.venue_name ? `Venue: ${event.venue_name}` : '',
+    'Times shown in your calendar’s timezone.',
+    options.appUrl ? `View: ${options.appUrl}/event/${event.id}` : '',
+  ].filter(Boolean)
 
   const lines = [
     'BEGIN:VEVENT',
     // Stable UID + SEQUENCE from the version column: calendar clients update in place
     // instead of duplicating, and only re-notify when version actually bumped.
-    `UID:${event.id}@matchpulse.app`,
+    `UID:${event.id}@silbosports.app`,
     `SEQUENCE:${event.version}`,
     `DTSTAMP:${formatIcsDate(new Date())}`,
     `LAST-MODIFIED:${formatIcsDate(new Date(event.updated_at))}`,
     dateOnly ? `DTSTART;VALUE=DATE:${formatIcsDateOnly(start)}` : `DTSTART:${formatIcsDate(start)}`,
     dateOnly ? `DTEND;VALUE=DATE:${formatIcsDateOnly(end)}` : `DTEND:${formatIcsDate(end)}`,
-    `SUMMARY:${escapeIcsText(event.title)}`,
+    `SUMMARY:${escapeIcsText(summary)}`,
+    categories.length ? `CATEGORIES:${categories.map(escapeIcsText).join(',')}` : '',
     cancelled ? 'STATUS:CANCELLED' : tentative ? 'STATUS:TENTATIVE' : 'STATUS:CONFIRMED',
     dateOnly ? 'TRANSP:TRANSPARENT' : '',
     event.venue_name ? `LOCATION:${escapeIcsText(event.venue_name)}` : '',
-    description ? `DESCRIPTION:${escapeIcsText(description)}` : '',
+    descParts.length ? `DESCRIPTION:${escapeIcsText(descParts.join('\n'))}` : '',
+    // Reminders: only on timed, non-cancelled events (alarms on all-day TBD entries are noise).
+    ...(!dateOnly && !cancelled ? (options.reminderMinutes ?? []).flatMap(valarm) : []),
     'END:VEVENT',
   ]
 
   return lines.filter(Boolean).map(foldLine).join('\r\n')
 }
 
-export function renderCalendar(name: string, events: FeedEvent[]): string {
+export function renderCalendar(name: string, events: FeedEvent[], options: RenderOptions = {}): string {
   return [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//MatchPulse//Calendar Feed//EN',
+    'PRODID:-//Silbo Sports//Calendar Feed//EN',
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
     foldLine(`X-WR-CALNAME:${escapeIcsText(name)}`),
-    ...events.map(eventToVevent).filter(Boolean),
+    ...events.map((event) => eventToVevent(event, options)).filter(Boolean),
     'END:VCALENDAR',
   ].join('\r\n')
 }

@@ -1,4 +1,4 @@
-import { Check, Search, Sparkles, Users, X } from 'lucide-react'
+import { Check, Search, Sparkles, Star, Users, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useAppState } from '../app/state-context'
@@ -56,7 +56,7 @@ export function SportPage() {
 // Soccer: World Cup planner by default, with pills to switch to other live soccer leagues
 // (EPL, La Liga, UCL, …) even while the World Cup is on. Leagues arrive viewership-ordered.
 function SoccerPage() {
-  const { prefs } = useAppState()
+  const { prefs, toggleFollow, followedLeagueIds } = useAppState()
   const { leagues, events } = useSportSchedule('soccer')
   const [leagueId, setLeagueId] = useState<string | null>(null) // null = World Cup planner
 
@@ -76,11 +76,20 @@ function SoccerPage() {
         <WorldCupPlanner />
       ) : (
         <section className="space-y-3">
-          <div>
-            <h1 className="text-xl font-extrabold text-primary">{activeLeague?.name}</h1>
-            <p className="text-sm text-ink/60">
-              {leagueEvents.length} upcoming - shown in {prefs.timezone}
-            </p>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h1 className="text-xl font-extrabold text-primary">{activeLeague?.name}</h1>
+              <p className="text-sm text-ink/60">
+                {leagueEvents.length} upcoming - shown in {prefs.timezone}
+              </p>
+            </div>
+            {activeLeague && (
+              <FollowButton
+                active={followedLeagueIds.includes(activeLeague.id)}
+                onClick={() => toggleFollow({ targetType: 'league', targetId: activeLeague.id, intent: 'watch' })}
+                label={activeLeague.name}
+              />
+            )}
           </div>
           {leagueEvents.length > 0 ? (
             leagueEvents.map((event) => (
@@ -282,12 +291,13 @@ function WorldCupPlanner() {
 // Live, DB-backed page for every non-soccer sport: banner + league filter + upcoming events,
 // plus an athlete roster for individual sports (tennis/golf/athletics/combat).
 function LiveSportPage({ sport }: { sport: SportInfo }) {
-  const { prefs } = useAppState()
+  const { prefs, toggleFollow, followedLeagueIds, followedCompetitorIds } = useAppState()
   const canonical = sport.canonicalSportKey
   const isIndividual = INDIVIDUAL_SPORTS.includes(canonical)
   const { leagues, events, loading, configured } = useSportSchedule(canonical)
   const roster = useSportRoster(canonical, isIndividual)
   const [leagueId, setLeagueId] = useState<string | null>(null)
+  const activeLeague = leagueId ? leagues.find((l) => l.id === leagueId) : null
 
   const shownEvents = useMemo(
     () => (leagueId ? events.filter((e) => e.leagueId === leagueId) : events),
@@ -320,7 +330,16 @@ function LiveSportPage({ sport }: { sport: SportInfo }) {
       ) : (
         <>
           {leagues.length > 1 && (
-            <LeagueFilter primaryLabel="All" leagues={leagues} selectedId={leagueId} onSelect={setLeagueId} />
+            <div className="flex flex-wrap items-center gap-2">
+              <LeagueFilter primaryLabel="All" leagues={leagues} selectedId={leagueId} onSelect={setLeagueId} />
+              {activeLeague && (
+                <FollowButton
+                  active={followedLeagueIds.includes(activeLeague.id)}
+                  onClick={() => toggleFollow({ targetType: 'league', targetId: activeLeague.id, intent: 'watch' })}
+                  label={activeLeague.name}
+                />
+              )}
+            </div>
           )}
 
           <div className={`grid gap-4 ${isIndividual ? 'lg:grid-cols-[1fr_320px]' : ''}`}>
@@ -344,11 +363,52 @@ function LiveSportPage({ sport }: { sport: SportInfo }) {
               )}
             </section>
 
-            {isIndividual && <RosterPanel players={roster.players} loading={roster.loading} noun={sport.label} />}
+            {isIndividual && (
+              <RosterPanel
+                players={roster.players}
+                loading={roster.loading}
+                noun={sport.label}
+                followedIds={followedCompetitorIds}
+                onToggle={(id) => toggleFollow({ targetType: 'competitor', targetId: id, intent: 'watch' })}
+              />
+            )}
           </div>
         </>
       )}
     </div>
+  )
+}
+
+// A star toggle for following a league or competitor. Adds the target to the user's picks so it
+// flows into My Schedule, exports, feeds, and alerts.
+function FollowButton({
+  active,
+  onClick,
+  label,
+  size = 'md',
+}: {
+  active: boolean
+  onClick: () => void
+  label: string
+  size?: 'sm' | 'md'
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      title={active ? `Following ${label}` : `Follow ${label}`}
+      className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border font-mono uppercase tracking-wide transition-colors ${
+        size === 'sm' ? 'px-2 py-1 text-[10px]' : 'px-3 py-1.5 text-[11px]'
+      } ${
+        active
+          ? 'border-primary bg-primary/15 text-primary'
+          : 'border-primary/25 text-ink/70 hover:bg-primary/10'
+      }`}
+    >
+      <Star size={size === 'sm' ? 11 : 13} className={active ? 'fill-primary' : ''} />
+      {active ? 'Following' : 'Follow'}
+    </button>
   )
 }
 
@@ -543,12 +603,25 @@ function EventTicket({
   )
 }
 
-function RosterPanel({ players, loading, noun }: { players: Array<{ id: string; name: string; country: string | null }>; loading: boolean; noun: string }) {
+function RosterPanel({
+  players,
+  loading,
+  noun,
+  followedIds,
+  onToggle,
+}: {
+  players: Array<{ id: string; name: string; country: string | null }>
+  loading: boolean
+  noun: string
+  followedIds: string[]
+  onToggle: (id: string, name: string) => void
+}) {
   const [query, setQuery] = useState('')
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
     return q ? players.filter((p) => p.name.toLowerCase().includes(q)) : players
   }, [players, query])
+  const followedSet = useMemo(() => new Set(followedIds), [followedIds])
 
   return (
     <Panel className="h-fit lg:sticky lg:top-20">
@@ -569,12 +642,26 @@ function RosterPanel({ players, loading, noun }: { players: Array<{ id: string; 
             />
           </label>
           <ul className="silbo-scrollbar max-h-[460px] space-y-0.5 overflow-y-auto pr-1">
-            {filtered.slice(0, 200).map((p) => (
-              <li key={p.id} className="flex items-center justify-between rounded-lg px-3 py-1.5 text-sm hover:bg-primary/8">
-                <span className="min-w-0 truncate font-medium">{p.name}</span>
-                {p.country && <span className="ml-2 shrink-0 font-mono text-[10px] uppercase text-ink/45">{p.country}</span>}
-              </li>
-            ))}
+            {filtered.slice(0, 200).map((p) => {
+              const following = followedSet.has(p.id)
+              return (
+                <li key={p.id} className="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-primary/8">
+                  <span className="min-w-0 flex-1 truncate font-medium">{p.name}</span>
+                  {p.country && <span className="shrink-0 font-mono text-[10px] uppercase text-ink/45">{p.country}</span>}
+                  <button
+                    type="button"
+                    onClick={() => onToggle(p.id, p.name)}
+                    aria-pressed={following}
+                    title={following ? `Following ${p.name}` : `Follow ${p.name}`}
+                    className={`shrink-0 rounded-full p-1 transition-colors ${
+                      following ? 'text-primary' : 'text-ink/30 hover:text-primary'
+                    }`}
+                  >
+                    <Star size={14} className={following ? 'fill-primary' : ''} />
+                  </button>
+                </li>
+              )
+            })}
           </ul>
         </>
       )}

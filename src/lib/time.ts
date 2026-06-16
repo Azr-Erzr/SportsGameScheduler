@@ -103,6 +103,11 @@ export function formatIcsDate(date: Date) {
   return date.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '')
 }
 
+/** Format a Date as an iCalendar all-day DATE value (e.g. 20260611), for TBD-time events. */
+export function formatIcsDateOnly(date: Date) {
+  return date.toISOString().slice(0, 10).replace(/-/g, '')
+}
+
 export function slug(value: string) {
   return value
     .toLowerCase()

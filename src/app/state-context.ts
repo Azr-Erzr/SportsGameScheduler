@@ -6,6 +6,8 @@ export type AppState = {
   follows: Follow[]
   toggleFollow: (follow: Follow) => void
   followedTeams: string[]
+  followedLeagueIds: string[]
+  followedCompetitorIds: string[]
   prefs: Preferences
   setPrefs: (prefs: Preferences) => void
   auth: {

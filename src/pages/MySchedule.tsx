@@ -7,11 +7,12 @@ import { cityLabelFor } from '../lib/cities'
 import { MatchCard } from '../components/MatchCard'
 import { Button, EmptyState, Panel, PanelHeading } from '../components/ui'
 import { filterMatchesForTeams, useMatches } from '../data/liveMatches'
+import { useMyEvents } from '../data/liveSport'
 import { allMatches, groupMatches } from '../data/worldcup'
 import { exportFilename } from '../domain/brand'
 import { copyToClipboard, downloadBlob } from '../lib/clipboard'
 import { findConflicts } from '../lib/conflicts'
-import { createIcsBlob } from '../lib/ics'
+import { createIcsBlob, createMultiSportIcsBlob, sportEmoji } from '../lib/ics'
 import { createNotesText } from '../lib/notes'
 import { canvasToBlob, createScheduleCanvas } from '../lib/poster'
 import { formatLongDate, formatTime } from '../lib/time'
@@ -48,7 +49,7 @@ function inRange(date: Date, range: RangeKey, nowMs: number): boolean {
 }
 
 export function MySchedulePage() {
-  const { followedTeams, toggleFollow, prefs } = useAppState()
+  const { followedTeams, followedLeagueIds, followedCompetitorIds, toggleFollow, prefs } = useAppState()
   const [range, setRange] = useState<RangeKey>('all')
   const [hidePast, setHidePast] = useState(true)
   const [exportMessage, setExportMessage] = useState('')
@@ -59,6 +60,41 @@ export function MySchedulePage() {
   // Render-pure clock (quantized external store) so the memo never calls Date.now() in render.
   const nowMs = useNow()
   const { matches } = useMatches()
+
+  // Multi-sport schedule from DB follows (leagues + competitors), independent of the WC planner.
+  const myEvents = useMyEvents(followedLeagueIds, followedCompetitorIds)
+  const liveSchedule = useMemo(
+    () =>
+      myEvents.events.filter(
+        (e) =>
+          e.startsAt &&
+          inRange(e.startsAt, range, nowMs) &&
+          (!hidePast || e.startsAt.getTime() > nowMs - 2 * 3600_000),
+      ),
+    [myEvents.events, range, hidePast, nowMs],
+  )
+  const hasLiveFollows = followedLeagueIds.length > 0 || followedCompetitorIds.length > 0
+
+  function exportLiveIcs() {
+    downloadBlob(
+      createMultiSportIcsBlob(liveSchedule, { reminderMinutes: [60] }),
+      exportFilename('live-schedule', 'ics'),
+    )
+    setExportMessage('All-sports calendar downloaded with 1-hour reminders.')
+  }
+
+  async function copyLiveNotes() {
+    const text = liveSchedule
+      .map((e) => {
+        const when = e.startsAt
+          ? `${formatLongDate(e.startsAt, timeZone, { locale: prefs.locale, hour12: prefs.hour12 ?? undefined })} ${formatTime(e.startsAt, timeZone, { locale: prefs.locale, hour12: prefs.hour12 ?? undefined })}`
+          : 'Time TBD'
+        return `${sportEmoji(e.sportKey)} ${e.title} — ${when}${e.venue ? ` @ ${e.venue}` : ''}`
+      })
+      .join('\n')
+    await copyToClipboard(text)
+    setExportMessage('All-sports schedule copied - paste into Notes or a group chat.')
+  }
 
   const schedule = useMemo(() => {
     return filterMatchesForTeams(matches, followedTeams).filter(
@@ -109,11 +145,11 @@ export function MySchedulePage() {
     setExportMessage('Plain-text schedule copied - paste it into Notes or a group chat.')
   }
 
-  if (followedTeams.length === 0) {
+  if (followedTeams.length === 0 && !hasLiveFollows) {
     return (
       <EmptyState
         title="Your schedule is empty"
-        body="Follow a few teams and every match they play shows up here, converted to your local time."
+        body="Follow World Cup teams, or a league or player from any sport, and every event shows up here in your local time."
       >
         <Link to="/sports/soccer">
           <Button>Pick World Cup teams</Button>
@@ -155,6 +191,49 @@ export function MySchedulePage() {
           </span>
         </Panel>
       </div>
+
+      {hasLiveFollows && (
+        <Panel className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <PanelHeading
+              title="Across all sports"
+              subtitle={`${liveSchedule.length} from your followed leagues & players`}
+            />
+            <div className="flex gap-1.5">
+              <Button variant="ghost" onClick={exportLiveIcs} disabled={liveSchedule.length === 0}>
+                <Download size={15} /> .ics
+              </Button>
+              <Button variant="subtle" onClick={copyLiveNotes} disabled={liveSchedule.length === 0}>
+                <Copy size={15} /> Notes
+              </Button>
+            </div>
+          </div>
+          {myEvents.loading ? (
+            <p className="text-sm text-ink/50">Loading your live schedule…</p>
+          ) : liveSchedule.length === 0 ? (
+            <p className="text-sm text-ink/50">No upcoming events in this range from your live follows.</p>
+          ) : (
+            <ul className="space-y-1.5">
+              {liveSchedule.slice(0, 60).map((e) => (
+                <li key={e.id} className="flex items-center gap-3 rounded-lg bg-page/60 px-3 py-2">
+                  <span className="text-lg leading-none">{sportEmoji(e.sportKey)}</span>
+                  <span className="min-w-0 flex-1 truncate text-sm font-semibold">{e.title}</span>
+                  {e.leagueName && (
+                    <span className="hidden shrink-0 font-mono text-[10px] uppercase text-ink/40 sm:block">
+                      {e.leagueName}
+                    </span>
+                  )}
+                  <span className="shrink-0 font-mono text-xs text-ink/55">
+                    {e.startsAt
+                      ? `${formatLongDate(e.startsAt, timeZone, { locale: prefs.locale, hour12: prefs.hour12 ?? undefined })} ${formatTime(e.startsAt, timeZone, { locale: prefs.locale, hour12: prefs.hour12 ?? undefined })}`
+                      : 'TBD'}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Panel>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-[250px_1fr]">
         {/* YOUR WORLD rail: followed picks with event counts. */}

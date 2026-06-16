@@ -4,15 +4,25 @@ import { AppStateContext } from './state-context'
 import {
   getFollows,
   getPreferences,
+  saveFollows,
   savePreferences,
   toggleFollow as storeToggleFollow,
   type Follow,
   type Preferences,
 } from '../lib/store'
 import { getSupabaseClient, isSupabaseConfigured } from '../lib/supabase'
+import {
+  isDbFollow,
+  mergeFollowsOnSignIn,
+  loadRemotePrefs,
+  pushFollow,
+  removeFollow,
+  saveRemotePrefs,
+} from '../data/userData'
 
-// App-wide state: follows + display preferences, persisted through src/lib/store.ts.
-// When Supabase auth lands, this context keeps the same shape and the store swaps backends.
+// App-wide state: follows + display preferences, persisted through src/lib/store.ts (localStorage)
+// and mirrored to Supabase (user_follows + profiles) once the user signs in. DB-eligible follows
+// (sport/league/competitor/custom_league with uuid ids) sync; World Cup "team" follows stay local.
 
 export function AppStateProvider({ children }: PropsWithChildren) {
   const [follows, setFollows] = useState<Follow[]>(() => getFollows())
@@ -46,17 +56,76 @@ export function AppStateProvider({ children }: PropsWithChildren) {
     }
   }, [])
 
-  const toggleFollow = useCallback((follow: Follow) => {
-    setFollows(storeToggleFollow(follow))
-  }, [])
+  // On sign-in: merge local follows into the account and adopt server preferences.
+  useEffect(() => {
+    if (!user) return
+    let cancelled = false
+    getSupabaseClient().then(async (supabase) => {
+      if (!supabase || cancelled) return
+      const merged = await mergeFollowsOnSignIn(supabase, user.id, getFollows())
+      if (cancelled) return
+      saveFollows(merged)
+      setFollows(merged)
 
-  const setPrefs = useCallback((next: Preferences) => {
-    savePreferences(next)
-    setPrefsState(next)
-  }, [])
+      const remotePrefs = await loadRemotePrefs(supabase, user.id)
+      if (cancelled) return
+      if (remotePrefs && Object.keys(remotePrefs).length) {
+        setPrefsState((current) => {
+          const next = { ...current, ...remotePrefs }
+          savePreferences(next)
+          return next
+        })
+      } else {
+        // First sign-in with no server profile yet: seed it from local prefs.
+        await saveRemotePrefs(supabase, user.id, getPreferences())
+      }
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [user])
+
+  const toggleFollow = useCallback(
+    (follow: Follow) => {
+      const next = storeToggleFollow(follow)
+      setFollows(next)
+      const nowFollowing = next.some(
+        (f) => f.targetType === follow.targetType && f.targetId === follow.targetId && f.intent === follow.intent,
+      )
+      if (user && isDbFollow(follow)) {
+        getSupabaseClient().then((supabase) => {
+          if (!supabase) return
+          if (nowFollowing) void pushFollow(supabase, user.id, follow)
+          else void removeFollow(supabase, user.id, follow)
+        })
+      }
+    },
+    [user],
+  )
+
+  const setPrefs = useCallback(
+    (next: Preferences) => {
+      savePreferences(next)
+      setPrefsState(next)
+      if (user) {
+        getSupabaseClient().then((supabase) => {
+          if (supabase) void saveRemotePrefs(supabase, user.id, next)
+        })
+      }
+    },
+    [user],
+  )
 
   const followedTeams = useMemo(
     () => follows.filter((f) => f.targetType === 'team').map((f) => f.targetId),
+    [follows],
+  )
+  const followedLeagueIds = useMemo(
+    () => follows.filter((f) => f.targetType === 'league').map((f) => f.targetId),
+    [follows],
+  )
+  const followedCompetitorIds = useMemo(
+    () => follows.filter((f) => f.targetType === 'competitor').map((f) => f.targetId),
     [follows],
   )
 
@@ -92,6 +161,8 @@ export function AppStateProvider({ children }: PropsWithChildren) {
       follows,
       toggleFollow,
       followedTeams,
+      followedLeagueIds,
+      followedCompetitorIds,
       prefs,
       setPrefs,
       auth: {
@@ -103,7 +174,20 @@ export function AppStateProvider({ children }: PropsWithChildren) {
         signOut,
       },
     }),
-    [authReady, follows, followedTeams, prefs, setPrefs, signInWithGoogle, signInWithMagicLink, signOut, toggleFollow, user],
+    [
+      authReady,
+      follows,
+      followedTeams,
+      followedLeagueIds,
+      followedCompetitorIds,
+      prefs,
+      setPrefs,
+      signInWithGoogle,
+      signInWithMagicLink,
+      signOut,
+      toggleFollow,
+      user,
+    ],
   )
 
   return <AppStateContext.Provider value={value}>{children}</AppStateContext.Provider>
