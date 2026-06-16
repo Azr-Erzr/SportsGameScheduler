@@ -281,6 +281,36 @@ the reference for masking discipline.
 - Mobile collapse (icon panel only) feathers cleanly — no rectangle.
 - Reuses existing `/assets/sport-banners/broadcast/{asset}-{icon,action}.webp`.
 
+### Shipped (June 16, 2026) — and where the plan met the assets
+Implemented in `SportChannelBanner.tsx` + the broadcast `.sport-channel-*` rules. The banner now
+reads as one continuous field. Two realities of the *actual art* forced a smarter composite than
+the original "switch both panels to `screen`" plan — keep these in mind before touching it:
+
+- **The two WebPs per sport have opposite backgrounds.** The `-icon` art is neon-on-**black**
+  (or an ambient-lit scene); the `-action` art is a full telemetry scene on a **cream/parchment**
+  background (it was authored for the light banner). So a single blend mode can't serve both:
+  `screen` drops black but blows cream to white; `multiply` kills the neon glow.
+- **The banner is responsive** (4-col > 1320px → 2-col stacked with a full-width action strip →
+  icon-only < 700px). A global horizontal `dark→pale→dark` gradient only lines up in the 4-col
+  case, so it would break legibility/seams when stacked.
+
+What shipped instead (the layout-robust, asset-honest version of the §11 intent):
+- **Shared warm-pale field** (`--scf-field`, a hair of `--mp-accent`) carries the title/copy and
+  the cream-backed action art; **grid + plus-marks + faint scanline** run continuously on
+  `.sport-channel-banner::before` (below the panels). Title stays sport-`ticketStub` (dark) on the
+  pale field — already AA, no separate legibility band needed.
+- **Icon zone:** a *local, feathered* dark-teal backing (`--scf-void`/`--scf-deep`) that dissolves
+  into the field; art `mix-blend-mode: screen` + a **radial** feather mask (kills the WebP's
+  rectangular edge, corner haze, and any cream border) so even ambient-lit icons (motorsport) read
+  as a neon subject emerging from the dark, bleeding off the left edge.
+- **Action zone:** cream-backed scene on the matching pale field at **normal** blend (no rectangle,
+  neon arc keeps glowing), framed by a dark-teal outer-corner vignette, bleeding off the right.
+  As the stacked bottom strip it's centred with the field as an invisible letterbox.
+- The dark "broadcast" weight lands on the **icon stamp + framed corners**, not a uniformly dark
+  right zone (impossible without destroying the cream action art) — which matches the real mockup.
+- `[data-paper]` (light) rules untouched; verified soccer/basketball/motorsport/hockey/tennis in
+  4-col, stacked, and mobile, both modes, clean `lint` + `build`.
+
 ### Ready-to-paste prompt for the design chat
 > **Context:** You're refining `SportChannelBanner` in the Silbo Sports app (React + Tailwind v4).
 > Read `docs/silbo-design-context.md` first — especially §2 (two-system→two-mode), §3 (palette),
