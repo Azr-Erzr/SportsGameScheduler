@@ -1871,7 +1871,7 @@
     --sport-channel-paper-ink: color-mix(in srgb, var(--mp-primary) 68%, #1d1812);
     --sport-channel-readable: color-mix(in srgb, var(--mp-ticket-stub) 82%, #1d1812);
     --sport-channel-pad: clamp(18px, 2vw, 26px);
-    --sport-channel-art-height: clamp(340px, 27vw, 392px);
+    --sport-channel-art-height: clamp(316px, 25vw, 372px);
     /* Broadcast "one continuous field": a shared warm-pale field carries the title/copy and the
        cream-backed action art; each art panel layers its OWN feathered backing (dark for the
        black-backed icon, dark-teal corner for the action) so nothing reads as a pasted rectangle
@@ -1972,17 +1972,19 @@
     background: none;
   }
 
-  /* Icon zone: a local dark-teal backing pulled out to the banner's left border (negative margin)
-     so the zone is anchored to the edge — no pale margin, no floating rectangle. */
+  /* Icon zone: a local dark backing pulled out to the banner's left/top/bottom borders (negative
+     margins) so the dark art fills the full banner height and bleeds off three edges — the pale
+     field never frames it. A horizontal gradient keeps the left third solid-dark top-to-bottom
+     and only fades toward the centre; a soft primary glow sits on the subject. */
   .sport-channel-icon-panel {
-    margin-left: calc(-1 * var(--sport-channel-pad));
+    margin: calc(-1 * var(--sport-channel-pad)) 0 calc(-1 * var(--sport-channel-pad)) calc(-1 * var(--sport-channel-pad));
     background:
-      radial-gradient(140% 120% at 34% 50%,
-        var(--scf-void) 0 38%,
-        var(--scf-deep) 56%,
-        color-mix(in srgb, var(--scf-deep) 55%, transparent) 70%,
-        color-mix(in srgb, var(--scf-deep) 22%, transparent) 85%,
-        transparent 100%);
+      linear-gradient(90deg,
+        var(--scf-void) 0 30%,
+        var(--scf-deep) 52%,
+        color-mix(in srgb, var(--scf-deep) 34%, transparent) 76%,
+        transparent 100%),
+      radial-gradient(120% 96% at 32% 50%, color-mix(in srgb, var(--mp-primary) 12%, transparent) 0 38%, transparent 76%);
   }
 
   .sport-channel-icon-panel::before {
@@ -2014,9 +2016,10 @@
      blend — no rectangle), framed by a dark-teal outer-corner vignette and bleeding off the right
      edge so the pitch reads as part of the broadcast field. */
   .sport-channel-action-panel {
+    margin-block: calc(-1 * var(--sport-channel-pad));
     background:
-      radial-gradient(120% 120% at 100% 6%, var(--scf-deep) 0 8%, color-mix(in srgb, var(--scf-deep) 32%, transparent) 30%, transparent 56%),
-      radial-gradient(150% 130% at 108% 92%, color-mix(in srgb, var(--scf-deep) 60%, transparent) 0 16%, transparent 52%);
+      radial-gradient(120% 120% at 100% 0%, var(--scf-deep) 0 8%, color-mix(in srgb, var(--scf-deep) 32%, transparent) 32%, transparent 58%),
+      radial-gradient(150% 130% at 108% 100%, color-mix(in srgb, var(--scf-deep) 55%, transparent) 0 16%, transparent 54%);
   }
 
   .sport-channel-action-panel::before {
@@ -2387,9 +2390,16 @@
       max-width: 70ch;
     }
 
+    /* Stacked: the art zones are no longer full banner-height columns, so drop the vertical
+       full-bleed (it would overlap the neighbouring rows). The icon keeps its left bleed. */
+    .sport-channel-icon-panel {
+      margin-block: 0;
+    }
+
     .sport-channel-action-panel {
       grid-column: 1 / -1;
       min-height: clamp(280px, 36vw, 340px);
+      margin: 0;
       background:
         radial-gradient(80% 150% at 4% 50%, color-mix(in srgb, var(--scf-deep) 44%, transparent) 0 14%, transparent 52%),
         radial-gradient(80% 150% at 96% 50%, color-mix(in srgb, var(--scf-deep) 44%, transparent) 0 14%, transparent 52%);
