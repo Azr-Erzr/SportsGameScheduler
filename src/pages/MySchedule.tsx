@@ -6,6 +6,8 @@ import { CityPicker } from '../components/CityPicker'
 import { cityLabelFor } from '../lib/cities'
 import { MatchCard } from '../components/MatchCard'
 import { Button, EmptyState, Panel, PanelHeading } from '../components/ui'
+import { AdSlot } from '../components/AdSlot'
+import { interleaveAds } from '../lib/ads'
 import { filterMatchesForTeams, useMatches } from '../data/liveMatches'
 import { useMyEvents } from '../data/liveSport'
 import { allMatches, groupMatches } from '../data/worldcup'
@@ -222,22 +224,28 @@ export function MySchedulePage() {
             <p className="text-sm text-ink/50">No upcoming events in this range from your live follows.</p>
           ) : (
             <ul className="space-y-1.5">
-              {liveSchedule.slice(0, 60).map((e) => (
-                <li key={e.id} className="flex items-center gap-3 rounded-lg bg-page/60 px-3 py-2">
-                  <span className="text-lg leading-none">{sportEmoji(e.sportKey)}</span>
-                  <span className="min-w-0 flex-1 truncate text-sm font-semibold">{e.title}</span>
-                  {e.leagueName && (
-                    <span className="hidden shrink-0 font-mono text-[10px] uppercase text-ink/40 sm:block">
-                      {e.leagueName}
+              {interleaveAds(liveSchedule.slice(0, 60), (e) => e.id, 8).map((entry) =>
+                entry.kind === 'ad' ? (
+                  <li key={entry.key}>
+                    <AdSlot format="leaderboard" />
+                  </li>
+                ) : (
+                  <li key={entry.key} className="flex items-center gap-3 rounded-lg bg-page/60 px-3 py-2">
+                    <span className="text-lg leading-none">{sportEmoji(entry.item.sportKey)}</span>
+                    <span className="min-w-0 flex-1 truncate text-sm font-semibold">{entry.item.title}</span>
+                    {entry.item.leagueName && (
+                      <span className="hidden shrink-0 font-mono text-[10px] uppercase text-ink/40 sm:block">
+                        {entry.item.leagueName}
+                      </span>
+                    )}
+                    <span className="shrink-0 font-mono text-xs text-ink/55">
+                      {entry.item.startsAt
+                        ? `${formatLongDate(entry.item.startsAt, timeZone, { locale: prefs.locale, hour12: prefs.hour12 ?? undefined })} ${formatTime(entry.item.startsAt, timeZone, { locale: prefs.locale, hour12: prefs.hour12 ?? undefined })}`
+                        : 'TBD'}
                     </span>
-                  )}
-                  <span className="shrink-0 font-mono text-xs text-ink/55">
-                    {e.startsAt
-                      ? `${formatLongDate(e.startsAt, timeZone, { locale: prefs.locale, hour12: prefs.hour12 ?? undefined })} ${formatTime(e.startsAt, timeZone, { locale: prefs.locale, hour12: prefs.hour12 ?? undefined })}`
-                      : 'TBD'}
-                  </span>
-                </li>
-              ))}
+                  </li>
+                ),
+              )}
             </ul>
           )}
         </Panel>

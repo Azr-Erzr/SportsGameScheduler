@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { useAppState } from '../app/state-context'
 import { Badge, Button, EmptyState, Panel, PanelHeading } from '../components/ui'
 import { useEvent } from '../data/liveSport'
+import { matchWatchProvider, watchLinkFor, WATCH_PROVIDERS } from '../lib/ads'
 import { exportFilename } from '../domain/brand'
 import { downloadBlob } from '../lib/clipboard'
 import { createMultiSportIcsBlob, sportEmoji } from '../lib/ics'
@@ -45,6 +46,7 @@ export function EventDetailPage() {
     : 'Time to be confirmed'
   const venue = [event.venue, event.venueCity, event.venueCountry].filter(Boolean).join(', ')
   const leagueFollowed = event.leagueId ? followedLeagueIds.includes(event.leagueId) : false
+  const regionCode = prefs.regionCode
 
   function exportIcs() {
     downloadBlob(createMultiSportIcsBlob([event!], { reminderMinutes: [60] }), exportFilename('event', 'ics'))
@@ -133,26 +135,71 @@ export function EventDetailPage() {
         </PanelHeading>
         {event.broadcasts.length > 0 ? (
           <ul className="space-y-1 text-sm">
-            {event.broadcasts.map((b, i) => (
-              <li key={`${b.country}-${b.channel}-${i}`} className="flex items-center gap-2">
-                <span className="font-mono text-[10px] uppercase text-ink/45">{b.country}</span>
-                {b.streamUrl ? (
-                  <a href={b.streamUrl} target="_blank" rel="noreferrer" className="font-medium text-primary hover:underline">
-                    {b.channel}
-                  </a>
-                ) : (
-                  <span className="font-medium">{b.channel}</span>
-                )}
-                <span className="text-ink/40">· {b.kind}</span>
-              </li>
-            ))}
+            {event.broadcasts.map((b, i) => {
+              const provider = matchWatchProvider(b.channel)
+              const link = provider ? watchLinkFor(provider.key) : null
+              const href = b.streamUrl ?? link?.href
+              return (
+                <li key={`${b.country}-${b.channel}-${i}`} className="flex items-center gap-2">
+                  <span className="font-mono text-[10px] uppercase text-ink/45">{b.country}</span>
+                  {href ? (
+                    <a
+                      href={href}
+                      target="_blank"
+                      rel={link?.affiliate ? 'sponsored noopener noreferrer' : 'noopener noreferrer'}
+                      className="font-medium text-primary hover:underline"
+                    >
+                      {b.channel}
+                    </a>
+                  ) : (
+                    <span className="font-medium">{b.channel}</span>
+                  )}
+                  <span className="text-ink/40">· {b.kind}</span>
+                </li>
+              )
+            })}
           </ul>
         ) : (
-          <p className="text-sm text-ink/55">
-            No broadcast listings yet. More options may be available in your region — check your local listings.
-          </p>
+          <WatchOptions regionCode={regionCode} />
         )}
       </Panel>
+    </div>
+  )
+}
+
+// No specific broadcast yet: surface region-relevant streaming destinations. These are
+// affiliate links when an affiliate id is configured (see lib/ads.ts), with the required
+// disclosure. Useful even unmonetized — it answers "where could I watch this?".
+function WatchOptions({ regionCode }: { regionCode?: string | null }) {
+  const region = (regionCode ?? 'US').toUpperCase()
+  const regional = WATCH_PROVIDERS.filter((p) => p.regions.includes(region))
+  const providers = (regional.length ? regional : WATCH_PROVIDERS).slice(0, 5)
+  const links = providers.map((p) => watchLinkFor(p.key)!).filter(Boolean)
+  const anyAffiliate = links.some((l) => l.affiliate)
+
+  return (
+    <div className="space-y-2">
+      <p className="text-sm text-ink/55">
+        No confirmed broadcast yet. Common ways to watch in your region:
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {links.map((l) => (
+          <a
+            key={l.name}
+            href={l.href}
+            target="_blank"
+            rel={l.affiliate ? 'sponsored noopener noreferrer' : 'noopener noreferrer'}
+            className="rounded-lg border border-primary/25 px-3 py-1.5 text-sm font-semibold text-primary hover:bg-primary/10"
+          >
+            {l.name}
+          </a>
+        ))}
+      </div>
+      <p className="text-[11px] text-ink/40">
+        {anyAffiliate
+          ? 'Some links are affiliate links — Silbo may earn a commission, at no cost to you.'
+          : 'Availability varies by region — check your local listings.'}
+      </p>
     </div>
   )
 }

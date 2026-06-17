@@ -10,6 +10,8 @@ import { deriveTeams, filterMatchesForTeams, useMatches } from '../data/liveMatc
 import { useSportRoster, useSportSchedule, type LiveEvent } from '../data/liveSport'
 import { allMatches, featuredTeams } from '../data/worldcup'
 import { getSport, type SportInfo } from '../domain/sports'
+import { AdSlot } from '../components/AdSlot'
+import { interleaveAds } from '../lib/ads'
 import { findConflicts } from '../lib/conflicts'
 import { formatDate, formatLongDate, formatTime, relativeTimeFromNow } from '../lib/time'
 
@@ -103,9 +105,13 @@ function SoccerPage() {
             )}
           </div>
           {leagueEvents.length > 0 ? (
-            leagueEvents.map((event) => (
-              <EventTicket key={event.id} event={event} locale={prefs.locale} hour12={prefs.hour12} timeZone={prefs.timezone} />
-            ))
+            interleaveAds(leagueEvents, (e) => e.id, 6).map((entry) =>
+              entry.kind === 'ad' ? (
+                <AdSlot key={entry.key} format="leaderboard" />
+              ) : (
+                <EventTicket key={entry.key} event={entry.item} locale={prefs.locale} hour12={prefs.hour12} timeZone={prefs.timezone} />
+              ),
+            )
           ) : (
             <EmptyState
               title="No upcoming fixtures"
@@ -359,9 +365,13 @@ function LiveSportPage({ sport }: { sport: SportInfo }) {
               {shownEvents.length > 0 ? (
                 <>
                   <p className="text-sm font-semibold text-ink/60">{shownEvents.length} upcoming</p>
-                  {shownEvents.map((event) => (
-                    <EventTicket key={event.id} event={event} locale={prefs.locale} hour12={prefs.hour12} timeZone={prefs.timezone} />
-                  ))}
+                  {interleaveAds(shownEvents, (e) => e.id, 6).map((entry) =>
+                    entry.kind === 'ad' ? (
+                      <AdSlot key={entry.key} format="leaderboard" />
+                    ) : (
+                      <EventTicket key={entry.key} event={entry.item} locale={prefs.locale} hour12={prefs.hour12} timeZone={prefs.timezone} />
+                    ),
+                  )}
                 </>
               ) : (
                 <EmptyState
