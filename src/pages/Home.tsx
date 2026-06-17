@@ -139,18 +139,34 @@ function ProgramCoverCard({
   return (
     <Link to={event.href} className="w-[270px] min-w-[270px] snap-start sm:w-[320px] sm:min-w-[320px]">
       <article
-        className="group relative h-[178px] overflow-hidden rounded-card border-2 bg-surface p-4 transition-transform hover:-translate-y-1"
+        className="group relative h-[178px] overflow-hidden rounded-card border-2 bg-surface py-4 pl-7 pr-4 transition-transform hover:-translate-y-1"
         style={{
           borderColor: `${theme.colors.primary}55`,
           boxShadow: `inset 0 0 0 1px ${theme.colors.primary}14`,
         }}
       >
+        {/* Sport-colour signal band on the left edge — the ticket-stub / jersey-stripe language
+            from the sport pages, so colour reads as category at a glance (replaces the old corner
+            rings). Segments stack the sport's primary + accent like broadcast colour bars. */}
         <div
-          className="absolute -right-14 -top-20 h-52 w-52 rounded-full opacity-25 transition-transform group-hover:scale-110"
-          style={{
-            background: `repeating-radial-gradient(circle, ${theme.colors.primary} 0 7px, transparent 7px 23px, ${theme.colors.accent} 23px 28px, transparent 28px 46px)`,
-          }}
+          className="absolute inset-y-0 left-0 w-3 transition-[width] duration-200 group-hover:w-3.5"
           aria-hidden="true"
+          style={{
+            background: `repeating-linear-gradient(180deg, ${theme.colors.primary} 0 15px, color-mix(in srgb, ${theme.colors.primary} 52%, #000) 15px 17px, ${theme.colors.accent} 17px 31px, color-mix(in srgb, ${theme.colors.accent} 52%, #000) 31px 33px)`,
+            boxShadow: `inset -1px 0 0 ${theme.colors.primary}99, 0 0 14px ${theme.colors.primary}33`,
+          }}
+        />
+        {/* Ticket-style perforation separating the band from the content. */}
+        <div
+          className="absolute inset-y-3 left-[18px] w-px"
+          aria-hidden="true"
+          style={{ background: `repeating-linear-gradient(180deg, ${theme.colors.primary}55 0 3px, transparent 3px 7px)` }}
+        />
+        {/* Faint sport wash bleeding off the band into the card body. */}
+        <div
+          className="absolute left-3 top-0 h-full w-28 opacity-25 transition-opacity group-hover:opacity-40"
+          aria-hidden="true"
+          style={{ background: `radial-gradient(130% 80% at 0% 50%, ${theme.colors.primary}, transparent 72%)` }}
         />
         <div className="relative flex h-full flex-col justify-between">
           <div className="flex items-start justify-between gap-3">
@@ -162,7 +178,6 @@ function ProgramCoverCard({
             </span>
           </div>
           <div>
-            <div className="mb-3 h-1.5 w-20 rounded-full" style={{ background: theme.colors.primary }} aria-hidden="true" />
             <h3 className="max-w-[15rem] text-xl font-black leading-tight" style={{ color: theme.colors.primary }}>
               {event.title}
             </h3>
