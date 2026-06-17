@@ -12,6 +12,7 @@ import { allMatches, featuredTeams } from '../data/worldcup'
 import { getSport, type SportInfo } from '../domain/sports'
 import { AdSlot } from '../components/AdSlot'
 import { interleaveAds } from '../lib/ads'
+import { useDocumentMeta } from '../lib/seo'
 import { findConflicts } from '../lib/conflicts'
 import { formatDate, formatLongDate, formatTime, relativeTimeFromNow } from '../lib/time'
 
@@ -52,6 +53,14 @@ const SKYLINE_COLORS = ['var(--mp-primary)', 'var(--mp-accent)', 'var(--color-ne
 export function SportPage() {
   const { sportKey = 'soccer' } = useParams()
   const sport = getSport(sportKey)
+
+  useDocumentMeta({
+    title: sport ? `${sport.label} schedule & live times — Silbo Sports` : 'Sports — Silbo Sports',
+    description: sport
+      ? `${sport.label} fixtures — ${sport.flagshipLeague} and more in your local time. Follow teams and players, sync to your calendar, and never miss a ${sport.eventNoun}.`
+      : undefined,
+    canonicalPath: `/sports/${sportKey}`,
+  })
 
   if (!sport) {
     return <EmptyState title="Unknown sport" body="That sport is not in the catalog yet." />

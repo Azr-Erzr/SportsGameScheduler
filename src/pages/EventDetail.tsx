@@ -7,6 +7,7 @@ import { matchWatchProvider, watchLinkFor, WATCH_PROVIDERS } from '../lib/ads'
 import { exportFilename } from '../domain/brand'
 import { downloadBlob } from '../lib/clipboard'
 import { createMultiSportIcsBlob, sportEmoji } from '../lib/ics'
+import { SEO_ORIGIN, useDocumentMeta, useJsonLd } from '../lib/seo'
 import { formatLongDate, formatTime } from '../lib/time'
 
 const STATUS_TONE: Record<string, 'secondary' | 'muted' | 'warning'> = {
@@ -21,6 +22,44 @@ export function EventDetailPage() {
   const { eventId } = useParams()
   const { prefs, toggleFollow, followedLeagueIds, followedCompetitorIds } = useAppState()
   const { event, loading, configured } = useEvent(eventId)
+
+  useDocumentMeta({
+    title: event ? `${event.title} — when & where to watch | Silbo Sports` : 'Event — Silbo Sports',
+    description: event
+      ? `${event.title}${event.leagueName ? ` · ${event.leagueName}` : ''} — start time in your local timezone, where to watch, follow, and add to your calendar.`
+      : undefined,
+    canonicalPath: eventId ? `/events/${eventId}` : undefined,
+  })
+  useJsonLd(
+    'event',
+    event && event.startsAt
+      ? {
+          '@context': 'https://schema.org',
+          '@type': 'SportsEvent',
+          name: event.title,
+          startDate: event.startsAt.toISOString(),
+          eventStatus:
+            event.status === 'cancelled'
+              ? 'https://schema.org/EventCancelled'
+              : event.status === 'postponed'
+                ? 'https://schema.org/EventPostponed'
+                : 'https://schema.org/EventScheduled',
+          ...(event.venue
+            ? {
+                location: {
+                  '@type': 'Place',
+                  name: event.venue,
+                  address: [event.venueCity, event.venueCountry].filter(Boolean).join(', ') || undefined,
+                },
+              }
+            : {}),
+          ...(event.competitors.length
+            ? { competitor: event.competitors.map((c) => ({ '@type': 'SportsTeam', name: c.name })) }
+            : {}),
+          url: `${SEO_ORIGIN}/events/${event.id}`,
+        }
+      : null,
+  )
 
   if (loading) {
     return <p className="board-label py-10 text-center text-ink/50">Tuning channel…</p>
