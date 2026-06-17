@@ -52,24 +52,33 @@ export function SportSwitcher() {
         onClick={() => setOpen((current) => !current)}
         aria-expanded={open}
         aria-haspopup="menu"
-        className="sport-switcher-trigger flex items-center gap-3 rounded-xl border border-transparent px-2 py-1.5 transition-colors hover:border-primary/20 hover:bg-primary/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        aria-label={`Browse sports — current channel: ${activeSport ? activeSport.label : 'all sports'}`}
+        title="Browse sports"
+        className="sport-switcher-trigger flex items-center gap-2.5 rounded-xl border border-primary/20 bg-primary/[0.04] px-2 py-1.5 transition-colors hover:border-primary/45 hover:bg-primary/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       >
         <span
           key={activeKey}
           className="sport-switcher-mark flex items-center justify-center"
         >
-          <SilboBrandMark size={44} color={activeTheme.colors.primary} />
+          <SilboBrandMark size={40} color={activeTheme.colors.primary} />
         </span>
         <span className="text-left">
           <span className="neon-text block font-display text-base leading-tight tracking-wide">
             SILBO
           </span>
-          <span className="hidden whitespace-nowrap font-mono text-[10px] uppercase tracking-[0.3em] text-ink/50 md:block">
-            {activeSport ? `CH ${String(sports.indexOf(activeSport) + 1).padStart(2, '0')} - ${activeSport.label}` : 'Sports Network'}
+          {/* The channel chip is styled as a dropdown control (border + dot + caret) so it reads as
+              the tappable sports selector rather than a static wordmark. */}
+          <span
+            className="mt-1 inline-flex items-center gap-1.5 rounded-full border px-2 py-[3px] font-mono text-[10px] font-bold uppercase leading-none tracking-[0.16em] transition-colors group-hover:border-current"
+            style={{ borderColor: `${activeTheme.colors.primary}55`, color: activeTheme.colors.primary }}
+          >
+            <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: activeTheme.colors.primary }} aria-hidden="true" />
+            <span className="hidden whitespace-nowrap sm:inline">
+              {activeSport ? `CH ${String(sports.indexOf(activeSport) + 1).padStart(2, '0')} · ${activeSport.label}` : 'All sports'}
+            </span>
+            <span className="whitespace-nowrap sm:hidden">{activeSport ? activeSport.label : 'Sports'}</span>
+            <ChevronDown size={13} className={`shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
           </span>
-        </span>
-        <span className={`text-ink/40 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}>
-          <ChevronDown size={16} />
         </span>
       </button>
 
