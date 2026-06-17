@@ -365,13 +365,13 @@
     object-fit: contain;
     user-select: none;
     pointer-events: none;
-    filter:
-      drop-shadow(0 0 9px color-mix(in srgb, var(--mp-primary) 20%, transparent))
-      drop-shadow(0 8px 12px rgba(0, 0, 0, 0.2));
+    /* PERF: a single cheap drop-shadow. Stacked drop-shadows on every icon (dozens on a
+       page) are a major paint cost. */
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.22));
   }
 
   [data-paper] .sport-asset-image {
-    filter: drop-shadow(0 8px 10px rgba(29, 24, 18, 0.18));
+    filter: drop-shadow(0 4px 7px rgba(29, 24, 18, 0.16));
   }
 
   .sport-asset-xs {
@@ -428,11 +428,11 @@
     mask-size: contain;
   }
 
+  /* PERF: the blurred glow layer was a per-icon blur filter (one of the most expensive paint
+     ops) rendered on ~10 icons on the board. Dropped — the non-blur ::after halo carries the
+     soft edge at a fraction of the cost. */
   .sport-asset-glow {
-    background: var(--sport-asset-primary);
-    filter: blur(6px);
-    opacity: 0.38;
-    transform: scale(1.04);
+    display: none;
   }
 
   .sport-asset-core {
@@ -442,15 +442,10 @@
       var(--sport-asset-primary);
   }
 
+  /* PERF: the sheen used mix-blend-mode (forces an isolated compositing layer per icon) plus a
+     hover transition that repainted on pointer move. Dropped for a flat, cheap look. */
   .sport-asset-sheen {
-    z-index: 2;
-    background:
-      linear-gradient(115deg, transparent 0 34%, rgba(255, 255, 255, 0.72) 42%, transparent 52%),
-      repeating-linear-gradient(0deg, rgba(244, 234, 216, 0.34) 0 1px, transparent 1px 7px);
-    mix-blend-mode: screen;
-    opacity: 0.34;
-    transform: translateX(-12%);
-    transition: transform 220ms ease, opacity 220ms ease;
+    display: none;
   }
 
   .sport-asset-icon::after {
@@ -907,10 +902,11 @@
     position: relative;
     min-height: 420px;
     overflow: hidden;
+    /* contain isolates paint/layout to this subtree. (No content-visibility: it suppresses the
+       pip view-timeline below. With the blur/blend paints removed, the board is light enough to
+       scroll smoothly without skipping its paint.) */
     contain: layout paint;
-    /* Names a view-progress timeline the signal pips ride as the board scrolls through the
-       viewport — robust to whichever element is the page scroller. (No content-visibility here:
-       it suppresses the view timeline, and this hero is always near the top so it bought little.) */
+    /* The per-card pips ride this view timeline as the board scrolls through the viewport. */
     view-timeline-name: --silbo-room;
     view-timeline-axis: block;
     border: 1px solid color-mix(in srgb, var(--mp-primary) 22%, transparent);
@@ -960,123 +956,60 @@
     font-size: clamp(3.2rem, 7vw, 7.8rem);
   }
 
-  .globe-signal-layer {
+  /* Each poster card carries a pip badge on its top edge. The pip starts up in the orbit zone
+     and scroll-lands onto its card as the stack scrolls into view, then locks (one-time). The
+     pip lives in .poster-card-link (a non-clipping wrapper) so it can float above the card,
+     which itself has overflow:hidden. */
+  .poster-card-link {
+    position: relative;
+    display: block;
+  }
+
+  .poster-pip {
     position: absolute;
-    inset: 0;
-    z-index: 3;
+    top: 2px;
+    left: 50%;
+    z-index: 4;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 46px;
+    height: 46px;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--poster-primary) 60%, transparent);
+    background:
+      radial-gradient(circle at 35% 25%, rgba(255, 255, 255, 0.16), transparent 38%),
+      color-mix(in srgb, #0b0a08 80%, var(--poster-primary));
+    box-shadow: 0 5px 12px rgba(0, 0, 0, 0.3);
+    /* Centre on the card's top edge; the scroll entrance rides `translate` so the two compose. */
+    transform: translate(-50%, -50%);
     pointer-events: none;
   }
 
-  .globe-signal {
-    position: absolute;
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    min-width: 36px;
-    min-height: 36px;
-    border: 1px solid color-mix(in srgb, var(--signal-color) 60%, transparent);
-    border-radius: 999px;
+  [data-paper] .poster-pip {
+    border-color: color-mix(in srgb, var(--poster-primary) 52%, rgba(29, 24, 18, 0.18));
     background:
-      radial-gradient(circle at 35% 25%, rgba(255, 255, 255, 0.18), transparent 36%),
-      color-mix(in srgb, #0b0a08 82%, var(--signal-color));
-    color: var(--signal-color);
-    box-shadow:
-      0 0 0 1px rgba(244, 234, 216, 0.07),
-      0 0 10px color-mix(in srgb, var(--signal-color) 28%, transparent);
-    padding: 5px;
-    pointer-events: auto;
-    translate: -50% -50%;
-    transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+      radial-gradient(circle at 38% 28%, rgba(255, 255, 255, 0.7), transparent 40%),
+      color-mix(in srgb, #fbf5e9 74%, var(--poster-primary));
+    box-shadow: 0 6px 14px rgba(29, 24, 18, 0.14);
   }
 
-  [data-paper] .globe-signal {
-    border-color: color-mix(in srgb, var(--signal-color) 56%, rgba(29, 24, 18, 0.18));
-    background:
-      radial-gradient(circle at 38% 28%, rgba(255, 255, 255, 0.78), transparent 38%),
-      color-mix(in srgb, #fbf5e9 76%, var(--signal-color));
-    color: var(--signal-color);
-    box-shadow:
-      0 0 0 1px rgba(29, 24, 18, 0.07),
-      0 8px 16px rgba(29, 24, 18, 0.1);
-  }
-
-  .globe-signal-label {
-    max-width: 0;
-    overflow: hidden;
-    white-space: nowrap;
-    font-family: var(--font-mono);
-    font-size: 9px;
-    font-weight: 800;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    opacity: 0;
-    transition: max-width 180ms ease, opacity 180ms ease, padding-right 180ms ease;
-  }
-
-  .globe-signal:hover,
-  .globe-signal:focus-visible,
-  .globe-signal.is-active {
-    z-index: 5;
-    border-color: var(--signal-color);
-    background:
-      radial-gradient(circle at 35% 25%, rgba(255, 255, 255, 0.26), transparent 38%),
-      color-mix(in srgb, #0b0a08 68%, var(--signal-color));
-    box-shadow:
-      0 0 0 2px color-mix(in srgb, var(--signal-color) 20%, transparent),
-      0 0 16px color-mix(in srgb, var(--signal-color) 38%, transparent);
-    transform: scale(1.08);
-  }
-
-  [data-paper] .globe-signal:hover,
-  [data-paper] .globe-signal:focus-visible,
-  [data-paper] .globe-signal.is-active {
-    background:
-      radial-gradient(circle at 38% 28%, rgba(255, 255, 255, 0.88), transparent 38%),
-      color-mix(in srgb, #fbf5e9 62%, var(--signal-color));
-    box-shadow:
-      0 0 0 2px color-mix(in srgb, var(--signal-color) 22%, transparent),
-      0 10px 22px rgba(29, 24, 18, 0.14);
-  }
-
-  .globe-signal:hover .globe-signal-label,
-  .globe-signal:focus-visible .globe-signal-label,
-  .globe-signal.is-active .globe-signal-label {
-    max-width: 8.5rem;
-    opacity: 1;
-    padding-right: 4px;
-  }
-
-  /* Scroll-driven pip travel: each signal drifts along a fixed diagonal arc as the page scrolls,
-     so the live-sports-room icons feel like they orbit. Driven entirely by the compositor via a
-     scroll timeline (no JS scroll handler), so it stays smooth. Drift rides the `translate`
-     property; hover/active keep `transform: scale()` separately, so the two never fight.
-     Degrades to the static layout where scroll timelines are unsupported, and is fully disabled
-     under reduced-motion. */
-  @keyframes signal-scroll-orbit {
-    0% {
-      translate: calc(-50% + var(--orbit-x0, -34px)) calc(-50% + var(--orbit-y0, 10px));
+  @keyframes pip-land {
+    from {
+      translate: var(--pip-x, 0px) var(--pip-y, -280px);
     }
-    50% {
-      translate: calc(-50% + var(--orbit-x1, 6px)) calc(-50% + var(--orbit-y1, -20px));
-    }
-    100% {
-      translate: calc(-50% + var(--orbit-x2, 52px)) calc(-50% + var(--orbit-y2, 6px));
+    to {
+      translate: 0px 0px;
     }
   }
 
-  @supports (animation-timeline: scroll()) {
+  @supports (animation-timeline: view()) {
     @media (prefers-reduced-motion: no-preference) {
-      .globe-signal {
-        animation: signal-scroll-orbit linear both;
+      .poster-pip {
+        animation: pip-land linear both;
         animation-timeline: --silbo-room;
-        animation-range: cover 0% cover 100%;
+        animation-range: entry 8% cover 46%;
       }
-      /* Per-pip amplitudes/directions so they spread along the arc instead of moving in lockstep. */
-      .globe-signal:nth-child(1) { --orbit-x0: -52px; --orbit-y0: 14px; --orbit-x1: 4px; --orbit-y1: -26px; --orbit-x2: 70px; --orbit-y2: 8px; }
-      .globe-signal:nth-child(2) { --orbit-x0: 60px; --orbit-y0: -8px; --orbit-x1: -10px; --orbit-y1: 22px; --orbit-x2: -64px; --orbit-y2: -6px; }
-      .globe-signal:nth-child(3) { --orbit-x0: -40px; --orbit-y0: -18px; --orbit-x1: 14px; --orbit-y1: 16px; --orbit-x2: 58px; --orbit-y2: -14px; }
-      .globe-signal:nth-child(4) { --orbit-x0: 44px; --orbit-y0: 16px; --orbit-x1: -8px; --orbit-y1: -18px; --orbit-x2: -56px; --orbit-y2: 12px; }
-      .globe-signal:nth-child(5) { --orbit-x0: -30px; --orbit-y0: -14px; --orbit-x1: 18px; --orbit-y1: 20px; --orbit-x2: 66px; --orbit-y2: -4px; }
     }
   }
 

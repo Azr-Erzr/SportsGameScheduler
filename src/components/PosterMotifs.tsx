@@ -34,14 +34,6 @@ type CapsuleStat = {
   label: string
 }
 
-const signalPositions = [
-  { x: 67, y: 27, orbit: 'primary', delay: '0s', label: 'Signal east' },
-  { x: 43, y: 35, orbit: 'secondary', delay: '-2.4s', label: 'Signal central' },
-  { x: 56, y: 58, orbit: 'primary', delay: '-4.8s', label: 'Signal south' },
-  { x: 28, y: 47, orbit: 'secondary', delay: '-7.2s', label: 'Signal west' },
-  { x: 78, y: 53, orbit: 'primary', delay: '-9.6s', label: 'Signal far side' },
-]
-
 const defaultStats: CapsuleStat[] = [
   { icon: Trophy, value: '32', label: 'Teams' },
   { icon: CalendarCheck, value: '64', label: 'Matches' },
@@ -208,6 +200,17 @@ export function TournamentCapsule({
   )
 }
 
+// Per-card pip start positions: each pip begins scattered up in the "orbit" zone above the
+// cards and scroll-lands onto its card (see .poster-pip + pip-land in tailwind.css).
+const PIP_ORBITS: Array<{ x: number; y: number }> = [
+  { x: -120, y: -300 },
+  { x: 96, y: -250 },
+  { x: -54, y: -340 },
+  { x: 132, y: -288 },
+  { x: -150, y: -262 },
+  { x: 40, y: -322 },
+]
+
 // Memoized so a change to the board's active index only re-renders the two cards whose
 // `active` flips — not all ~11 cards (each of which renders a sport asset). Without this,
 // sweeping the mouse across the board re-rendered the whole stack on every pointer move.
@@ -215,80 +218,52 @@ const EventPosterCard = memo(function EventPosterCard({
   event,
   index,
   active = false,
-  onActivate,
-}: {
-  event: PosterEvent
-  index: number
-  active?: boolean
-  onActivate?: (index: number) => void
-}) {
-  const theme = getTheme(event.sportKey)
-  const focus = onActivate ? () => onActivate(index) : undefined
-  const card = (
-    <article
-      className={`event-poster-card ${active ? 'is-active' : ''}`}
-      style={{ '--poster-primary': theme.colors.primary, '--poster-accent': theme.colors.accent } as CSSProperties}
-    >
-      <div className="event-poster-art" aria-hidden="true">
-        <span className="event-poster-number">{String(index + 1).padStart(2, '0')}</span>
-        <EventBlueprint sportKey={event.sportKey} />
-      </div>
-      <div>
-        <p>{event.label}</p>
-        <h3>{event.title}</h3>
-        <span>{event.detail}</span>
-      </div>
-    </article>
-  )
-
-  return event.href ? (
-    <Link to={event.href} className="block" onFocus={focus} onMouseEnter={focus}>
-      {card}
-    </Link>
-  ) : (
-    card
-  )
-})
-
-const GlobeSignal = memo(function GlobeSignal({
-  event,
-  index,
-  position,
-  isActive,
   iconVariant,
   onActivate,
 }: {
   event: PosterEvent
   index: number
-  position: (typeof signalPositions)[number]
-  isActive: boolean
+  active?: boolean
   iconVariant: 'brush' | 'neon3d'
-  onActivate: (index: number) => void
+  onActivate?: (index: number) => void
 }) {
   const theme = getTheme(event.sportKey)
-  const activate = () => onActivate(index)
-  return (
-    <button
-      type="button"
-      className={`globe-signal ${isActive ? 'is-active' : ''} orbit-${position.orbit}`}
-      style={
-        {
-          left: `${position.x}%`,
-          top: `${position.y}%`,
-          '--signal-color': theme.colors.primary,
-          '--signal-accent': theme.colors.accent,
-          '--signal-delay': position.delay,
-        } as CSSProperties
-      }
-      aria-pressed={isActive}
-      aria-label={`${position.label}: ${event.title}`}
-      onClick={activate}
-      onFocus={activate}
-      onMouseEnter={activate}
-    >
-      <SportAssetIcon sportKey={event.sportKey} size="xs" variant={iconVariant} />
-      <span className="globe-signal-label">{event.label}</span>
-    </button>
+  const focus = onActivate ? () => onActivate(index) : undefined
+  const orbit = PIP_ORBITS[index % PIP_ORBITS.length]
+  const wrapperStyle = {
+    '--poster-primary': theme.colors.primary,
+    '--poster-accent': theme.colors.accent,
+    '--pip-x': `${orbit.x}px`,
+    '--pip-y': `${orbit.y}px`,
+  } as CSSProperties
+
+  const inner = (
+    <>
+      <span className={`poster-pip ${active ? 'is-active' : ''}`} aria-hidden="true">
+        <SportAssetIcon sportKey={event.sportKey} size="xs" variant={iconVariant} />
+      </span>
+      <article className={`event-poster-card ${active ? 'is-active' : ''}`}>
+        <div className="event-poster-art" aria-hidden="true">
+          <span className="event-poster-number">{String(index + 1).padStart(2, '0')}</span>
+          <EventBlueprint sportKey={event.sportKey} />
+        </div>
+        <div>
+          <p>{event.label}</p>
+          <h3>{event.title}</h3>
+          <span>{event.detail}</span>
+        </div>
+      </article>
+    </>
+  )
+
+  return event.href ? (
+    <Link to={event.href} className="poster-card-link" style={wrapperStyle} onFocus={focus} onMouseEnter={focus}>
+      {inner}
+    </Link>
+  ) : (
+    <div className="poster-card-link" style={wrapperStyle}>
+      {inner}
+    </div>
   )
 })
 
@@ -323,26 +298,12 @@ export function GlobalEventBoard({ events, variant = 'compact' }: { events: Post
   }, [variant, events.length])
 
   const visibleEvents = events.slice(0, visibleCount)
-  const pipCount = Math.min(5, visibleCount)
 
   return (
     <section className={`global-event-board ${variant === 'room' ? 'global-event-board-room' : ''}`}>
       <div className="poster-orbit poster-orbit-one" aria-hidden="true" />
       <div className="poster-orbit poster-orbit-two" aria-hidden="true" />
       <div className="poster-globe" aria-hidden="true" />
-      <div className="globe-signal-layer" aria-label="Today's sport signals">
-        {events.slice(0, pipCount).map((event, index) => (
-          <GlobeSignal
-            key={event.title}
-            event={event}
-            index={index}
-            position={signalPositions[index % signalPositions.length]}
-            isActive={index === activeIndex}
-            iconVariant={iconVariant}
-            onActivate={activate}
-          />
-        ))}
-      </div>
 
       <div className="relative z-[1] flex flex-wrap items-start justify-between gap-4">
         <div>
@@ -369,7 +330,14 @@ export function GlobalEventBoard({ events, variant = 'compact' }: { events: Post
 
       <div className="poster-stack" ref={stackRef}>
         {visibleEvents.map((event, index) => (
-          <EventPosterCard key={event.title} event={event} index={index} active={index === activeIndex} onActivate={activate} />
+          <EventPosterCard
+            key={event.title}
+            event={event}
+            index={index}
+            active={index === activeIndex}
+            iconVariant={iconVariant}
+            onActivate={activate}
+          />
         ))}
       </div>
     </section>
