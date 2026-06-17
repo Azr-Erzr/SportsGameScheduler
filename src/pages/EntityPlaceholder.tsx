@@ -1,44 +1,138 @@
+import { ArrowLeft, ArrowRight, Star } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
-import { Button, EmptyState } from '../components/ui'
+import { useAppState } from '../app/state-context'
+import { Button, EmptyState, Panel } from '../components/ui'
+import { useCompetitor, useLeague, type LiveEvent } from '../data/liveSport'
+import { sportEmoji } from '../lib/ics'
+import { useDocumentMeta } from '../lib/seo'
+import { formatLongDate, formatTime } from '../lib/time'
 
-export function EventDetailPage() {
-  const { eventId } = useParams()
+// Shared upcoming-events list for league + team pages. Each row links to the event detail page.
+function UpcomingEvents({ events, sportKey }: { events: LiveEvent[]; sportKey: string | null }) {
+  const { prefs } = useAppState()
+  if (events.length === 0) {
+    return <EmptyState title="No upcoming events" body="New fixtures sync in automatically as providers publish them." />
+  }
   return (
-    <EmptyState
-      title="Event details are next"
-      body={`Event ${eventId ?? ''} will carry time, venue, follows, exports, alerts, and where-to-watch details once the server event API is connected.`}
-    >
-      <Link to="/my-schedule">
-        <Button variant="ghost">Back to My Schedule</Button>
-      </Link>
-    </EmptyState>
+    <ul className="space-y-1.5">
+      {events.map((e) => (
+        <li key={e.id}>
+          <Link
+            to={`/events/${e.id}`}
+            className="flex items-center gap-3 rounded-lg bg-page/60 px-3 py-2 hover:bg-primary/10"
+          >
+            <span className="text-lg leading-none">{sportEmoji(e.sportKey ?? sportKey)}</span>
+            <span className="min-w-0 flex-1 truncate text-sm font-semibold">{e.title}</span>
+            <span className="shrink-0 font-mono text-xs text-ink/55">
+              {e.startsAt
+                ? `${formatLongDate(e.startsAt, prefs.timezone, { locale: prefs.locale, hour12: prefs.hour12 ?? undefined })} ${formatTime(e.startsAt, prefs.timezone, { locale: prefs.locale, hour12: prefs.hour12 ?? undefined })}`
+                : 'TBD'}
+            </span>
+            <ArrowRight size={15} className="shrink-0 text-ink/40" />
+          </Link>
+        </li>
+      ))}
+    </ul>
   )
 }
 
 export function LeaguePage() {
   const { leagueId } = useParams()
+  const { prefs, toggleFollow, followedLeagueIds } = useAppState()
+  const { league, events, loading, configured } = useLeague(leagueId)
+
+  useDocumentMeta({
+    title: league ? `${league.name} schedule & fixtures — Silbo Sports` : 'League — Silbo Sports',
+    description: league
+      ? `${league.name} upcoming fixtures in your local time. Follow the league, sync to your calendar, and never miss a game.`
+      : undefined,
+    canonicalPath: leagueId ? `/leagues/${leagueId}` : undefined,
+  })
+
+  if (loading) return <p className="board-label py-10 text-center text-ink/50">Loading league…</p>
+  if (!configured) return <EmptyState title="Live data not configured" body="Connect Supabase to view leagues." />
+  if (!league) {
+    return (
+      <EmptyState title="League not found" body="This league isn't in the catalog yet.">
+        <Link to="/explore"><Button variant="ghost">Back to Explore</Button></Link>
+      </EmptyState>
+    )
+  }
+
+  const following = followedLeagueIds.includes(league.id)
   return (
-    <EmptyState
-      title="League pages are staged"
-      body={`${leagueId ?? 'This league'} will show teams, spotlight events, source freshness, and follow controls after the taxonomy migration lands.`}
-    >
-      <Link to="/explore">
-        <Button variant="ghost">Back to Explore</Button>
+    <div className="space-y-4">
+      <Link to="/explore" className="inline-flex items-center gap-1.5 text-sm text-ink/60 hover:text-primary">
+        <ArrowLeft size={15} /> Explore
       </Link>
-    </EmptyState>
+      <Panel className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="font-mono text-[11px] uppercase tracking-wide text-ink/50">
+            {sportEmoji(league.sportKey)} League{league.country ? ` · ${league.country}` : ''}
+          </p>
+          <h1 className="text-2xl font-extrabold text-primary">{league.name}</h1>
+          <p className="mt-1 text-sm text-ink/55">{events.length} upcoming · times in {prefs.timezone}</p>
+        </div>
+        <Button
+          variant={following ? 'subtle' : 'solid'}
+          onClick={() => toggleFollow({ targetType: 'league', targetId: league.id, intent: 'watch' })}
+        >
+          <Star size={15} className={following ? 'fill-current' : ''} />
+          {following ? 'Following' : 'Follow'}
+        </Button>
+      </Panel>
+      <UpcomingEvents events={events} sportKey={league.sportKey} />
+    </div>
   )
 }
 
 export function TeamPage() {
   const { teamId } = useParams()
+  const { prefs, toggleFollow, followedCompetitorIds } = useAppState()
+  const { competitor, events, loading, configured } = useCompetitor(teamId)
+
+  useDocumentMeta({
+    title: competitor ? `${competitor.name} schedule — Silbo Sports` : 'Team — Silbo Sports',
+    description: competitor
+      ? `${competitor.name} upcoming events in your local time. Follow them, sync to your calendar, and get reminders.`
+      : undefined,
+    canonicalPath: teamId ? `/teams/${teamId}` : undefined,
+  })
+
+  if (loading) return <p className="board-label py-10 text-center text-ink/50">Loading…</p>
+  if (!configured) return <EmptyState title="Live data not configured" body="Connect Supabase to view this page." />
+  if (!competitor) {
+    return (
+      <EmptyState title="Not found" body="This team or player isn't in the catalog yet.">
+        <Link to="/explore"><Button variant="ghost">Back to Explore</Button></Link>
+      </EmptyState>
+    )
+  }
+
+  const following = followedCompetitorIds.includes(competitor.id)
   return (
-    <EmptyState
-      title="Team pages are staged"
-      body={`${teamId ?? 'This team'} will show upcoming events, where-to-watch context, and alert controls after server follows are connected.`}
-    >
-      <Link to="/explore">
-        <Button variant="ghost">Back to Explore</Button>
+    <div className="space-y-4">
+      <Link to="/explore" className="inline-flex items-center gap-1.5 text-sm text-ink/60 hover:text-primary">
+        <ArrowLeft size={15} /> Explore
       </Link>
-    </EmptyState>
+      <Panel className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="font-mono text-[11px] uppercase tracking-wide text-ink/50">
+            {sportEmoji(competitor.sportKey)} {competitor.kind === 'person' ? 'Player' : 'Team'}
+            {competitor.country ? ` · ${competitor.country}` : ''}
+          </p>
+          <h1 className="text-2xl font-extrabold text-primary">{competitor.name}</h1>
+          <p className="mt-1 text-sm text-ink/55">{events.length} upcoming · times in {prefs.timezone}</p>
+        </div>
+        <Button
+          variant={following ? 'subtle' : 'solid'}
+          onClick={() => toggleFollow({ targetType: 'competitor', targetId: competitor.id, intent: 'watch' })}
+        >
+          <Star size={15} className={following ? 'fill-current' : ''} />
+          {following ? 'Following' : 'Follow'}
+        </Button>
+      </Panel>
+      <UpcomingEvents events={events} sportKey={competitor.sportKey} />
+    </div>
   )
 }

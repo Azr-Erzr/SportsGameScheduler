@@ -101,7 +101,14 @@ export function EventDetailPage() {
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="font-mono text-[11px] uppercase tracking-wide text-ink/50">
-              {sportEmoji(event.sportKey)} {event.leagueName || 'Event'}
+              {sportEmoji(event.sportKey)}{' '}
+              {event.leagueId && event.leagueName ? (
+                <Link to={`/leagues/${event.leagueId}`} className="hover:text-primary hover:underline">
+                  {event.leagueName}
+                </Link>
+              ) : (
+                event.leagueName || 'Event'
+              )}
             </p>
             <h1 className="text-2xl font-extrabold text-primary">{event.title}</h1>
           </div>
@@ -146,7 +153,9 @@ export function EventDetailPage() {
               return (
                 <li key={c.id} className="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-primary/8">
                   <span className="min-w-0 flex-1 truncate font-medium">
-                    {c.name}
+                    <Link to={`/teams/${c.id}`} className="hover:text-primary hover:underline">
+                      {c.name}
+                    </Link>
                     {c.role && c.role !== 'participant' && (
                       <span className="ml-2 font-mono text-[10px] uppercase text-ink/40">{c.role}</span>
                     )}

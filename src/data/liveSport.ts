@@ -350,6 +350,144 @@ export function useEvent(eventId: string | undefined): { event: EventDetail | nu
   return { event: loading ? null : state.event, loading, configured: state.configured }
 }
 
+export type LeagueInfo = { id: string; name: string; sportKey: string | null; country: string | null; logoUrl: string | null }
+
+// League detail: the league + its upcoming events (target of /leagues/:id).
+export function useLeague(leagueId: string | undefined): {
+  league: LeagueInfo | null
+  events: LiveEvent[]
+  loading: boolean
+  configured: boolean
+} {
+  const [state, setState] = useState<{ forKey: string; league: LeagueInfo | null; events: LiveEvent[]; configured: boolean }>({
+    forKey: 'init',
+    league: null,
+    events: [],
+    configured: true,
+  })
+
+  useEffect(() => {
+    let cancelled = false
+    const key = leagueId ?? ''
+    getSupabaseClient().then(async (supabase) => {
+      if (cancelled) return
+      if (!leagueId) {
+        setState({ forKey: key, league: null, events: [], configured: true })
+        return
+      }
+      if (!supabase) {
+        setState({ forKey: key, league: null, events: [], configured: false })
+        return
+      }
+      const nowIso = new Date(Date.now() - 3 * 3600_000).toISOString()
+      const [{ data: leagueRow }, { data: eventRows }] = await Promise.all([
+        supabase.from('leagues').select('id, name, country, logo_url, sports(key)').eq('id', leagueId).maybeSingle(),
+        supabase
+          .from('events')
+          .select(MY_EVENT_SELECT)
+          .eq('league_id', leagueId)
+          .eq('visibility', 'public')
+          .neq('status', 'finished')
+          .gte('starts_at', nowIso)
+          .order('starts_at', { ascending: true })
+          .limit(200),
+      ])
+      if (cancelled) return
+      if (!leagueRow) {
+        setState({ forKey: key, league: null, events: [], configured: true })
+        return
+      }
+      const r = leagueRow as unknown as { id: string; name: string; country: string | null; logo_url: string | null; sports: { key: string } | null }
+      setState({
+        forKey: key,
+        configured: true,
+        league: { id: r.id, name: r.name, sportKey: r.sports?.key ?? null, country: r.country, logoUrl: r.logo_url },
+        events: ((eventRows ?? []) as unknown as MyEventRow[]).map(mapMyEvent),
+      })
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [leagueId])
+
+  const loading = state.forKey !== (leagueId ?? '')
+  return { league: loading ? null : state.league, events: loading ? [] : state.events, loading, configured: state.configured }
+}
+
+export type CompetitorInfo = { id: string; name: string; sportKey: string | null; country: string | null; logoUrl: string | null; kind: string }
+
+// Team/player detail: the competitor + their upcoming events (target of /teams/:id).
+export function useCompetitor(competitorId: string | undefined): {
+  competitor: CompetitorInfo | null
+  events: LiveEvent[]
+  loading: boolean
+  configured: boolean
+} {
+  const [state, setState] = useState<{ forKey: string; competitor: CompetitorInfo | null; events: LiveEvent[]; configured: boolean }>({
+    forKey: 'init',
+    competitor: null,
+    events: [],
+    configured: true,
+  })
+
+  useEffect(() => {
+    let cancelled = false
+    const key = competitorId ?? ''
+    getSupabaseClient().then(async (supabase) => {
+      if (cancelled) return
+      if (!competitorId) {
+        setState({ forKey: key, competitor: null, events: [], configured: true })
+        return
+      }
+      if (!supabase) {
+        setState({ forKey: key, competitor: null, events: [], configured: false })
+        return
+      }
+      const { data: row } = await supabase
+        .from('competitors')
+        .select('id, name, country, logo_url, kind, sports(key)')
+        .eq('id', competitorId)
+        .maybeSingle()
+      if (cancelled) return
+      if (!row) {
+        setState({ forKey: key, competitor: null, events: [], configured: true })
+        return
+      }
+      const c = row as unknown as { id: string; name: string; country: string | null; logo_url: string | null; kind: string; sports: { key: string } | null }
+
+      const { data: links } = await supabase.from('event_competitors').select('event_id').eq('competitor_id', competitorId)
+      const eventIds = [...new Set((links ?? []).map((l) => l.event_id as string))]
+      const nowIso = new Date(Date.now() - 3 * 3600_000).toISOString()
+      const byId = new Map<string, LiveEvent>()
+      for (let i = 0; i < eventIds.length; i += 200) {
+        const { data } = await supabase
+          .from('events')
+          .select(MY_EVENT_SELECT)
+          .in('id', eventIds.slice(i, i + 200))
+          .eq('visibility', 'public')
+          .neq('status', 'finished')
+          .gte('starts_at', nowIso)
+          .order('starts_at', { ascending: true })
+        for (const e of (data ?? []) as unknown as MyEventRow[]) byId.set(e.id, mapMyEvent(e))
+      }
+      if (cancelled) return
+      const events = [...byId.values()].sort((a, b) => (a.startsAt?.getTime() ?? Infinity) - (b.startsAt?.getTime() ?? Infinity))
+      setState({
+        forKey: key,
+        configured: true,
+        competitor: { id: c.id, name: c.name, sportKey: c.sports?.key ?? null, country: c.country, logoUrl: c.logo_url, kind: c.kind },
+        events,
+      })
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [competitorId])
+
+  const loading = state.forKey !== (competitorId ?? '')
+  return { competitor: loading ? null : state.competitor, events: loading ? [] : state.events, loading, configured: state.configured }
+}
+
 export function useSportRoster(canonicalSportKey: string, enabled: boolean): { players: LivePlayer[]; loading: boolean } {
   const [state, setState] = useState<{ forKey: string; players: LivePlayer[] }>({ forKey: '', players: [] })
 
