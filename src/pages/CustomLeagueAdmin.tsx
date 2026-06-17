@@ -1,14 +1,18 @@
 import { ArrowLeft, Copy, Plus, Trash2 } from 'lucide-react'
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useAppState } from '../app/state-context'
 import { Badge, Button, EmptyState, Field, Panel, PanelHeading } from '../components/ui'
 import { customLeagueSportOptions } from '../domain/sports'
+import { loadRemoteLeagues, upsertRemoteLeague } from '../data/customLeagues'
 import { copyToClipboard } from '../lib/clipboard'
+import { getSupabaseClient } from '../lib/supabase'
 import { formatLongDate, formatTime } from '../lib/time'
 import {
   getCustomLeagues,
   newId,
   newToken,
+  saveCustomLeagues,
   upsertCustomLeague,
   type CustomEvent,
   type CustomLeague,
@@ -17,11 +21,37 @@ import {
 export function CustomLeagueAdminPage() {
   const { leagueId } = useParams()
   const navigate = useNavigate()
+  const { auth } = useAppState()
+  const userId = auth.user?.id
   const [league, setLeague] = useState<CustomLeague | undefined>(() =>
     getCustomLeagues().find((item) => item.id === leagueId),
   )
   const [teamName, setTeamName] = useState('')
   const [message, setMessage] = useState('')
+  const [checkingRemote, setCheckingRemote] = useState(Boolean(userId) && !league)
+
+  // Cross-device: if the league isn't on this device but the user is signed in, pull it from
+  // the account.
+  useEffect(() => {
+    // Only runs the remote lookup when the league is missing locally and the user is signed in;
+    // in every other case checkingRemote already initialized to false.
+    if (league || !userId || !leagueId) return
+    let cancelled = false
+    getSupabaseClient().then(async (supabase) => {
+      if (!supabase || cancelled) return
+      const remote = await loadRemoteLeagues(supabase, userId)
+      const found = remote.find((l) => l.id === leagueId)
+      if (cancelled) return
+      if (found) {
+        saveCustomLeagues([...getCustomLeagues().filter((l) => l.id !== found.id), found])
+        setLeague(found)
+      }
+      setCheckingRemote(false)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [league, userId, leagueId])
 
   const [eventTitle, setEventTitle] = useState('')
   const [eventDate, setEventDate] = useState('')
@@ -34,8 +64,11 @@ export function CustomLeagueAdminPage() {
   const sportLabels = new Map<string, string>(customLeagueSportOptions.map((sport) => [sport.key, sport.label]))
 
   if (!league) {
+    if (checkingRemote) {
+      return <p className="board-label py-10 text-center text-ink/50">Loading league…</p>
+    }
     return (
-      <EmptyState title="League not found" body="It may have been deleted on this device.">
+      <EmptyState title="League not found" body="It may have been deleted, or it lives on another device — sign in to sync.">
         <Link to="/custom-leagues">
           <Button variant="ghost">Back to Community</Button>
         </Link>
@@ -46,6 +79,7 @@ export function CustomLeagueAdminPage() {
   function save(next: CustomLeague) {
     upsertCustomLeague(next)
     setLeague(next)
+    if (userId) getSupabaseClient().then((supabase) => supabase && upsertRemoteLeague(supabase, userId, next))
   }
 
   function addTeam(event: FormEvent) {

@@ -4,26 +4,16 @@ import { Link } from 'react-router-dom'
 import { useAppState } from '../app/state-context'
 import { Badge, Button, EmptyState, Field, Panel, PanelHeading } from '../components/ui'
 import { customLeagueSportOptions } from '../domain/sports'
-import {
-  deleteCustomLeague,
-  getCustomLeagues,
-  newId,
-  newToken,
-  upsertCustomLeague,
-  type CustomLeague,
-} from '../lib/store'
+import { useCustomLeagues } from '../data/customLeagues'
+import { newId, newToken, type CustomLeague } from '../lib/store'
 
 export function CustomLeaguesPage() {
   const { prefs } = useAppState()
-  const [leagues, setLeagues] = useState<CustomLeague[]>(() => getCustomLeagues())
+  const { leagues, save, remove: removeLeague, signedIn } = useCustomLeagues()
   const [name, setName] = useState('')
   const [sportKey, setSportKey] = useState('soccer')
   const [location, setLocation] = useState('')
   const sportLabels = new Map<string, string>(customLeagueSportOptions.map((sport) => [sport.key, sport.label]))
-
-  function refresh() {
-    setLeagues(getCustomLeagues())
-  }
 
   function createLeague(event: FormEvent) {
     event.preventDefault()
@@ -40,16 +30,14 @@ export function CustomLeaguesPage() {
       events: [],
       createdAt: new Date().toISOString(),
     }
-    upsertCustomLeague(league)
+    save(league)
     setName('')
     setLocation('')
-    refresh()
   }
 
   function remove(league: CustomLeague) {
     if (!confirm(`Delete "${league.name}" and its ${league.events.length} events?`)) return
-    deleteCustomLeague(league.id)
-    refresh()
+    removeLeague(league.id)
   }
 
   return (
@@ -59,6 +47,11 @@ export function CustomLeaguesPage() {
         <p className="text-sm text-ink/60">
           Little league, kids' hockey, pickup soccer, school teams - build the schedule once, then enable
           a public link when it is ready for families.
+        </p>
+        <p className="mt-1 text-xs text-ink/45">
+          {signedIn
+            ? 'Synced to your account — your leagues follow you across devices.'
+            : 'Saved on this device. Sign in to sync across devices and publish share links that work anywhere.'}
         </p>
       </div>
 

@@ -1,31 +1,55 @@
 import { CalendarDays, Copy, Download } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { Badge, Button, EmptyState, Panel } from '../components/ui'
+import { loadSharedLeague } from '../data/customLeagues'
 import { brand } from '../domain/brand'
 import { customLeagueSportOptions } from '../domain/sports'
 import { copyToClipboard, downloadBlob } from '../lib/clipboard'
 import { createCustomLeagueIcsBlob } from '../lib/ics'
+import { getSupabaseClient } from '../lib/supabase'
 import { formatLongDate, formatTime } from '../lib/time'
-import { getCustomLeagueByToken } from '../lib/store'
+import { getCustomLeagueByToken, type CustomLeague } from '../lib/store'
 import { SportThemeProvider } from '../theme/SportThemeProvider'
 import { paperTheme } from '../theme/themes'
 
 // Public, read-only custom-league schedule (Objective 9). Reached via the unguessable share
-// token; requires no login. NOTE: until the Supabase backend hosts leagues, share links only
-// resolve on the device that created the league — cross-device sharing arrives with the API.
+// token; requires no login. Resolves locally first (creator's device), then from Supabase via
+// the share-gated get_shared_league RPC — so links now work cross-device.
 
 export function SharePage() {
   const { token = '' } = useParams()
-  const league = useMemo(() => getCustomLeagueByToken(token), [token])
+  const [league, setLeague] = useState<CustomLeague | undefined>(() => getCustomLeagueByToken(token))
+  const [loading, setLoading] = useState(!league)
   const [message, setMessage] = useState('')
   const sportLabels = new Map<string, string>(customLeagueSportOptions.map((sport) => [sport.key, sport.label]))
 
+  useEffect(() => {
+    if (league) return
+    let cancelled = false
+    getSupabaseClient().then(async (supabase) => {
+      if (!supabase || cancelled) {
+        if (!cancelled) setLoading(false)
+        return
+      }
+      const remote = await loadSharedLeague(supabase, token)
+      if (cancelled) return
+      if (remote) setLeague(remote)
+      setLoading(false)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [token, league])
+
   if (!league) {
+    if (loading) {
+      return <p className="board-label py-10 text-center text-ink/50">Loading schedule…</p>
+    }
     return (
       <EmptyState
         title="Schedule not found"
-        body="This share link is invalid, or the league lives on another device. Cross-device share links go live with the backend."
+        body="This share link is invalid, or the schedule's owner has turned sharing off."
       />
     )
   }
