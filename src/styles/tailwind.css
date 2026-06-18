@@ -1013,6 +1013,19 @@
     }
   }
 
+  /* Firefox/Safari fallback: scroll-driven timelines aren't supported there, so the pips would
+     sit static. Instead, run a one-time time-based land-in when the board reveals (the JS adds
+     `.is-revealed` via IntersectionObserver). Default state is "landed", so if JS never runs the
+     pips are simply shown in place — never hidden. */
+  @supports not (animation-timeline: view()) {
+    @media (prefers-reduced-motion: no-preference) {
+      .global-event-board.is-revealed .poster-pip {
+        animation: pip-land 0.85s cubic-bezier(0.22, 1, 0.36, 1) both;
+        animation-delay: calc(var(--pip-index, 0) * 70ms);
+      }
+    }
+  }
+
   .globe-signal-preview {
     position: relative;
     z-index: 4;
@@ -1992,24 +2005,22 @@
     background-image: var(--sport-channel-icon-image);
     background-position: center;
     background-size: cover;
-    /* A radial feather dissolves the WebP's edges/corner-haze into the field; an extra LEFT
-       feather drops the cream border frame + diagonal stripe to transparent before the banner's
-       clip line — so the neon subject emerges from the dark with no hard vertical seam at the
-       left edge. Works for black-backed and ambient-lit icons alike. */
+    /* Fills the whole banner height as one block. Horizontal feather: left drops the WebP's cream
+       border/stripe before the clip, right blends the neon into the centre field. A gentle
+       top/bottom feather dissolves the WebP's horizontal border line into the DARK backing (not the
+       pale field), so the zone still reads as one solid full-height section. */
     -webkit-mask-image:
-      radial-gradient(122% 134% at 50% 52%, #000 0 42%, rgba(0, 0, 0, 0.8) 66%, transparent 94%),
-      linear-gradient(90deg, transparent 0, #000 17%);
+      linear-gradient(90deg, transparent 0, #000 15%, #000 72%, transparent 100%),
+      linear-gradient(180deg, transparent 0, #000 6%, #000 94%, transparent 100%);
     -webkit-mask-composite: source-in;
     mask-image:
-      radial-gradient(122% 134% at 50% 52%, #000 0 42%, rgba(0, 0, 0, 0.8) 66%, transparent 94%),
-      linear-gradient(90deg, transparent 0, #000 17%);
+      linear-gradient(90deg, transparent 0, #000 15%, #000 72%, transparent 100%),
+      linear-gradient(180deg, transparent 0, #000 6%, #000 94%, transparent 100%);
     mask-composite: intersect;
   }
 
   .sport-channel-icon-panel::after {
-    background:
-      radial-gradient(125% 108% at 30% 50%, transparent 0 62%, color-mix(in srgb, var(--scf-field) 70%, transparent) 92% 100%);
-    opacity: 0.6;
+    background: none;
   }
 
   /* Action zone: the cream-backed telemetry scene blends straight onto the matching field (normal
@@ -2029,14 +2040,11 @@
     background-size: cover;
     mix-blend-mode: normal;
     filter: saturate(1.04) contrast(1.03) drop-shadow(0 0 14px color-mix(in srgb, var(--mp-primary) 20%, transparent));
-    -webkit-mask-image:
-      linear-gradient(90deg, transparent 0, #000 18%, #000 100%),
-      linear-gradient(180deg, transparent 0, #000 7% 93%, transparent 100%);
-    -webkit-mask-composite: source-in;
-    mask-image:
-      linear-gradient(90deg, transparent 0, #000 18%, #000 100%),
-      linear-gradient(180deg, transparent 0, #000 7% 93%, transparent 100%);
-    mask-composite: intersect;
+    /* Full banner-height: horizontal feather only (left blends into the centre field, right bleeds
+       off the edge); top & bottom stay solid so the scene fills the whole height. The cream scene
+       edges blend into the matching pale field, so no vertical feather is needed. */
+    -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 18%, #000 100%);
+    mask-image: linear-gradient(90deg, transparent 0, #000 18%, #000 100%);
   }
 
   .sport-channel-action-panel::after {
@@ -2374,49 +2382,44 @@
   }
 
   @media (max-width: 1320px) {
+    /* Medium widths (laptops, tablets, non-maximized windows) stay HORIZONTAL — a compact
+       shrunk-to-fit version of the 4-col capsule, never the tall stacked one. Three zones:
+       icon (full-height col) | centre (title over copy) | action (full-height col). The art
+       zones keep the base full-bleed so they remain edge-to-edge. */
     .sport-channel-banner {
-      grid-template-columns: minmax(180px, 250px) minmax(0, 1fr);
+      --sport-channel-art-height: clamp(228px, 27vw, 312px);
+      grid-template-columns: minmax(112px, 220px) minmax(0, 1fr) minmax(146px, 300px);
+      grid-template-rows: auto auto;
+      gap: 12px 16px;
+    }
+
+    .sport-channel-icon-panel {
+      grid-column: 1;
+      grid-row: 1 / span 2;
+    }
+
+    .sport-channel-title {
+      grid-column: 2;
+      grid-row: 1;
     }
 
     .sport-channel-copy {
-      grid-column: 1 / -1;
+      grid-column: 2;
+      grid-row: 2;
+      align-self: start;
       border-left: 0;
       border-top: 1px solid color-mix(in srgb, var(--mp-primary) 18%, transparent);
       padding-left: 0;
-      padding-top: 18px;
+      padding-top: 12px;
     }
 
     .sport-channel-copy p {
-      max-width: 70ch;
-    }
-
-    /* Stacked: the art zones are no longer full banner-height columns, so drop the vertical
-       full-bleed (it would overlap the neighbouring rows). The icon keeps its left bleed. */
-    .sport-channel-icon-panel {
-      margin-block: 0;
+      max-width: 56ch;
     }
 
     .sport-channel-action-panel {
-      grid-column: 1 / -1;
-      min-height: clamp(280px, 36vw, 340px);
-      margin: 0;
-      background:
-        radial-gradient(80% 150% at 4% 50%, color-mix(in srgb, var(--scf-deep) 44%, transparent) 0 14%, transparent 52%),
-        radial-gradient(80% 150% at 96% 50%, color-mix(in srgb, var(--scf-deep) 44%, transparent) 0 14%, transparent 52%);
-    }
-
-    /* As a full-width bottom strip the cream-backed scene is centred and the matching field fills
-       the sides (an invisible letterbox), so it never reads as a cropped rectangle. */
-    .sport-channel-action-panel::before {
-      inset: 0;
-      background-position: center;
-      background-size: contain;
-      -webkit-mask-image:
-        linear-gradient(90deg, transparent 0, #000 12% 88%, transparent 100%),
-        linear-gradient(180deg, transparent 0, #000 8% 92%, transparent 100%);
-      mask-image:
-        linear-gradient(90deg, transparent 0, #000 12% 88%, transparent 100%),
-        linear-gradient(180deg, transparent 0, #000 8% 92%, transparent 100%);
+      grid-column: 3;
+      grid-row: 1 / span 2;
     }
 
     .art-capsule {
@@ -2465,15 +2468,25 @@
   @media (max-width: 700px) {
     .sport-channel-banner {
       grid-template-columns: 1fr;
+      grid-template-rows: none;
       gap: 14px;
       min-height: 0;
       padding: 14px;
       border-radius: 8px;
     }
 
+    /* Single column on phones — undo the medium 3-col placement so everything stacks. */
+    .sport-channel-icon-panel,
+    .sport-channel-title,
+    .sport-channel-copy,
+    .sport-channel-action-panel {
+      grid-column: auto;
+      grid-row: auto;
+    }
+
     .sport-channel-icon-panel {
       min-height: 156px;
-      margin-left: 0;
+      margin: 0;
     }
 
     .sport-channel-icon-panel::before {
