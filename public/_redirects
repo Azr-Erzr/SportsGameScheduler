@@ -1,0 +1,5 @@
+# Cloudflare Pages SPA fallback: serve index.html for any non-asset path so client-side routes
+# (/events/:id, /leagues/:id, /teams/:id, /s/:token, /sports/:key, /settings/alerts) resolve on a
+# hard refresh or shared link instead of 404ing. Real files (assets, robots.txt, sitemap.xml) are
+# served as-is; only unmatched routes fall through to the app shell.
+/*    /index.html    200
