@@ -91,8 +91,8 @@ export function SportChannelBanner({
   const bannerStyle: BannerStyle =
     prefs.themeMode === 'program'
       ? {
-          '--sport-channel-icon': `url("/assets/sport-banners/ink/${assetKey}-icon.png")`,
-          '--sport-channel-action': `url("/assets/sport-banners/ink/${assetKey}-action.png")`,
+          '--sport-channel-icon': `url("/assets/sport-banners/ink/${assetKey}-icon.webp")`,
+          '--sport-channel-action': `url("/assets/sport-banners/ink/${assetKey}-action.webp")`,
           '--sport-channel-icon-wash-x': artFocus.iconX,
           '--sport-channel-icon-wash-y': artFocus.iconY,
           '--sport-channel-action-wash-x': artFocus.actionX,

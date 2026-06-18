@@ -994,35 +994,45 @@
     box-shadow: 0 6px 14px rgba(29, 24, 18, 0.14);
   }
 
-  @keyframes pip-land {
-    from {
-      translate: var(--pip-x, 0px) var(--pip-y, -280px);
+  /* Continuous ambient bob. Animates `transform` only (keeps the -50%/-50% centering), so it
+     composes with the `translate`-based entrance below. Transform animations run on the
+     compositor in every engine (incl. Firefox), so this is cheap even on weaker devices. */
+  @keyframes pip-float {
+    0%,
+    100% {
+      transform: translate(-50%, -50%) rotate(-1.5deg);
     }
-    to {
+    50% {
+      transform: translate(-50%, -64%) rotate(1.5deg);
+    }
+  }
+
+  /* UNIVERSAL pip motion — no scroll-driven timeline, no @supports gate, so it behaves
+     identically in Chromium, Firefox, Safari, and mobile. Pips drift up in the orbit zone and
+     gently bob; when the board scrolls into view the JS adds `.is-revealed` (IntersectionObserver)
+     and they settle onto their cards. `translate` (entrance) and `transform` (bob) are independent
+     properties, so the two compose without fighting. */
+  @media (prefers-reduced-motion: no-preference) {
+    .poster-pip {
+      animation: pip-float 5s ease-in-out infinite;
+      /* Desync each pip so they don't bob in lockstep. */
+      animation-delay: calc(var(--pip-index, 0) * -0.8s);
+      /* Start scattered in the orbit zone (scaled so it stays within the board's clip). */
+      translate: calc(var(--pip-x, 0px) * 0.55) calc(var(--pip-y, -280px) * 0.5);
+      transition: translate 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .global-event-board.is-revealed .poster-pip {
       translate: 0px 0px;
+      transition-delay: calc(var(--pip-index, 0) * 70ms);
     }
   }
 
-  @supports (animation-timeline: view()) {
-    @media (prefers-reduced-motion: no-preference) {
-      .poster-pip {
-        animation: pip-land linear both;
-        animation-timeline: --silbo-room;
-        animation-range: entry 8% cover 46%;
-      }
-    }
-  }
-
-  /* Firefox/Safari fallback: scroll-driven timelines aren't supported there, so the pips would
-     sit static. Instead, run a one-time time-based land-in when the board reveals (the JS adds
-     `.is-revealed` via IntersectionObserver). Default state is "landed", so if JS never runs the
-     pips are simply shown in place — never hidden. */
-  @supports not (animation-timeline: view()) {
-    @media (prefers-reduced-motion: no-preference) {
-      .global-event-board.is-revealed .poster-pip {
-        animation: pip-land 0.85s cubic-bezier(0.22, 1, 0.36, 1) both;
-        animation-delay: calc(var(--pip-index, 0) * 70ms);
-      }
+  /* Respect reduced-motion: no bob, no drift — pips just sit landed on their cards. */
+  @media (prefers-reduced-motion: reduce) {
+    .poster-pip {
+      animation: none;
+      translate: 0px 0px;
     }
   }
 

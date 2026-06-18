@@ -235,6 +235,8 @@ const EventPosterCard = memo(function EventPosterCard({
     '--poster-accent': theme.colors.accent,
     '--pip-x': `${orbit.x}px`,
     '--pip-y': `${orbit.y}px`,
+    // Used by the non-Chromium entrance fallback to stagger each pip's land-in.
+    '--pip-index': index,
   } as CSSProperties
 
   const inner = (
@@ -297,10 +299,34 @@ export function GlobalEventBoard({ events, variant = 'compact' }: { events: Post
     return () => observer.disconnect()
   }, [variant, events.length])
 
+  // Chromium drives the pip entrance off a CSS scroll-timeline. Firefox/Safari don't support
+  // scroll-driven animations, so we trigger a one-time time-based entrance when the board scrolls
+  // into view. The class is inert in Chromium (its rule lives under `@supports not (...)`).
+  const boardRef = useRef<HTMLElement>(null)
+  const [revealed, setRevealed] = useState(false)
+  useEffect(() => {
+    const el = boardRef.current
+    if (!el || revealed) return
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          setRevealed(true)
+          observer.disconnect()
+        }
+      },
+      { rootMargin: '0px 0px -15% 0px' },
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [revealed])
+
   const visibleEvents = events.slice(0, visibleCount)
 
   return (
-    <section className={`global-event-board ${variant === 'room' ? 'global-event-board-room' : ''}`}>
+    <section
+      ref={boardRef}
+      className={`global-event-board ${variant === 'room' ? 'global-event-board-room' : ''} ${revealed ? 'is-revealed' : ''}`}
+    >
       <div className="poster-orbit poster-orbit-one" aria-hidden="true" />
       <div className="poster-orbit poster-orbit-two" aria-hidden="true" />
       <div className="poster-globe" aria-hidden="true" />
