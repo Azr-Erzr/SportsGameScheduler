@@ -15,6 +15,7 @@ import { exportFilename } from '../domain/brand'
 import { copyToClipboard, downloadBlob } from '../lib/clipboard'
 import { findConflicts } from '../lib/conflicts'
 import { createIcsBlob, createMultiSportIcsBlob, sportEmoji } from '../lib/ics'
+import { t } from '../lib/i18n'
 import { createNotesText } from '../lib/notes'
 import { canvasToBlob, createScheduleCanvas } from '../lib/poster'
 import { formatLongDate, formatTime } from '../lib/time'
@@ -23,11 +24,11 @@ import { posterChromeTheme } from '../theme/themes'
 
 type RangeKey = 'all' | 'today' | 'weekend' | 'week'
 
-const ranges: Array<{ key: RangeKey; label: string }> = [
-  { key: 'all', label: 'Tournament' },
-  { key: 'today', label: 'Today' },
-  { key: 'weekend', label: 'This Weekend' },
-  { key: 'week', label: 'Next 7 Days' },
+const ranges: Array<{ key: RangeKey; labelKey: string }> = [
+  { key: 'all', labelKey: 'schedule.range.all' },
+  { key: 'today', labelKey: 'schedule.range.today' },
+  { key: 'weekend', labelKey: 'schedule.range.weekend' },
+  { key: 'week', labelKey: 'schedule.range.week' },
 ]
 
 function inRange(date: Date, range: RangeKey, nowMs: number): boolean {
@@ -150,14 +151,14 @@ export function MySchedulePage() {
   if (followedTeams.length === 0 && !hasLiveFollows) {
     return (
       <EmptyState
-        title="Your schedule is empty"
-        body="Follow World Cup teams, or a league or player from any sport, and every event shows up here in your local time."
+        title={t('schedule.emptyTitle', undefined, prefs.locale)}
+        body={t('schedule.emptyBody', undefined, prefs.locale)}
       >
         <Link to="/sports/soccer">
-          <Button>Pick World Cup teams</Button>
+          <Button>{t('schedule.pickWorldCup', undefined, prefs.locale)}</Button>
         </Link>
         <Link to="/explore">
-          <Button variant="ghost">Explore sports</Button>
+          <Button variant="ghost">{t('home.exploreSports', undefined, prefs.locale)}</Button>
         </Link>
       </EmptyState>
     )
@@ -167,9 +168,9 @@ export function MySchedulePage() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-extrabold text-primary">My Schedule</h1>
+          <h1 className="text-xl font-extrabold text-primary">{t('schedule.title', undefined, prefs.locale)}</h1>
           <p className="text-sm text-ink/60">
-            {schedule.length} events for {followedTeams.length} followed teams - shown in {timeZone}
+            {t('schedule.summary', { events: schedule.length, teams: followedTeams.length, timezone: timeZone }, prefs.locale)}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -177,7 +178,7 @@ export function MySchedulePage() {
             to="/settings/alerts"
             className="inline-flex items-center gap-1.5 rounded-lg border border-primary/20 px-3 py-2 text-sm font-semibold text-ink/75 hover:bg-primary/8"
           >
-            <BellRing size={15} /> Alerts
+            <BellRing size={15} /> {t('schedule.alerts', undefined, prefs.locale)}
           </Link>
           <CityPicker />
         </div>
@@ -186,18 +187,24 @@ export function MySchedulePage() {
       <div className="grid gap-3 sm:grid-cols-3">
         <Panel className="flex min-w-0 items-center gap-3">
           <CalendarDays size={18} className="shrink-0 text-primary" />
-          <span className="text-sm font-semibold">{schedule.length} upcoming</span>
+          <span className="text-sm font-semibold">{t('schedule.upcoming', { count: schedule.length }, prefs.locale)}</span>
         </Panel>
         <Panel className="flex min-w-0 items-center gap-3">
           <Globe2 size={18} className="shrink-0 text-primary" />
-          <span className="text-sm font-semibold">{cityLabel} local time</span>
+          <span className="text-sm font-semibold">{t('schedule.localTime', { city: cityLabel }, prefs.locale)}</span>
         </Panel>
         <Panel className="flex min-w-0 items-center gap-3">
           <Zap size={18} className="shrink-0 text-primary" />
           <span className="min-w-0 truncate text-sm font-semibold">
             {nextMatch
-              ? `Next: ${nextMatch.team1} vs ${nextMatch.team2}, ${formatLongDate(nextMatch.startsAt, timeZone, { locale: prefs.locale, hour12: prefs.hour12 ?? undefined })} ${formatTime(nextMatch.startsAt, timeZone, { locale: prefs.locale, hour12: prefs.hour12 ?? undefined })}`
-              : 'Nothing in this range'}
+              ? t(
+                  'schedule.next',
+                  {
+                    match: `${nextMatch.team1} vs ${nextMatch.team2}, ${formatLongDate(nextMatch.startsAt, timeZone, { locale: prefs.locale, hour12: prefs.hour12 ?? undefined })} ${formatTime(nextMatch.startsAt, timeZone, { locale: prefs.locale, hour12: prefs.hour12 ?? undefined })}`,
+                  },
+                  prefs.locale,
+                )
+              : t('schedule.nothingInRange', undefined, prefs.locale)}
           </span>
         </Panel>
       </div>
@@ -206,8 +213,8 @@ export function MySchedulePage() {
         <Panel className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <PanelHeading
-              title="Across all sports"
-              subtitle={`${liveSchedule.length} from your followed leagues & players`}
+              title={t('schedule.allSports', undefined, prefs.locale)}
+              subtitle={t('schedule.allSportsSubtitle', { count: liveSchedule.length }, prefs.locale)}
             />
             <div className="flex gap-1.5">
               <Button variant="ghost" onClick={exportLiveIcs} disabled={liveSchedule.length === 0}>
@@ -219,9 +226,9 @@ export function MySchedulePage() {
             </div>
           </div>
           {myEvents.loading ? (
-            <p className="text-sm text-ink/50">Loading your live schedule…</p>
+            <p className="text-sm text-ink/50">{t('schedule.loadingLive', undefined, prefs.locale)}</p>
           ) : liveSchedule.length === 0 ? (
-            <p className="text-sm text-ink/50">No upcoming events in this range from your live follows.</p>
+            <p className="text-sm text-ink/50">{t('schedule.noLiveRange', undefined, prefs.locale)}</p>
           ) : (
             <ul className="space-y-1.5">
               {interleaveAds(liveSchedule.slice(0, 60), (e) => e.id, 8).map((entry) =>
@@ -254,9 +261,12 @@ export function MySchedulePage() {
       <div className="grid gap-4 lg:grid-cols-[250px_1fr]">
         {/* YOUR WORLD rail: followed picks with event counts. */}
         <Panel className="hidden h-fit lg:sticky lg:top-20 lg:block">
-          <PanelHeading title="Your world" subtitle={`${followedTeams.length} picks`} />
+          <PanelHeading
+            title={t('schedule.yourWorld', undefined, prefs.locale)}
+            subtitle={t('schedule.picks', { count: followedTeams.length }, prefs.locale)}
+          />
           <div className="mb-1 flex items-center justify-between rounded-lg bg-primary px-3 py-2 text-void">
-            <span className="text-sm font-bold">All events</span>
+            <span className="text-sm font-bold">{t('schedule.allEvents', undefined, prefs.locale)}</span>
             <span className="font-mono text-xs font-bold">{schedule.length}</span>
           </div>
           <ul className="space-y-1">
@@ -284,7 +294,7 @@ export function MySchedulePage() {
             to="/sports/soccer"
             className="mt-2 flex items-center gap-2 rounded-lg border border-dashed border-primary/30 px-3 py-2 text-sm font-semibold text-primary hover:bg-primary/8"
           >
-            <Plus size={14} /> Add a pick
+            <Plus size={14} /> {t('schedule.addPick', undefined, prefs.locale)}
           </Link>
         </Panel>
 
@@ -296,19 +306,19 @@ export function MySchedulePage() {
                 variant={range === item.key ? 'solid' : 'ghost'}
                 onClick={() => setRange(item.key)}
               >
-                {item.label}
+                {t(item.labelKey, undefined, prefs.locale)}
               </Button>
             ))}
             <label className="ml-2 flex items-center gap-2 text-sm text-ink/70">
               <input type="checkbox" checked={hidePast} onChange={(e) => setHidePast(e.target.checked)} />
-              Hide finished
+              {t('schedule.hideFinished', undefined, prefs.locale)}
             </label>
             <span className="flex-1" />
             <Button variant="ghost" onClick={exportIcs}>
               <Download size={15} /> .ics
             </Button>
             <Button variant="export" onClick={exportImage}>
-              <FileImage size={15} /> Image
+              <FileImage size={15} /> {t('schedule.image', undefined, prefs.locale)}
             </Button>
             <Button variant="subtle" onClick={copyNotes}>
               <Copy size={15} /> Notes
@@ -329,15 +339,17 @@ export function MySchedulePage() {
               />
             ))}
           {schedule.length === 0 && (
-            <EmptyState title="No events in this range" body="Try a wider range, or follow more teams." />
+            <EmptyState
+              title={t('schedule.noRangeTitle', undefined, prefs.locale)}
+              body={t('schedule.noRangeBody', undefined, prefs.locale)}
+            />
           )}
 
           {/* TBD tracking strip: uncertainty as a feature, departure-board voice. */}
           <div className="flex flex-wrap items-center gap-3 rounded-card border border-dashed border-flap-tbd/50 bg-flap-tbd/8 px-4 py-3">
-            <span className="flap flap-tbd shrink-0">TBD dates</span>
+            <span className="flap flap-tbd shrink-0">{t('schedule.tbdDates', undefined, prefs.locale)}</span>
             <p className="min-w-0 flex-1 text-sm text-ink/70">
-              Tracking <strong className="text-ink">{tbdSlotCount} knockout slots</strong> without confirmed
-              teams. We'll whistle when they're set.
+              {t('schedule.tbdBody', { count: tbdSlotCount }, prefs.locale)}
             </p>
           </div>
         </div>

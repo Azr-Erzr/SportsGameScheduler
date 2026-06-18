@@ -86,6 +86,14 @@ function startsAtFor(ev: RawEvent): { iso: string | null; tbd: boolean } {
   return { iso: null, tbd: true }
 }
 
+async function payloadHash(value: unknown): Promise<string> {
+  const data = new TextEncoder().encode(JSON.stringify(value))
+  const hash = await crypto.subtle.digest('SHA-256', data)
+  return Array.from(new Uint8Array(hash))
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('')
+}
+
 // ---- per-step hydration --------------------------------------------------
 
 type Ctx = { sportId: string; sportKey: string; leagueId: string; leagueName: string; targetId: string }
@@ -213,11 +221,14 @@ async function upsertEvents(ctx: Ctx, raw: RawEvent[], counters: Counters) {
   const venueMap = await ensureVenues(raw.map((ev) => ev.strVenue ?? '').filter(Boolean) as string[])
 
   const pids = raw.map((ev) => ev.idEvent!).filter(Boolean)
-  const existing = new Map<string, { id: string; title: string; status: string; starts_at: string | null; version: number }>()
+  const existing = new Map<
+    string,
+    { id: string; title: string; status: string; starts_at: string | null; version: number; payload_hash: string | null }
+  >()
   for (let i = 0; i < pids.length; i += 200) {
     const { data } = await supabase
       .from('events')
-      .select('id, provider_event_id, title, status, starts_at, version')
+      .select('id, provider_event_id, title, status, starts_at, version, payload_hash')
       .eq('provider_key', 'thesportsdb')
       .in('provider_event_id', pids.slice(i, i + 200))
     for (const e of data ?? []) existing.set(e.provider_event_id, e)
@@ -235,6 +246,18 @@ async function upsertEvents(ctx: Ctx, raw: RawEvent[], counters: Counters) {
     const prior = existing.get(ev.idEvent)
     const homeId = ev.idHomeTeam ? competitorMap.get(ev.idHomeTeam) : undefined
     const awayId = ev.idAwayTeam ? competitorMap.get(ev.idAwayTeam) : undefined
+    const metadata = { round: ev.intRound ?? null, season: ev.strSeason ?? null, source: 'thesportsdb' }
+    const checkedAt = new Date().toISOString()
+    const hash = await payloadHash({
+      title,
+      status,
+      starts_at: iso,
+      starts_at_tbd: tbd,
+      venue: ev.strVenue ?? null,
+      home_provider_id: ev.idHomeTeam ?? null,
+      away_provider_id: ev.idAwayTeam ?? null,
+      metadata,
+    })
 
     if (!prior) {
       toInsert.push({
@@ -252,13 +275,31 @@ async function upsertEvents(ctx: Ctx, raw: RawEvent[], counters: Counters) {
         visibility: 'public',
         home_competitor_id: homeId ?? null,
         away_competitor_id: awayId ?? null,
-        metadata: { round: ev.intRound ?? null, season: ev.strSeason ?? null, source: 'thesportsdb' },
+        metadata,
+        payload_hash: hash,
+        last_checked_at: checkedAt,
+        source_confidence: 'provider',
       })
       inserts.push({ pid: ev.idEvent, home: homeId, away: awayId })
       counters.events += 1
     } else {
+      if (prior.payload_hash === hash) {
+        await supabase.from('events').update({ last_checked_at: checkedAt }).eq('id', prior.id)
+        continue
+      }
       const visibleChange = prior.title !== title || prior.status !== status || prior.starts_at !== iso
-      if (!visibleChange) continue
+      if (!visibleChange) {
+        await supabase
+          .from('events')
+          .update({
+            payload_hash: hash,
+            last_checked_at: checkedAt,
+            metadata,
+            venue_id: ev.strVenue ? venueMap.get(ev.strVenue) ?? null : null,
+          })
+          .eq('id', prior.id)
+        continue
+      }
       const timingChange = prior.starts_at !== iso || prior.status !== status
       await supabase
         .from('events')
@@ -269,7 +310,11 @@ async function upsertEvents(ctx: Ctx, raw: RawEvent[], counters: Counters) {
           starts_at_tbd: tbd,
           venue_id: ev.strVenue ? venueMap.get(ev.strVenue) ?? null : null,
           version: prior.version + 1,
-          updated_at: new Date().toISOString(),
+          updated_at: checkedAt,
+          last_checked_at: checkedAt,
+          payload_hash: hash,
+          source_confidence: 'provider',
+          metadata,
         })
         .eq('id', prior.id)
       if (timingChange) {

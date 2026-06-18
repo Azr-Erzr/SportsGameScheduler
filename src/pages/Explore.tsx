@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { useAppState } from '../app/state-context'
 import { SportAssetIcon } from '../components/SportAssetIcon'
 import { sports } from '../domain/sports'
+import { t } from '../lib/i18n'
 import { getTheme, withSurfaceMode } from '../theme/themes'
 import { Badge, Panel } from '../components/ui'
 
@@ -14,10 +15,9 @@ export function ExplorePage() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-xl font-extrabold text-primary">Sports directory</h1>
+        <h1 className="text-xl font-extrabold text-primary">{t('explore.title', undefined, prefs.locale)}</h1>
         <p className="text-sm text-ink/60">
-          Browse supported sport families, live coverage status, and source-readiness notes as new
-          leagues come online.
+          {t('explore.body', undefined, prefs.locale)}
         </p>
       </div>
 
@@ -38,9 +38,9 @@ export function ExplorePage() {
                     <SportAssetIcon sportKey={sport.key} size="sm" variant={iconVariant} />
                   </span>
                   {sport.enabled ? (
-                    <Badge tone="secondary">Live</Badge>
+                    <Badge tone="secondary">{t('explore.live', undefined, prefs.locale)}</Badge>
                   ) : (
-                    <Badge tone="muted">Coming soon</Badge>
+                    <Badge tone="muted">{t('explore.comingSoon', undefined, prefs.locale)}</Badge>
                   )}
                 </div>
                 <h2 className="mt-3 text-lg font-bold" style={{ color: theme.colors.primary }}>
@@ -51,7 +51,7 @@ export function ExplorePage() {
                 </h2>
                 <p className="mt-1 text-sm text-ink/60">{sport.tagline}</p>
                 <span className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-primary opacity-0 transition-opacity group-hover:opacity-100">
-                  Open <ArrowRight size={14} />
+                  {t('explore.open', undefined, prefs.locale)} <ArrowRight size={14} />
                 </span>
               </Panel>
             </Link>

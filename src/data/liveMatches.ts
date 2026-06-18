@@ -3,7 +3,7 @@ import type { Match } from '../domain/match'
 import { getSupabaseClient } from '../lib/supabase'
 import { groupMatches as bundledMatches } from './worldcup'
 
-// Live schedule source: reads public events from Supabase (RLS: visibility='public'),
+// Live schedule source: reads the World Cup from TheSportsDB league 4429 in Supabase,
 // falling back to the bundled openfootball dataset when offline or unconfigured.
 // Pages depend only on the Match shape, so swapping sources is invisible to the UI.
 
@@ -17,6 +17,19 @@ type LiveRow = {
   home_competitor_id: string | null
   away_competitor_id: string | null
   venues: { name: string } | null
+  leagues: { provider_key: string; provider_league_id: string } | null
+}
+
+const WORLD_CUP_PROVIDER_KEY = 'thesportsdb'
+const WORLD_CUP_PROVIDER_LEAGUE_ID = '4429'
+
+const teamNameAliases: Record<string, string> = {
+  'Bosnia-Herzegovina': 'Bosnia & Herzegovina',
+  'United States': 'USA',
+}
+
+function normalizeTeamName(name: string) {
+  return teamNameAliases[name] ?? name
 }
 
 let cache: { matches: Match[]; source: MatchSource } | null = null
@@ -28,8 +41,12 @@ async function fetchLiveMatches(): Promise<{ matches: Match[]; source: MatchSour
 
   const { data, error } = await supabase
     .from('events')
-    .select('id, title, starts_at, metadata, home_competitor_id, away_competitor_id, venues(name)')
-    .eq('provider_key', 'worldcup_json')
+    .select(
+      'id, title, starts_at, metadata, home_competitor_id, away_competitor_id, venues(name), leagues!inner(provider_key, provider_league_id)',
+    )
+    .eq('leagues.provider_key', WORLD_CUP_PROVIDER_KEY)
+    .eq('leagues.provider_league_id', WORLD_CUP_PROVIDER_LEAGUE_ID)
+    .eq('visibility', 'public')
     // Confirmed-team matches only (placeholder knockout slots have no competitors yet).
     .not('home_competitor_id', 'is', null)
     .not('away_competitor_id', 'is', null)
@@ -46,8 +63,8 @@ async function fetchLiveMatches(): Promise<{ matches: Match[]; source: MatchSour
         round: row.metadata?.round ?? '',
         date: row.starts_at!.slice(0, 10),
         time: '',
-        team1,
-        team2,
+        team1: normalizeTeamName(team1),
+        team2: normalizeTeamName(team2),
         group: row.metadata?.group ?? undefined,
         ground: row.venues?.name ?? '',
         startsAt,

@@ -3,20 +3,19 @@ import { NavLink, Outlet, useLocation, useParams } from 'react-router-dom'
 import { AuthButton } from '../components/AuthButton'
 import { SportSwitcher } from '../components/SportSwitcher'
 import { useAppState } from './state-context'
-import { brand } from '../domain/brand'
 import { getSport } from '../domain/sports'
 import { t } from '../lib/i18n'
 import { getTheme, withSurfaceMode } from '../theme/themes'
 import { SportThemeProvider } from '../theme/SportThemeProvider'
 
 const navItems = [
-  { to: '/', labelKey: 'nav.home', mobileLabel: 'Home', icon: Home },
-  { to: '/my-schedule', labelKey: 'nav.mySchedule', mobileLabel: 'Schedule', icon: ListChecks },
-  { to: '/exports', labelKey: 'nav.exports', mobileLabel: 'Exports', icon: Share2 },
-  { to: '/custom-leagues', labelKey: 'nav.customLeagues', mobileLabel: 'Local', icon: Users },
+  { to: '/', labelKey: 'nav.home', mobileLabelKey: 'nav.mobile.home', icon: Home },
+  { to: '/my-schedule', labelKey: 'nav.mySchedule', mobileLabelKey: 'nav.mobile.schedule', icon: ListChecks },
+  { to: '/exports', labelKey: 'nav.exports', mobileLabelKey: 'nav.mobile.exports', icon: Share2 },
+  { to: '/custom-leagues', labelKey: 'nav.customLeagues', mobileLabelKey: 'nav.mobile.local', icon: Users },
 ]
 
-function DesktopNav() {
+function DesktopNav({ locale }: { locale?: string | null }) {
   return (
     <nav className="hidden items-center gap-1 md:flex">
       {navItems.map(({ to, labelKey, icon: Icon }) => (
@@ -35,7 +34,7 @@ function DesktopNav() {
                 }`}
               >
                 <Icon size={16} />
-                <span>{t(labelKey)}</span>
+                <span>{t(labelKey, undefined, locale)}</span>
               </span>
             </>
           )}
@@ -45,19 +44,19 @@ function DesktopNav() {
   )
 }
 
-function MobileNav() {
+function MobileNav({ locale }: { locale?: string | null }) {
   return (
     <nav
       aria-label="Primary mobile navigation"
       className="fixed inset-x-0 bottom-0 z-40 border-t border-primary/15 bg-surface px-2 pb-[calc(env(safe-area-inset-bottom)+0.55rem)] pt-2 shadow-[0_-8px_22px_rgba(0,0,0,0.24)] md:hidden"
     >
       <div className="mx-auto flex max-w-md items-center justify-between gap-1">
-        {navItems.map(({ to, labelKey, mobileLabel, icon: Icon }) => (
+        {navItems.map(({ to, labelKey, mobileLabelKey, icon: Icon }) => (
           <NavLink
             key={to}
             to={to}
             end={to === '/'}
-            aria-label={t(labelKey)}
+            aria-label={t(labelKey, undefined, locale)}
             className={({ isActive }) =>
               `group flex h-12 min-w-12 items-center justify-center gap-1.5 rounded-2xl px-2 text-[10px] font-bold leading-none transition-all ${
                 isActive
@@ -69,7 +68,9 @@ function MobileNav() {
             {({ isActive }) => (
               <>
                 <Icon size={19} strokeWidth={2.25} className="shrink-0" />
-                <span className={`${isActive ? 'block max-w-[4rem]' : 'sr-only'} truncate`}>{mobileLabel}</span>
+                <span className={`${isActive ? 'block max-w-[4rem]' : 'sr-only'} truncate`}>
+                  {t(mobileLabelKey, undefined, locale)}
+                </span>
               </>
             )}
           </NavLink>
@@ -98,14 +99,14 @@ export function AppShell() {
           <div className="mx-auto flex w-full max-w-[1460px] items-center justify-between gap-2 px-3 py-2.5 sm:gap-4 sm:px-4">
             <SportSwitcher />
 
-            <DesktopNav />
+            <DesktopNav locale={prefs.locale} />
 
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => setPrefs({ ...prefs, themeMode: programMode ? 'broadcast' : 'program' })}
-                title={programMode ? 'Switch to Broadcast Dark' : 'Switch to Program Light'}
-                aria-label={programMode ? 'Switch to Broadcast Dark' : 'Switch to Program Light'}
+                title={t(programMode ? 'app.theme.toBroadcast' : 'app.theme.toProgram', undefined, prefs.locale)}
+                aria-label={t(programMode ? 'app.theme.toBroadcast' : 'app.theme.toProgram', undefined, prefs.locale)}
                 className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-primary/30 text-primary transition-colors hover:bg-primary/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
               >
                 {programMode ? <Moon size={17} /> : <Sun size={17} />}
@@ -122,12 +123,11 @@ export function AppShell() {
         <footer className="relative z-[1] mx-auto w-full max-w-[1460px] px-4 pb-40 pt-4 md:pb-8">
           <div className="color-bars mb-3 h-1.5 w-28 opacity-70" aria-hidden="true" />
           <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink/45">
-            {brand.appName} — schedules generated locally in your browser. Times shown in your
-            selected timezone. Always double-check against official sources before travel.
+            {t('app.footerDisclaimer', undefined, prefs.locale)}
           </p>
         </footer>
 
-        <MobileNav />
+        <MobileNav locale={prefs.locale} />
       </div>
     </SportThemeProvider>
   )

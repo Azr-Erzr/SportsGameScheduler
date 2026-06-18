@@ -75,44 +75,32 @@ function calendarVisibleChanged(
   return existing.title !== next.title || existing.status !== next.status || existing.starts_at !== next.starts_at
 }
 
-function changeLogRows(
+function statusHistoryRows(
   eventId: string,
   providerKey: ProviderKey,
   existing: { title: string; status: string; starts_at: string | null },
   next: { title: string; status: string; starts_at: string | null },
 ) {
   const rows = []
-  if (existing.starts_at !== next.starts_at) {
+  if (existing.starts_at !== next.starts_at || existing.status !== next.status) {
     rows.push({
       event_id: eventId,
-      change_type: 'time_change',
-      significance: 'notify',
-      old_value: { starts_at: existing.starts_at },
-      new_value: { starts_at: next.starts_at },
-      source: providerKey,
-    })
-  }
-  if (existing.status !== next.status) {
-    rows.push({
-      event_id: eventId,
-      change_type: next.status === 'cancelled' ? 'cancellation' : 'status_change',
-      significance: next.status === 'cancelled' ? 'notify' : 'calendar',
-      old_value: { status: existing.status },
-      new_value: { status: next.status },
-      source: providerKey,
-    })
-  }
-  if (existing.title !== next.title) {
-    rows.push({
-      event_id: eventId,
-      change_type: 'title_change',
-      significance: 'calendar',
-      old_value: { title: existing.title },
-      new_value: { title: next.title },
+      old_status: existing.status,
+      new_status: next.status,
+      old_starts_at: existing.starts_at,
+      new_starts_at: next.starts_at,
       source: providerKey,
     })
   }
   return rows
+}
+
+async function payloadHash(value: unknown): Promise<string> {
+  const data = new TextEncoder().encode(JSON.stringify(value))
+  const hash = await crypto.subtle.digest('SHA-256', data)
+  return Array.from(new Uint8Array(hash))
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('')
 }
 
 async function upsertNormalizedEvent(db: SupabaseClient, providerEvent: ProviderEvent, sportId: string, leagueId: string | null) {
@@ -121,10 +109,20 @@ async function upsertNormalizedEvent(db: SupabaseClient, providerEvent: Provider
     status: providerEvent.status,
     starts_at: providerEvent.startsAt ?? null,
   }
+  const checkedAt = new Date().toISOString()
+  const hash = await payloadHash({
+    ...next,
+    short_title: providerEvent.shortTitle ?? null,
+    starts_at_tbd: providerEvent.startsAtTbd ?? false,
+    timezone: providerEvent.timezone ?? null,
+    metadata: providerEvent.metadata,
+    competitors: providerEvent.competitors,
+    broadcasts: providerEvent.broadcasts ?? [],
+  })
 
   const { data: existing } = await db
     .from('events')
-    .select('id, title, status, starts_at, version')
+    .select('id, title, status, starts_at, version, payload_hash')
     .eq('provider_key', providerEvent.providerKey)
     .eq('provider_event_id', providerEvent.providerEventId)
     .maybeSingle()
@@ -134,26 +132,32 @@ async function upsertNormalizedEvent(db: SupabaseClient, providerEvent: Provider
 
   if (existing) {
     eventId = existing.id
+    if (existing.payload_hash === hash) {
+      await db.from('events').update({ last_checked_at: checkedAt }).eq('id', eventId)
+      return false
+    }
     const visibleChange = calendarVisibleChanged(existing, next)
-    const changeRows = changeLogRows(eventId, providerEvent.providerKey, existing, next)
+    const historyRows = statusHistoryRows(eventId, providerEvent.providerKey, existing, next)
     changed = visibleChange
 
-    const { error } = await db
-      .from('events')
-      .update({
-        ...next,
-        short_title: providerEvent.shortTitle ?? null,
-        starts_at_tbd: providerEvent.startsAtTbd ?? false,
-        timezone: providerEvent.timezone ?? null,
-        metadata: providerEvent.metadata,
-        version: visibleChange ? existing.version + 1 : existing.version,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', eventId)
+    const updatePayload: Record<string, unknown> = {
+      ...next,
+      short_title: providerEvent.shortTitle ?? null,
+      starts_at_tbd: providerEvent.startsAtTbd ?? false,
+      timezone: providerEvent.timezone ?? null,
+      metadata: providerEvent.metadata,
+      version: visibleChange ? existing.version + 1 : existing.version,
+      last_checked_at: checkedAt,
+      payload_hash: hash,
+      source_confidence: 'provider',
+    }
+    if (visibleChange) updatePayload.updated_at = checkedAt
+
+    const { error } = await db.from('events').update(updatePayload).eq('id', eventId)
     if (error) throw error
 
-    if (changeRows.length) {
-      await db.from('event_change_log').insert(changeRows)
+    if (historyRows.length) {
+      await db.from('event_status_history').insert(historyRows)
     }
   } else {
     const { data: inserted, error } = await db
@@ -170,20 +174,15 @@ async function upsertNormalizedEvent(db: SupabaseClient, providerEvent: Provider
         starts_at_tbd: providerEvent.startsAtTbd ?? false,
         timezone: providerEvent.timezone ?? null,
         metadata: providerEvent.metadata,
+        payload_hash: hash,
+        last_checked_at: checkedAt,
+        source_confidence: 'provider',
       })
       .select('id')
       .single()
     if (error) throw error
     eventId = inserted.id
     changed = true
-    await db.from('event_change_log').insert({
-      event_id: eventId,
-      change_type: 'new_event',
-      significance: 'calendar',
-      old_value: null,
-      new_value: next,
-      source: providerEvent.providerKey,
-    })
   }
 
   // Participation + broadcasts are replaced wholesale per sync (source of truth = provider).

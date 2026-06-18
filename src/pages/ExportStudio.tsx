@@ -9,17 +9,18 @@ import { useMyEvents } from '../data/liveSport'
 import { brand, exportFilename } from '../domain/brand'
 import { copyToClipboard, downloadBlob } from '../lib/clipboard'
 import { createIcsBlob, createMultiSportIcsBlob } from '../lib/ics'
+import { t } from '../lib/i18n'
 import { createNotesText } from '../lib/notes'
 import { MAX_EVENTS_BY_TEMPLATE, paginateEvents, type ExportTemplate } from '../lib/paginate'
 import { canvasToBlob, createScheduleCanvas } from '../lib/poster'
 import { formatDate, formatTime } from '../lib/time'
 import { posterChromeTheme } from '../theme/themes'
 
-const templates: Array<{ key: ExportTemplate; label: string; hint: string }> = [
-  { key: 'story', label: 'Phone story', hint: '7 events/page' },
-  { key: 'poster', label: 'Poster', hint: '9 events/page' },
-  { key: 'compact', label: 'Compact list', hint: '12 events/page' },
-  { key: 'family', label: 'Family board', hint: '6 events/page' },
+const templates: Array<{ key: ExportTemplate; labelKey: string; hint: string }> = [
+  { key: 'story', labelKey: 'export.template.story', hint: '7 events/page' },
+  { key: 'poster', labelKey: 'export.template.poster', hint: '9 events/page' },
+  { key: 'compact', labelKey: 'export.template.compact', hint: '12 events/page' },
+  { key: 'family', labelKey: 'export.template.family', hint: '6 events/page' },
 ]
 
 export function ExportStudioPage() {
@@ -107,9 +108,9 @@ export function ExportStudioPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-xl font-extrabold text-primary">Silbo Exports</h1>
+        <h1 className="text-xl font-extrabold text-primary">{t('export.title', undefined, prefs.locale)}</h1>
         <p className="text-sm text-ink/60">
-          Choose live subscribed feeds for schedule changes, or static packs for quick saving, sharing, and no-signup downloads.
+          {t('export.body', undefined, prefs.locale)}
         </p>
       </div>
 
@@ -117,19 +118,19 @@ export function ExportStudioPage() {
         <Link to="/calendar" className="rounded-xl border border-primary/20 bg-page/60 p-4 transition-colors hover:bg-primary/5">
           <div className="flex items-center gap-2 text-primary">
             <CalendarDays size={18} />
-            <h2 className="font-bold">Live Sync</h2>
+            <h2 className="font-bold">{t('export.liveSync', undefined, prefs.locale)}</h2>
           </div>
           <p className="mt-2 text-sm text-ink/62">
-            Subscribe once and let Silbo update the calendar feed when times, TBD teams, or venues change. Calendar apps choose their own refresh timing.
+            {t('export.liveSyncBody', undefined, prefs.locale)}
           </p>
         </Link>
         <div className="rounded-xl border border-export/30 bg-export/10 p-4">
           <div className="flex items-center gap-2 text-export">
             <FileImage size={18} />
-            <h2 className="font-bold">Static Packs</h2>
+            <h2 className="font-bold">{t('export.staticPacks', undefined, prefs.locale)}</h2>
           </div>
           <p className="mt-2 text-sm text-ink/62">
-            Download images, .ics snapshots, or Notes text without signing up. These are yours to share, but they do not auto-update.
+            {t('export.staticPacksBody', undefined, prefs.locale)}
           </p>
         </div>
       </Panel>
@@ -137,7 +138,7 @@ export function ExportStudioPage() {
       <div className="grid gap-4 lg:grid-cols-[340px_1fr]">
         <div className="space-y-4">
           <Panel>
-            <PanelHeading title="Image template" subtitle="Photo export never becomes unreadable - it paginates." />
+            <PanelHeading title={t('export.imageTemplate', undefined, prefs.locale)} subtitle={t('export.imageTemplateBody', undefined, prefs.locale)} />
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               {templates.map((item) => (
                 <button
@@ -150,7 +151,7 @@ export function ExportStudioPage() {
                       : 'border-primary/20 bg-surface hover:bg-primary/5'
                   }`}
                 >
-                  {item.label}
+                  {t(item.labelKey, undefined, prefs.locale)}
                   <span className={`block text-xs font-normal ${template === item.key ? 'text-void/70' : 'text-ink/50'}`}>
                     {item.hint}
                   </span>
@@ -158,30 +159,42 @@ export function ExportStudioPage() {
               ))}
             </div>
             <p className="mt-3 text-sm text-ink/70">
-              {schedule.length} events {'->'} <strong>{pages.length}</strong> page{pages.length === 1 ? '' : 's'} (max{' '}
-              {MAX_EVENTS_BY_TEMPLATE[template]} per page)
+              {t(
+                'export.pageHint',
+                {
+                  count: schedule.length,
+                  pages: pages.length,
+                  plural: pages.length === 1 ? '' : 's',
+                  max: MAX_EVENTS_BY_TEMPLATE[template],
+                },
+                prefs.locale,
+              )}
             </p>
           </Panel>
 
           <Panel className="space-y-2">
-            <PanelHeading title="Export" />
+            <PanelHeading title={t('export.actions', undefined, prefs.locale)} />
             <Button className="w-full" variant="export" onClick={() => exportImages(true)} disabled={schedule.length === 0}>
-              <FileImage size={15} /> Save image{pages.length > 1 ? `s (${pages.length})` : ''}
+              <FileImage size={15} />{' '}
+              {pages.length > 1
+                ? t('export.saveImages', { count: pages.length }, prefs.locale)
+                : t('export.saveImage', undefined, prefs.locale)}
             </Button>
             <Button className="w-full" variant="ghost" onClick={exportIcs} disabled={schedule.length === 0}>
-              <Download size={15} /> Download World Cup .ics
+              <Download size={15} /> {t('export.downloadWorldCup', undefined, prefs.locale)}
             </Button>
             <Button
               className="w-full"
               variant="ghost"
               onClick={exportAllSportsIcs}
               disabled={myEvents.events.length === 0}
-              title="Every upcoming event from the leagues and players you follow, across all sports"
+              title={t('export.allSportsTitle', undefined, prefs.locale)}
             >
-              <CalendarDays size={15} /> All-sports calendar .ics{myEvents.events.length ? ` (${myEvents.events.length})` : ''}
+              <CalendarDays size={15} /> {t('export.allSportsCalendar', undefined, prefs.locale)}
+              {myEvents.events.length ? ` (${myEvents.events.length})` : ''}
             </Button>
             <Button className="w-full" variant="subtle" onClick={copyNotes} disabled={schedule.length === 0}>
-              <Copy size={15} /> Copy for Notes
+              <Copy size={15} /> {t('export.copyNotes', undefined, prefs.locale)}
             </Button>
             {message && <p className="text-sm font-medium text-primary">{message}</p>}
           </Panel>
@@ -189,13 +202,13 @@ export function ExportStudioPage() {
 
         <Panel>
           <PanelHeading
-            title="Preview"
-            subtitle={`Page 1 of ${pages.length || 1} - ${cityLabel} local time`}
+            title={t('export.preview', undefined, prefs.locale)}
+            subtitle={t('export.previewSubtitle', { pages: pages.length || 1, city: cityLabel }, prefs.locale)}
           >
             <Share2 size={18} className="text-primary" />
           </PanelHeading>
           {schedule.length === 0 ? (
-            <p className="py-10 text-center text-sm text-ink/50">Follow teams to see an export preview.</p>
+            <p className="py-10 text-center text-sm text-ink/50">{t('export.emptyPreview', undefined, prefs.locale)}</p>
           ) : (
             <div className="space-y-2">
               {(pages[0] ?? []).map((match) => (
