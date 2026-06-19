@@ -994,44 +994,41 @@
     box-shadow: 0 6px 14px rgba(29, 24, 18, 0.14);
   }
 
-  /* Continuous ambient bob. Animates `transform` only (keeps the -50%/-50% centering), so it
-     composes with the `translate`-based entrance below. Transform animations run on the
-     compositor in every engine (incl. Firefox), so this is cheap even on weaker devices. */
-  @keyframes pip-float {
-    0%,
-    100% {
-      transform: translate(-50%, -50%) rotate(-1.5deg);
+  /* The pips wait hovering above their cards, then drop down and settle when the board scrolls
+     into view (JS adds `.is-revealed` via IntersectionObserver). This is a ONE-TIME entrance with
+     NO perpetual animation: a continuous bob was repainting the heavy gradient board every frame
+     in Firefox (it doesn't layer-promote the pips like Chromium) and roughly halved its FPS. The
+     drop rides the `translate` property; the `transform` centering (-50%/-50%) is left untouched.
+     Universal — no scroll-driven timeline, no @supports gate — so it behaves the same in every
+     engine. */
+  @keyframes pip-drop {
+    0% {
+      translate: calc(var(--pip-x, 0px) * 0.55) calc(var(--pip-y, -280px) * 0.52);
     }
-    50% {
-      transform: translate(-50%, -64%) rotate(1.5deg);
+    78% {
+      translate: 0px 7px; /* slight overshoot below the resting point, then settle */
+    }
+    100% {
+      translate: 0px 0px;
     }
   }
 
-  /* UNIVERSAL pip motion — no scroll-driven timeline, no @supports gate, so it behaves
-     identically in Chromium, Firefox, Safari, and mobile. Pips drift up in the orbit zone and
-     gently bob; when the board scrolls into view the JS adds `.is-revealed` (IntersectionObserver)
-     and they settle onto their cards. `translate` (entrance) and `transform` (bob) are independent
-     properties, so the two compose without fighting. */
   @media (prefers-reduced-motion: no-preference) {
+    /* Default (board not yet scrolled to): pips hover up in the orbit zone above their cards. */
     .poster-pip {
-      animation: pip-float 5s ease-in-out infinite;
-      /* Desync each pip so they don't bob in lockstep. */
-      animation-delay: calc(var(--pip-index, 0) * -0.8s);
-      /* Start scattered in the orbit zone (scaled so it stays within the board's clip). */
-      translate: calc(var(--pip-x, 0px) * 0.55) calc(var(--pip-y, -280px) * 0.5);
-      transition: translate 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+      translate: calc(var(--pip-x, 0px) * 0.55) calc(var(--pip-y, -280px) * 0.52);
     }
 
     .global-event-board.is-revealed .poster-pip {
-      translate: 0px 0px;
-      transition-delay: calc(var(--pip-index, 0) * 70ms);
+      animation: pip-drop 1.05s cubic-bezier(0.3, 0.9, 0.3, 1) forwards;
+      /* Stagger so they rain down one after another. */
+      animation-delay: calc(var(--pip-index, 0) * 95ms);
     }
   }
 
-  /* Respect reduced-motion: no bob, no drift — pips just sit landed on their cards. */
+  /* Reduced motion: no hover, no drop — pips simply rest on their cards. */
   @media (prefers-reduced-motion: reduce) {
     .poster-pip {
-      animation: none;
       translate: 0px 0px;
     }
   }
@@ -1945,7 +1942,6 @@
     opacity: 0.3;
   }
 
-
   .sport-channel-panel,
   .sport-channel-title,
   .sport-channel-copy {
@@ -2040,11 +2036,18 @@
     background-size: cover;
     mix-blend-mode: normal;
     filter: saturate(1.04) contrast(1.03) drop-shadow(0 0 14px color-mix(in srgb, var(--mp-primary) 20%, transparent));
-    /* Full banner-height: horizontal feather only (left blends into the centre field, right bleeds
-       off the edge); top & bottom stay solid so the scene fills the whole height. The cream scene
-       edges blend into the matching pale field, so no vertical feather is needed. */
-    -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 18%, #000 100%);
-    mask-image: linear-gradient(90deg, transparent 0, #000 18%, #000 100%);
+    /* Fills the banner height: left feather blends into the centre field, right bleeds off the
+       edge. A gentle top/bottom feather dissolves the cream WebP border line into the field (and at
+       the top-right reveals the dark corner vignette), cleaning the "hint of cream" on creamier
+       scenes (combat/basketball) without losing the full-height read. */
+    -webkit-mask-image:
+      linear-gradient(90deg, transparent 0, #000 18%, #000 100%),
+      linear-gradient(180deg, transparent 0, #000 6%, #000 94%, transparent 100%);
+    -webkit-mask-composite: source-in;
+    mask-image:
+      linear-gradient(90deg, transparent 0, #000 18%, #000 100%),
+      linear-gradient(180deg, transparent 0, #000 6%, #000 94%, transparent 100%);
+    mask-composite: intersect;
   }
 
   .sport-channel-action-panel::after {
@@ -2160,6 +2163,10 @@
   [data-paper] .sport-channel-banner {
     --sport-channel-ink: var(--sport-channel-paper-ink);
     min-height: calc(var(--sport-channel-art-height) + var(--sport-channel-pad) + var(--sport-channel-pad) + 2px);
+    /* Let the inked brush art spill a touch past the banner edges — the imperfect brush-stroke
+       style reads better breaking the frame than clipped square. (Broadcast keeps overflow hidden
+       to clip its bled WebP art.) */
+    overflow: visible;
     border-color: color-mix(in srgb, var(--mp-primary) 24%, rgba(29, 24, 18, 0.12));
     background:
       radial-gradient(ellipse at 86% 36%, color-mix(in srgb, var(--mp-primary) 15%, transparent), transparent 38%),
@@ -2175,7 +2182,6 @@
       radial-gradient(circle at 70% 50%, color-mix(in srgb, var(--mp-primary) 6%, transparent), transparent 45%);
     opacity: 0.75;
   }
-
 
   [data-paper] .sport-channel-panel {
     min-height: var(--sport-channel-art-height);
@@ -2237,6 +2243,9 @@
     opacity: 0.84;
     -webkit-mask-image: var(--sport-channel-icon);
     mask-image: var(--sport-channel-icon);
+    /* Left brush meets the banner height (lightly scaled, barely spills). */
+    -webkit-mask-size: auto 103%;
+    mask-size: auto 103%;
   }
 
   [data-paper] .sport-channel-icon-panel {
@@ -2283,6 +2292,11 @@
       drop-shadow(0 0 16px color-mix(in srgb, var(--mp-primary) 18%, transparent));
     -webkit-mask-image: var(--sport-channel-action);
     mask-image: var(--sport-channel-action);
+    /* Right brush stays level but scaled up so its strokes spill a little past the banner edge. */
+    -webkit-mask-size: auto 114%;
+    -webkit-mask-position: 60% center;
+    mask-size: auto 114%;
+    mask-position: 60% center;
   }
 
   [data-paper] .sport-channel-action-panel {
