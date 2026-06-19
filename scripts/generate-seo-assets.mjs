@@ -177,6 +177,5 @@ const routes = [...staticRoutes, ...sportRoutes, ...dbRoutes]
 await Promise.all(routes.map((route) => writeRouteHtml(baseHtml, route)))
 await writeSitemap(routes)
 await writeBrandAssets(distDir, { rootDir: root })
-await fs.writeFile(path.join(distDir, '_redirects'), '/*  /index.html  200\n')
 
-console.log(`Generated SEO HTML for ${routes.length} routes, sitemap.xml, brand assets, and _redirects.`)
+console.log(`Generated SEO HTML for ${routes.length} routes, sitemap.xml, and brand assets.`)
