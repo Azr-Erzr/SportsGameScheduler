@@ -2,11 +2,20 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import sharp from 'sharp'
+import TextToSVG from 'text-to-svg'
 
 const defaultRoot = process.cwd()
 const brandGreen = '#4dff8a'
 const warmPaper = '#f4ead8'
 const voidBlack = '#0b0a08'
+const paperInk = '#17130f'
+
+const brandFontFiles = {
+  display: 'Bungee-Regular.ttf',
+  head: 'ArchivoBlack-Regular.ttf',
+  sans: 'SpaceGrotesk-Bold.ttf',
+  mono: 'IBMPlexMono-Bold.ttf',
+}
 
 function extractLogoPath(svg) {
   const match = svg.match(/<path\s+d="([^"]+)"/)
@@ -17,6 +26,21 @@ function extractLogoPath(svg) {
 async function readLogoPath(rootDir) {
   const svg = await fs.readFile(path.join(rootDir, 'public/assets/brand/silbo-whistle-trace.svg'), 'utf8')
   return extractLogoPath(svg)
+}
+
+function loadBrandText(rootDir) {
+  const fontDir = path.join(rootDir, 'public/assets/brand/fonts')
+  return {
+    display: TextToSVG.loadSync(path.join(fontDir, brandFontFiles.display)),
+    head: TextToSVG.loadSync(path.join(fontDir, brandFontFiles.head)),
+    sans: TextToSVG.loadSync(path.join(fontDir, brandFontFiles.sans)),
+    mono: TextToSVG.loadSync(path.join(fontDir, brandFontFiles.mono)),
+  }
+}
+
+function textPath(font, text, { x, y, size, fill, opacity = 1, anchor = 'top' }) {
+  const d = font.getD(String(text), { x, y, fontSize: size, anchor })
+  return `<path d="${d}" fill="${fill}"${opacity === 1 ? '' : ` opacity="${opacity}"`}/>`
 }
 
 export function createFaviconSvg(logoPath) {
@@ -44,68 +68,102 @@ export function createFaviconSvg(logoPath) {
 }
 
 export function createOgCoverSvg(logoPath) {
-  const fixtureRows = [
-    ['World Cup 2026', 'follow countries, kickoff changes'],
-    ['F1 race weekends', 'practice, sprint, qualifying, race'],
-    ['UFC / PFL fight cards', 'main cards, prelims, late swaps'],
+  return createOgCoverSvgWithText(logoPath, loadBrandText(defaultRoot))
+}
+
+export function createOgCoverSvgWithText(logoPath, text) {
+  const rows = [
+    ['6:00 PM', 'EDT', 'Canada vs Qatar', 'Group B - Matchday 8 - Vancouver'],
+    ['8:30 PM', 'EDT', 'Brazil vs Haiti', 'Group C - Matchday 9 - Philadelphia'],
+    ['7:00 PM', 'Local', 'Formula 1 race weekend', 'Practice - qualifying - sprint - race'],
+    ['10:00 PM', 'Local', 'UFC / PFL fight cards', 'Main cards - prelims - fighter alerts'],
   ]
 
   return `<svg width="1200" height="630" viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#070806"/>
-      <stop offset="0.42" stop-color="#11100c"/>
-      <stop offset="1" stop-color="#082313"/>
+      <stop offset="0.48" stop-color="#10100c"/>
+      <stop offset="1" stop-color="#051b10"/>
     </linearGradient>
-    <radialGradient id="greenHalo" cx="75%" cy="26%" r="58%">
-      <stop offset="0" stop-color="${brandGreen}" stop-opacity="0.72"/>
-      <stop offset="0.45" stop-color="#35f5ff" stop-opacity="0.18"/>
+    <radialGradient id="greenHalo" cx="15%" cy="18%" r="74%">
+      <stop offset="0" stop-color="${brandGreen}" stop-opacity="0.24"/>
+      <stop offset="0.45" stop-color="#35f5ff" stop-opacity="0.08"/>
       <stop offset="1" stop-color="#07110b" stop-opacity="0"/>
     </radialGradient>
-    <linearGradient id="logoGrad" x1="665" y1="92" x2="1120" y2="445" gradientUnits="userSpaceOnUse">
+    <linearGradient id="logoGrad" x1="80" y1="54" x2="214" y2="178" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#38eaff"/>
       <stop offset="0.44" stop-color="${brandGreen}"/>
       <stop offset="0.75" stop-color="#ff4fd8"/>
       <stop offset="1" stop-color="#ffc24b"/>
     </linearGradient>
-    <linearGradient id="card" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0" stop-color="#f6efdf"/>
-      <stop offset="1" stop-color="#fffaf0"/>
+    <linearGradient id="paperRow" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#fffaf0"/>
+      <stop offset="1" stop-color="#f1e6d2"/>
+    </linearGradient>
+    <linearGradient id="timeStub" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#082c1c"/>
+      <stop offset="1" stop-color="#087549"/>
     </linearGradient>
     <filter id="softGlow" x="-35%" y="-35%" width="170%" height="170%">
-      <feGaussianBlur stdDeviation="9" result="blur"/>
+      <feGaussianBlur stdDeviation="4.2" result="blur"/>
       <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="rowShadow" x="-4%" y="-30%" width="108%" height="160%">
+      <feDropShadow dx="0" dy="7" stdDeviation="5" flood-color="#000" flood-opacity="0.35"/>
     </filter>
   </defs>
   <rect width="1200" height="630" fill="url(#bg)"/>
   <rect width="1200" height="630" fill="url(#greenHalo)"/>
-  <g opacity="0.13" stroke="${warmPaper}" stroke-width="1">
-    ${Array.from({ length: 18 }, (_, i) => `<path d="M0 ${48 + i * 34}H1200"/>`).join('')}
-    ${Array.from({ length: 24 }, (_, i) => `<path d="M${26 + i * 52} 0V630"/>`).join('')}
+  <g opacity="0.12" stroke="${brandGreen}" stroke-width="1">
+    ${Array.from({ length: 16 }, (_, i) => `<path d="M0 ${32 + i * 38}H1200"/>`).join('')}
+    ${Array.from({ length: 22 }, (_, i) => `<path d="M${44 + i * 54} 0V630"/>`).join('')}
   </g>
-  <g transform="translate(66 58)">
-    <text x="0" y="0" dominant-baseline="hanging" font-family="Arial Black, Arial, sans-serif" font-size="38" fill="${brandGreen}" letter-spacing="5">SILBO SPORTS</text>
-    <text x="0" y="104" font-family="Arial Black, Arial, sans-serif" font-size="72" fill="${warmPaper}">Every game, match,</text>
-    <text x="0" y="188" font-family="Arial Black, Arial, sans-serif" font-size="72" fill="${warmPaper}">race, and card</text>
-    <text x="0" y="272" font-family="Arial Black, Arial, sans-serif" font-size="72" fill="${brandGreen}">in your calendar.</text>
-    <text x="4" y="350" font-family="Arial, sans-serif" font-weight="700" font-size="29" fill="${warmPaper}" opacity="0.8">Live calendar feeds, poster exports, reminders, and shareable watch boards.</text>
+  <g opacity="0.18" stroke="${warmPaper}" stroke-width="1.2">
+    <path d="M1008 62h126v126h-126z"/>
+    <path d="M1041 62v126M1101 62v126M1008 125h126M1068 96a30 30 0 0 0 0 58"/>
   </g>
-  <g transform="translate(790 132)">
-    <path transform="scale(0.5)" d="${logoPath}" fill="url(#logoGrad)" fill-rule="evenodd" filter="url(#softGlow)"/>
+
+  <rect x="42" y="34" width="1116" height="164" rx="24" fill="#07100b" fill-opacity="0.82" stroke="${brandGreen}" stroke-opacity="0.58" stroke-width="2"/>
+  <g transform="translate(82 68)">
+    <path transform="scale(0.185)" d="${logoPath}" fill="url(#logoGrad)" fill-rule="evenodd" filter="url(#softGlow)"/>
+    <path d="M151 16v104" stroke="${warmPaper}" stroke-opacity="0.38" stroke-width="2"/>
+    ${textPath(text.display, 'SILBO SPORTS', { x: 188, y: 12, size: 56, fill: brandGreen })}
+    ${textPath(text.head, 'Every game, match, race, and card in your calendar', { x: 190, y: 76, size: 28, fill: warmPaper })}
+    ${textPath(text.mono, 'LOCAL TIME - LIVE SYNC - STATIC PACKS - REMINDERS', { x: 192, y: 116, size: 15, fill: brandGreen })}
   </g>
-  <g transform="translate(68 474)">
-    ${fixtureRows
+
+  <rect x="42" y="218" width="1116" height="58" rx="14" fill="#0b120d" fill-opacity="0.9" stroke="${brandGreen}" stroke-opacity="0.5"/>
+  ${textPath(text.mono, 'CANADA', { x: 120, y: 237, size: 25, fill: warmPaper })}
+  ${textPath(text.mono, '/', { x: 318, y: 237, size: 25, fill: brandGreen })}
+  ${textPath(text.mono, 'BRAZIL', { x: 365, y: 237, size: 25, fill: warmPaper })}
+  ${textPath(text.mono, '/', { x: 552, y: 237, size: 25, fill: brandGreen })}
+  ${textPath(text.mono, 'FORMULA 1', { x: 600, y: 237, size: 25, fill: warmPaper })}
+  ${textPath(text.mono, '/', { x: 844, y: 237, size: 25, fill: brandGreen })}
+  ${textPath(text.mono, 'FIGHT CARDS', { x: 890, y: 237, size: 25, fill: warmPaper })}
+
+  <g transform="translate(58 306)">
+    ${rows
       .map(
-        ([title, body], index) => `<g transform="translate(${index * 354} 0)">
-      <rect width="316" height="94" rx="18" fill="url(#card)" opacity="0.96"/>
-      <rect x="0.5" y="0.5" width="315" height="93" rx="17.5" fill="none" stroke="${brandGreen}" stroke-opacity="0.42"/>
-      <text x="22" y="36" font-family="Arial Black, Arial, sans-serif" font-size="22" fill="#09130c">${title}</text>
-      <text x="22" y="66" font-family="Arial, sans-serif" font-size="17" fill="#354238">${body}</text>
+        ([time, zone, title, detail], index) => `<g transform="translate(0 ${index * 57})" filter="url(#rowShadow)">
+      <rect x="0" y="0" width="1084" height="48" rx="12" fill="url(#paperRow)"/>
+      <rect x="0" y="0" width="176" height="48" rx="12" fill="url(#timeStub)" stroke="${brandGreen}" stroke-width="1.2"/>
+      <path d="M176 0v48" stroke="${brandGreen}" stroke-width="2"/>
+      ${textPath(text.mono, time, { x: 34, y: 9, size: 21, fill: brandGreen })}
+      ${textPath(text.mono, zone, { x: 68, y: 29, size: 12, fill: warmPaper })}
+      ${textPath(text.head, title, { x: 212, y: 15, size: 25, fill: paperInk })}
+      ${textPath(text.sans, detail, { x: 612, y: 17, size: 16, fill: '#62584a' })}
+      ${textPath(text.mono, String(index + 1).padStart(2, '0'), { x: 1025, y: 14, size: 21, fill: '#9b9a79' })}
     </g>`,
       )
       .join('')}
   </g>
-  <text x="1084" y="584" text-anchor="end" font-family="Arial, sans-serif" font-weight="700" font-size="22" fill="${warmPaper}" opacity="0.72">silbosports.com</text>
+
+  <g transform="translate(64 590)">
+    <rect x="0" y="-24" width="12" height="42" fill="${brandGreen}"/>
+    ${textPath(text.sans, 'Share a live watch board or save a clean static schedule.', { x: 36, y: -18, size: 21, fill: warmPaper })}
+    ${textPath(text.mono, 'SILBOSPORTS.COM', { x: 920, y: -15, size: 16, fill: brandGreen })}
+  </g>
 </svg>
 `
 }
@@ -113,8 +171,9 @@ export function createOgCoverSvg(logoPath) {
 export async function writeBrandAssets(targetDir, { rootDir = defaultRoot } = {}) {
   await fs.mkdir(targetDir, { recursive: true })
   const logoPath = await readLogoPath(rootDir)
+  const text = loadBrandText(rootDir)
   const faviconSvg = createFaviconSvg(logoPath)
-  const ogSvg = createOgCoverSvg(logoPath)
+  const ogSvg = createOgCoverSvgWithText(logoPath, text)
 
   await fs.writeFile(path.join(targetDir, 'favicon.svg'), faviconSvg)
   await sharp(Buffer.from(ogSvg)).png().toFile(path.join(targetDir, 'og-cover.png'))
