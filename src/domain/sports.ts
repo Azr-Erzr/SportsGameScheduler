@@ -160,13 +160,13 @@ export const sports: SportInfo[] = [
   {
     key: 'custom',
     canonicalSportKey: 'custom',
-    label: 'Community',
-    flagshipLeague: 'Your own leagues',
+    label: 'Other Sports',
+    flagshipLeague: 'Badminton · Cricket · Rugby · more',
     icon: Users,
     badgeKey: 'custom',
     enabled: true,
     eventNoun: 'event',
-    tagline: 'Your league, your schedule',
+    tagline: 'Badminton, cricket, rugby, squash, table tennis and everything else people play',
   },
 ]
 

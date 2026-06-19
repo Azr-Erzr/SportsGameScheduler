@@ -11,6 +11,7 @@ import { AppStateProvider } from './app/state'
 const HomePage = lazy(() => import('./pages/Home').then((m) => ({ default: m.HomePage })))
 const MySchedulePage = lazy(() => import('./pages/MySchedule').then((m) => ({ default: m.MySchedulePage })))
 const SportPage = lazy(() => import('./pages/SportPage').then((m) => ({ default: m.SportPage })))
+const OtherSportsPage = lazy(() => import('./pages/OtherSports').then((m) => ({ default: m.OtherSportsPage })))
 const ExplorePage = lazy(() => import('./pages/Explore').then((m) => ({ default: m.ExplorePage })))
 const CalendarFeedsPage = lazy(() => import('./pages/CalendarFeeds').then((m) => ({ default: m.CalendarFeedsPage })))
 const CustomLeaguesPage = lazy(() => import('./pages/CustomLeagues').then((m) => ({ default: m.CustomLeaguesPage })))
@@ -45,6 +46,7 @@ const router = createBrowserRouter([
       { path: '/', element: lazyRoute(<HomePage />) },
       { path: '/my-schedule', element: lazyRoute(<MySchedulePage />) },
       { path: '/explore', element: lazyRoute(<ExplorePage />) },
+      { path: '/other-sports', element: lazyRoute(<OtherSportsPage />) },
       { path: '/sports/:sportKey', element: lazyRoute(<SportPage />) },
       { path: '/sports/:sportKey/:leagueKey', element: lazyRoute(<SportPage />) },
       { path: '/leagues/:leagueId', element: lazyRoute(<LeaguePage />) },

@@ -84,7 +84,15 @@ export function AppShell() {
   const { sportKey } = useParams()
   const location = useLocation()
   const { prefs, setPrefs } = useAppState()
-  const baseTheme = getTheme(location.pathname === '/' ? 'neutral' : sportKey && getSport(sportKey) ? sportKey : 'soccer')
+  const baseTheme = getTheme(
+    location.pathname === '/'
+      ? 'neutral'
+      : location.pathname === '/other-sports'
+        ? 'custom'
+        : sportKey && getSport(sportKey)
+          ? sportKey
+          : 'soccer',
+  )
   const theme = withSurfaceMode(baseTheme, prefs.themeMode)
   const programMode = prefs.themeMode === 'program'
 

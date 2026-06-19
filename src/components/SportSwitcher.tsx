@@ -20,7 +20,12 @@ export function SportSwitcher() {
   const location = useLocation()
   const { sportKey } = useParams()
   const { prefs } = useAppState()
-  const activeKey = location.pathname === '/' ? 'neutral' : sportKey ?? 'soccer'
+  const activeKey =
+    location.pathname === '/'
+      ? 'neutral'
+      : location.pathname === '/other-sports'
+        ? 'custom'
+        : sportKey ?? 'soccer'
   const activeTheme = withSurfaceMode(getTheme(activeKey), prefs.themeMode)
   const activeSport = sports.find((sport) => sport.key === activeKey)
   const sportIconVariant = prefs.themeMode === 'program' ? 'brush' : 'neon3d'
@@ -43,7 +48,7 @@ export function SportSwitcher() {
 
   function pick(key: string) {
     setOpen(false)
-    navigate(key === 'custom' ? '/custom-leagues' : `/sports/${key}`)
+    navigate(key === 'custom' ? '/other-sports' : `/sports/${key}`)
   }
 
   return (
