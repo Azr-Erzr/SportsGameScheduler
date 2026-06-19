@@ -2129,8 +2129,15 @@
     mask-composite: intersect;
   }
 
+  /* Tones the cream-backed scenes (combat/basketball) toward the dark field at the top/bottom/right
+     edges so the banner reads dark like soccer, instead of cream "coming up" at the boundary. The
+     left/centre is left clear so the scene blends into the pale title band and the neon survives. */
   .sport-channel-action-panel::after {
-    background: none;
+    background:
+      linear-gradient(180deg, color-mix(in srgb, var(--scf-deep) 62%, transparent) 0, transparent 24%, transparent 80%, color-mix(in srgb, var(--scf-deep) 62%, transparent) 100%),
+      linear-gradient(90deg, transparent 0 66%, color-mix(in srgb, var(--scf-deep) 54%, transparent) 100%);
+    mix-blend-mode: multiply;
+    opacity: 0.6;
   }
 
   .sport-channel-title {
@@ -2271,11 +2278,10 @@
       transparent;
     border-color: transparent;
     box-shadow: none;
-    /* Fill the full banner height in light mode too: feather only on the sides into the paper
-       (vertical stays solid) so the inked art zone lines up with the banner background instead of
-       floating with paper above and below it — mirrors the broadcast full-height treatment. */
-    -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 11%, #000 89%, transparent 100%);
-    mask-image: linear-gradient(90deg, transparent 0, #000 11%, #000 89%, transparent 100%);
+    /* No box mask: the brush PNGs already have soft splattered alpha edges, so they blend into the
+       paper on their own AND can hang past the banner border (a box mask would clip the spill). */
+    -webkit-mask-image: none;
+    mask-image: none;
   }
 
   [data-paper] .sport-channel-panel::before {
@@ -2323,9 +2329,12 @@
     opacity: 0.84;
     -webkit-mask-image: var(--sport-channel-icon);
     mask-image: var(--sport-channel-icon);
-    /* Left brush meets the banner height (lightly scaled, barely spills). */
-    -webkit-mask-size: auto 103%;
-    mask-size: auto 103%;
+    /* Cover so the brush fills the zone at natural framing (the size of the banner, like dark
+       soccer) instead of being scaled/zoomed in place. */
+    -webkit-mask-size: cover;
+    -webkit-mask-position: center;
+    mask-size: cover;
+    mask-position: center;
   }
 
   [data-paper] .sport-channel-icon-panel {
@@ -2357,7 +2366,8 @@
   }
 
   [data-paper] .sport-channel-action-panel::before {
-    inset: -2%;
+    /* Box extends past the bottom edge so the cover-filled brush hangs over the border. */
+    inset: -2% -2% -14% -2%;
     background-image:
       radial-gradient(
         ellipse at var(--sport-channel-action-wash-x, 56%) var(--sport-channel-action-wash-y, 54%),
@@ -2372,12 +2382,11 @@
       drop-shadow(0 0 16px color-mix(in srgb, var(--mp-primary) 18%, transparent));
     -webkit-mask-image: var(--sport-channel-action);
     mask-image: var(--sport-channel-action);
-    /* Near-natural size, TOP-anchored so the small extra height grows downward — the figure's top
-       isn't cropped and its bottom brush hangs past the (softened) bottom border instead of being
-       zoomed/centre-cropped. */
-    -webkit-mask-size: auto 108%;
+    /* Cover (size of the banner, like dark soccer), TOP-anchored so the figure's top isn't cropped
+       and its bottom brush hangs past the border via the extended box + overflow:visible. */
+    -webkit-mask-size: cover;
     -webkit-mask-position: 50% 0%;
-    mask-size: auto 108%;
+    mask-size: cover;
     mask-position: 50% 0%;
   }
 
