@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
-import sharp from 'sharp'
 import { createClient } from '@supabase/supabase-js'
+import { writeBrandAssets } from './generate-brand-assets.mjs'
 
 const root = process.cwd()
 const distDir = path.join(root, 'dist')
@@ -29,13 +29,6 @@ const staticRoutes = [
     description: 'Your followed teams, leagues, players, drivers, and fighters in one local-time schedule.',
     priority: '0.6',
     changefreq: 'daily',
-  },
-  {
-    path: '/exports',
-    title: 'Schedule exports - Silbo Sports',
-    description: 'Export your sports schedule to live calendar feeds, posters, images, and Notes-friendly text.',
-    priority: '0.5',
-    changefreq: 'monthly',
   },
   {
     path: '/calendar',
@@ -178,52 +171,12 @@ async function writeSitemap(routes) {
   )
 }
 
-async function writeOgCover() {
-  const svg = `
-    <svg width="1200" height="630" viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stop-color="#0b0a08"/>
-          <stop offset="0.56" stop-color="#16130f"/>
-          <stop offset="1" stop-color="#102817"/>
-        </linearGradient>
-        <radialGradient id="signal" cx="78%" cy="24%" r="65%">
-          <stop offset="0" stop-color="#54ff9f" stop-opacity="0.55"/>
-          <stop offset="0.42" stop-color="#46e8ff" stop-opacity="0.22"/>
-          <stop offset="1" stop-color="#0b0a08" stop-opacity="0"/>
-        </radialGradient>
-      </defs>
-      <rect width="1200" height="630" fill="url(#bg)"/>
-      <rect width="1200" height="630" fill="url(#signal)"/>
-      <g opacity="0.18" stroke="#f4ead8" stroke-width="1">
-        ${Array.from({ length: 18 }, (_, i) => `<path d="M0 ${60 + i * 34}H1200"/>`).join('')}
-        ${Array.from({ length: 24 }, (_, i) => `<path d="M${i * 52} 0V630"/>`).join('')}
-      </g>
-      <g transform="translate(78 82)">
-        <circle cx="38" cy="38" r="27" fill="none" stroke="#54ff9f" stroke-width="10"/>
-        <path d="M66 26c32-22 66-20 94 4" fill="none" stroke="#46e8ff" stroke-width="9" stroke-linecap="round"/>
-        <path d="M73 50c25-13 48-12 70 3" fill="none" stroke="#ff4fd8" stroke-width="7" stroke-linecap="round"/>
-        <text x="0" y="132" font-family="Arial Black, Arial, sans-serif" font-size="42" fill="#54ff9f" letter-spacing="4">SILBO</text>
-      </g>
-      <text x="82" y="288" font-family="Arial Black, Arial, sans-serif" font-size="76" fill="#f4ead8">Every game, match,</text>
-      <text x="82" y="372" font-family="Arial Black, Arial, sans-serif" font-size="76" fill="#f4ead8">race, and card</text>
-      <text x="82" y="458" font-family="Arial Black, Arial, sans-serif" font-size="76" fill="#54ff9f">in your calendar.</text>
-      <text x="86" y="535" font-family="Arial, sans-serif" font-size="31" fill="#f4ead8" opacity="0.78">Local times. Live feeds. Poster exports. Alerts.</text>
-      <g transform="translate(840 390)" fill="none" stroke="#54ff9f" stroke-width="7" opacity="0.9">
-        <circle cx="110" cy="70" r="94"/>
-        <path d="M31 21c55 42 105 46 158 0M29 119c58-39 111-38 162 0M110-24c-37 57-37 130 0 188M110-24c37 57 37 130 0 188"/>
-      </g>
-    </svg>`
-  const png = await sharp(Buffer.from(svg)).png().toBuffer()
-  await fs.writeFile(path.join(distDir, 'og-cover.png'), png)
-}
-
 const baseHtml = await fs.readFile(path.join(distDir, 'index.html'), 'utf8')
 const dbRoutes = await fetchDbRoutes()
 const routes = [...staticRoutes, ...sportRoutes, ...dbRoutes]
 await Promise.all(routes.map((route) => writeRouteHtml(baseHtml, route)))
 await writeSitemap(routes)
-await writeOgCover()
+await writeBrandAssets(distDir, { rootDir: root })
 await fs.writeFile(path.join(distDir, '_redirects'), '/*  /index.html  200\n')
 
-console.log(`Generated SEO HTML for ${routes.length} routes, sitemap.xml, og-cover.png, and _redirects.`)
+console.log(`Generated SEO HTML for ${routes.length} routes, sitemap.xml, brand assets, and _redirects.`)

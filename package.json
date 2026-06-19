@@ -5,9 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build && node scripts/generate-seo-assets.mjs",
+    "build": "npm run brand:assets && tsc -b && vite build && node scripts/generate-seo-assets.mjs",
     "lint": "eslint .",
     "test": "vitest run",
+    "brand:assets": "node scripts/generate-brand-assets.mjs",
     "images": "node scripts/optimize-images.mjs",
     "preview": "vite preview",
     "cloudflare:deploy": "npm run build && wrangler deploy",

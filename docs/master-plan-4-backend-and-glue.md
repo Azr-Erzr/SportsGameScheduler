@@ -360,3 +360,158 @@ Schedule should be the post-selection home base: review saved matches, choose ca
 download static files, print/share, and manage reminders/settings from one surface.
 
 Later, make the schedule hub smarter with DB-backed saved schedule summaries and reminder state.
+
+---
+
+## 11. Competitive Strategy Overlay (June 19, 2026)
+
+Reviewed source pack:
+
+- `Silbo_Competitive_Product_Technology_Strategy_2026.docx` / `.pdf`
+- `Silbo_Competitive_Strategy_Decision_Workbook_2026.xlsx`
+- `Silbo_Competitive_Analysis_Data.json`
+- `Silbo_Competitive_Strategy_README.txt`
+
+Strategic answer in one sentence: **do not compete as another fixed directory of team calendar
+feeds; win as the neutral sports schedule compiler.** Silbo should let a fan, family, organizer,
+publisher, or small rights holder express the living sports schedule they actually need, then sync,
+export, print, share, embed, or alert on it without betting, fantasy, or stats-app clutter.
+
+### 11.1 Competitive Position
+
+The reviewed market splits into five businesses:
+
+1. **Calendar-feed catalogues** (`Sync2Cal`, `SportsCal`, `Fixtur.es`): win with search, breadth,
+   one-tap subscription, and trust that events stay updated.
+2. **Static export utilities** (`Your Sports Calendar`, `Matchesio`, open ICS repos): win with no
+   login, CSV/PDF/ICS, dashboard/print use, and immediate file delivery.
+3. **League/tournament schedulers** (`LeagueLobster`, AI schedulers): win with deterministic
+   pairing/venue constraints and organizer switching costs.
+4. **Team/club operating systems** (`TeamSnap`, `SportsEngine`, `LeagueApps`): win through
+   organization-mandated adoption, registration, payments, roster, chat, and RSVP bundles.
+5. **Calendar-marketing infrastructure** (`ECAL`, `AddEvent`, `Teamup`): win with branded sync
+   channels, analytics, localization, APIs, enterprise reliability, and permissions.
+
+Silbo's wedge is the intersection none of them fully owns: professional + local/custom schedules,
+multi-sport follows, live feeds, static exports, uncertainty-aware event modeling, multilingual UI,
+and future schedule rules/recipes from one normalized event model.
+
+### 11.2 Immediate Foundation Gates
+
+Treat these as release gates before scaling acquisition:
+
+- **Feed correctness and first-party delivery:** fix placeholder/TBD feed semantics for truly null
+  `starts_at`, implement `include_broadcasts`, proxy calendar URLs through
+  `https://silbosports.com/cal/...`, and set one canonical `APP_URL` everywhere.
+- **Feed health and key management:** store last successful feed access, provider freshness,
+  generation status, stale warnings, revoke/rotate controls, and a client-specific polling
+  expectation note. Keep raw feed tokens unrecoverable.
+- **Product analytics:** instrument anonymous and signed-in funnels before paid acquisition:
+  first follow, first preview, first export, feed creation, feed activation, alert opt-in,
+  collection creation, import success/failure, and week-4 retained scheduler.
+- **Provider independence:** keep TheSportsDB as low-cost breadth/artwork/fallback, but introduce a
+  provider adapter + field-level provenance layer and a second provider shadow scorecard before
+  promising premium coverage.
+- **Rights and allowed-use registry:** track which providers/leagues allow public pages, feeds,
+  exports, embeds, screenshots, affiliate links, and API redistribution.
+- **Architecture/documentation hygiene:** archive superseded naming/status docs and generate status
+  docs from source where possible so product claims do not drift.
+
+### 11.3 Product Objectives Added By The Competitive Review
+
+Highest-leverage objectives to merge into the existing backlog:
+
+- **No-account live preview + quick export:** show enough value before signup, then convert after a
+  useful export/feed exists.
+- **Named Silbo Collections:** turn raw follows into saved collections like "Canada + Brazil World
+  Cup nights", "F1 weekends", or "family hockey + Leafs". Collections should power feeds, alerts,
+  exports, share links, and future rules.
+- **One export schema, many formats:** add CSV, JSON, XLSX, true PDF/print, and saved export
+  recipes beside ICS, PNG, and Notes. Export recipes should remember fields, language, layout,
+  accessibility/quiet mode, and branding.
+- **Schedule compiler rules:** build toward union/intersection/exclusion rules, time windows,
+  round/session filters, "only finals", "no events after 11pm", and "winner of this slot" logic.
+- **Change intelligence:** alert on meaningful diffs, not just raw updates: time moved, venue
+  changed, opponent resolved, broadcast added/removed, status postponed/cancelled, or confidence
+  changed.
+- **Import workflows:** ICS/CSV first, then assisted image/PDF extraction. Always include mapping,
+  preview, validation, and reversible commits.
+- **Custom league normalization:** keep the local-first ease, but normalize active custom teams,
+  events, roles, audit history, constraints, generators, and publish state instead of depending on
+  JSON payloads for long-lived operational data.
+- **Direct calendar connectors:** after feed reliability, offer optional least-privilege Google and
+  Outlook calendar creation while keeping portable ICS as the universal fallback.
+- **Embeds / white-label publish widgets:** after rights controls, pilot a small "Silbo Sync" widget
+  for clubs, publishers, and community organizers.
+- **Public request + correction queue:** turn missing coverage and corrections into demand signals,
+  with evidence links, review status, and accountability.
+
+### 11.4 Data And Hydration Implications
+
+The competitive review changes the data plan from "more leagues" to **measured source quality**:
+
+- Add field-level provenance for important event fields (`starts_at`, venue, competitors, status,
+  broadcast, round/session, artwork): source provider, source id, last checked, confidence,
+  allowed-use class, and discrepancy state.
+- Keep `events.source_confidence` for simple display, but add a lower-level provenance/discrepancy
+  table before the second provider becomes authoritative.
+- Use **API-Sports** as the most likely second-provider shadow candidate across high-demand sports;
+  use **Sportmonks** selectively for premium football depth; reserve **Sportradar** for future
+  official/enterprise coverage when revenue justifies procurement.
+- Backfill `broadcasts`/watch links regionally before leaning on affiliate revenue. The useful unit
+  is "viewer in region X with service Y", not a generic TV string.
+- Add data quality SLOs and a public/internal coverage status view: freshness, stale minutes,
+  target failures, confidence distribution, correction turnaround, and provider disagreement rate.
+- Continue the World Cup dedupe objective: retire or bridge the `worldcup_json` planner path so
+  2026 soccer runs from the same DB-backed/provider-provenance model as the rest of Silbo.
+
+### 11.5 Monetization Direction
+
+Principle: charge for ongoing coordination, reliability, and workflow depth; keep basic fixture
+access portable and useful.
+
+- **Free:** browse, basic follows, one live feed, limited collections, basic ICS/PNG/text, ten-event
+  preview, and small community-league limits.
+- **Silbo Plus:** test US$24-36/year for unlimited collections/feeds, CSV/JSON/XLSX/PDF, advanced
+  rules, change intelligence, watch preferences, visual packs, and priority requests.
+- **Silbo Family:** test US$48-60/year for household profiles, shared schedules, travel buffers,
+  conflict rules, and quiet/accessibility profiles.
+- **Silbo Organizer:** test US$9-29/month or event-volume pricing for imports, generators, roles,
+  RSVP, public pages, embeds, custom branding/domain, and operational alerts.
+- **Silbo Publish/API:** test US$99-599+/month for white-label sync selectors, API/webhooks,
+  analytics, localization, official badges, SLA, and multi-admin publishing.
+
+Avoid dense display ads in the schedule flow, betting affiliate dependence, per-team consumer
+pricing, opaque small-club quotes, and locking users out of static/historical exports after
+cancellation.
+
+### 11.6 Twelve-Month Roadmap Overlay
+
+- **0-30 days:** feed semantics, first-party feed URL, token/key controls, analytics, rights
+  registry, architecture docs.
+- **31-90 days:** provider adapter, second-provider shadow scorecard, no-account preview,
+  CSV/JSON/XLSX/PDF, named Collections, correction/request queue, visible confidence, web push,
+  data SLOs.
+- **60-180 days:** saved compiler rules, optional Google/Outlook connectors, regional watch data,
+  SEO discovery pages as product surfaces, change-diff alerts, imports, roles, entity
+  localization/transliteration, uncertainty everywhere, accessible/quiet exports, subscription
+  billing.
+- **90-240 days:** deterministic grassroots schedule generator, assisted image/PDF import,
+  conversational setup wrapper around the solver, RSVP/availability, embeds/white-label pilot,
+  Organizer pricing.
+- **180-365 days:** public API/webhooks, household plan, Silbo Travel prototype, saved visual packs
+  and template marketplace.
+
+### 11.7 KPI Set
+
+Track success by product behavior, not only traffic:
+
+- Activation: visitor -> first follow/preview/export/feed; no-account preview -> account conversion.
+- Reliability: feed-option test pass rate, stale-event rate, feed fetch success, provider freshness,
+  token rotations without support, correction turnaround.
+- Retention: week-4 retained schedulers, collections per activated user, feeds per active user,
+  alert open/action rate, export recipe reuse.
+- Coverage: priority-league completeness, provider disagreement rate, confidence distribution,
+  request-driven coverage closed.
+- Monetization: paid conversion, ARPU, churn, Organizer publish conversion, B2B MRR, affiliate
+  click-through with complaint rate guardrails.
