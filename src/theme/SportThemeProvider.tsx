@@ -31,6 +31,8 @@ export function SportThemeProvider({ theme, children }: PropsWithChildren<{ them
           '--color-secondary': theme.colors.secondary,
           '--color-accent': theme.colors.accent,
           '--color-export': theme.colors.export,
+          '--color-ticket-stub': theme.colors.ticketStub,
+          '--color-ticket-stub-text': theme.colors.ticketStubText,
         } as CSSProperties
       }
     >
