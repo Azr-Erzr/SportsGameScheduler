@@ -2287,10 +2287,14 @@
     background-size: contain;
     opacity: 0.78;
     mix-blend-mode: multiply;
+    /* Watercolour bloom: a soft primary + accent halo bleeds the pigment past the brush edges onto
+       the paper (the light-mode mirror of dark mode's neon glow), so the art sits IN the page
+       instead of stamped on it. */
     filter:
-      drop-shadow(0 2px 0 rgba(29, 24, 18, 0.16))
-      drop-shadow(0 12px 18px rgba(29, 24, 18, 0.16))
-      drop-shadow(0 0 14px color-mix(in srgb, var(--mp-primary) 16%, transparent));
+      drop-shadow(0 2px 0 rgba(29, 24, 18, 0.14))
+      drop-shadow(0 12px 18px rgba(29, 24, 18, 0.14))
+      drop-shadow(0 0 18px color-mix(in srgb, var(--mp-primary) 34%, transparent))
+      drop-shadow(0 0 40px color-mix(in srgb, var(--mp-accent) 20%, transparent));
     -webkit-mask-repeat: no-repeat;
     mask-repeat: no-repeat;
     -webkit-mask-position: center;
@@ -2315,8 +2319,13 @@
     background-image:
       radial-gradient(
         ellipse at var(--sport-channel-icon-wash-x, 50%) var(--sport-channel-icon-wash-y, 58%),
-        color-mix(in srgb, var(--mp-primary) 60%, #1d1812) 0 14%,
-        transparent 38%
+        color-mix(in srgb, var(--mp-primary) 62%, #1d1812) 0 14%,
+        transparent 40%
+      ),
+      radial-gradient(
+        ellipse at 74% 82%,
+        color-mix(in srgb, var(--mp-accent) 52%, #1d1812) 0 12%,
+        transparent 44%
       ),
       linear-gradient(135deg, rgba(29, 24, 18, 0.97), color-mix(in srgb, var(--mp-ticket-stub) 34%, #1d1812));
     opacity: 0.84;
@@ -2363,15 +2372,21 @@
     background-image:
       radial-gradient(
         ellipse at var(--sport-channel-action-wash-x, 56%) var(--sport-channel-action-wash-y, 54%),
-        color-mix(in srgb, var(--mp-primary) 64%, #1d1812) 0 14%,
-        transparent 40%
+        color-mix(in srgb, var(--mp-primary) 66%, #1d1812) 0 14%,
+        transparent 42%
+      ),
+      radial-gradient(
+        ellipse at 30% 78%,
+        color-mix(in srgb, var(--mp-accent) 52%, #1d1812) 0 12%,
+        transparent 46%
       ),
       linear-gradient(135deg, rgba(29, 24, 18, 0.98), color-mix(in srgb, var(--mp-ticket-stub) 38%, #1d1812));
     opacity: 0.88;
     filter:
-      drop-shadow(0 3px 0 rgba(29, 24, 18, 0.16))
-      drop-shadow(0 18px 24px rgba(29, 24, 18, 0.2))
-      drop-shadow(0 0 16px color-mix(in srgb, var(--mp-primary) 18%, transparent));
+      drop-shadow(0 3px 0 rgba(29, 24, 18, 0.14))
+      drop-shadow(0 18px 24px rgba(29, 24, 18, 0.18))
+      drop-shadow(0 0 20px color-mix(in srgb, var(--mp-primary) 32%, transparent))
+      drop-shadow(0 0 42px color-mix(in srgb, var(--mp-accent) 20%, transparent));
     -webkit-mask-image: var(--sport-channel-action);
     mask-image: var(--sport-channel-action);
     /* Contain so the WHOLE figure shows at its natural size, fit to the banner height — not
