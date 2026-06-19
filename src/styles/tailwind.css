@@ -1945,16 +1945,6 @@
     opacity: 0.3;
   }
 
-  .sport-channel-banner::after {
-    content: '';
-    position: absolute;
-    inset: auto 18px 12px;
-    height: 3px;
-    pointer-events: none;
-    z-index: 3;
-    background: linear-gradient(90deg, var(--mp-primary), var(--mp-accent), var(--mp-export), transparent);
-    opacity: 0.72;
-  }
 
   .sport-channel-panel,
   .sport-channel-title,
@@ -2186,10 +2176,6 @@
     opacity: 0.75;
   }
 
-  [data-paper] .sport-channel-banner::after {
-    background: linear-gradient(90deg, var(--mp-primary), var(--mp-accent), var(--mp-export), transparent);
-    opacity: 0.52;
-  }
 
   [data-paper] .sport-channel-panel {
     min-height: var(--sport-channel-art-height);

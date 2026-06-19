@@ -1,6 +1,5 @@
 import { CalendarDays, Copy, Download, FileImage, Share2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { useAppState } from '../app/state-context'
 import { cityLabelFor } from '../lib/cities'
 import { Button, Panel, PanelHeading } from '../components/ui'
@@ -15,6 +14,7 @@ import { MAX_EVENTS_BY_TEMPLATE, paginateEvents, type ExportTemplate } from '../
 import { canvasToBlob, createScheduleCanvas } from '../lib/poster'
 import { formatDate, formatTime } from '../lib/time'
 import { posterChromeTheme } from '../theme/themes'
+import { CalendarFeedsPage } from './CalendarFeeds'
 
 const templates: Array<{ key: ExportTemplate; labelKey: string; hint: string }> = [
   { key: 'story', labelKey: 'export.template.story', hint: '7 events/page' },
@@ -23,8 +23,11 @@ const templates: Array<{ key: ExportTemplate; labelKey: string; hint: string }> 
   { key: 'family', labelKey: 'export.template.family', hint: '6 events/page' },
 ]
 
+type ExportMode = 'static' | 'sync'
+
 export function ExportStudioPage() {
   const { followedTeams, followedLeagueIds, followedCompetitorIds, prefs } = useAppState()
+  const [mode, setMode] = useState<ExportMode>('static')
   const [template, setTemplate] = useState<ExportTemplate>('poster')
   const [message, setMessage] = useState('')
 
@@ -115,7 +118,17 @@ export function ExportStudioPage() {
       </div>
 
       <Panel className="grid gap-3 md:grid-cols-2">
-        <Link to="/calendar" className="rounded-xl border border-primary/20 bg-page/60 p-4 transition-colors hover:bg-primary/5">
+        <button
+          type="button"
+          data-testid="export-mode-sync"
+          aria-pressed={mode === 'sync'}
+          onClick={() => setMode('sync')}
+          className={`rounded-xl border p-4 text-left transition-colors ${
+            mode === 'sync'
+              ? 'border-primary/50 bg-primary/10'
+              : 'border-primary/20 bg-page/60 hover:bg-primary/5'
+          }`}
+        >
           <div className="flex items-center gap-2 text-primary">
             <CalendarDays size={18} />
             <h2 className="font-bold">{t('export.liveSync', undefined, prefs.locale)}</h2>
@@ -123,8 +136,18 @@ export function ExportStudioPage() {
           <p className="mt-2 text-sm text-ink/62">
             {t('export.liveSyncBody', undefined, prefs.locale)}
           </p>
-        </Link>
-        <div className="rounded-xl border border-export/30 bg-export/10 p-4">
+        </button>
+        <button
+          type="button"
+          data-testid="export-mode-static"
+          aria-pressed={mode === 'static'}
+          onClick={() => setMode('static')}
+          className={`rounded-xl border p-4 text-left transition-colors ${
+            mode === 'static'
+              ? 'border-export/50 bg-export/10'
+              : 'border-export/25 bg-page/60 hover:bg-export/8'
+          }`}
+        >
           <div className="flex items-center gap-2 text-export">
             <FileImage size={18} />
             <h2 className="font-bold">{t('export.staticPacks', undefined, prefs.locale)}</h2>
@@ -132,9 +155,12 @@ export function ExportStudioPage() {
           <p className="mt-2 text-sm text-ink/62">
             {t('export.staticPacksBody', undefined, prefs.locale)}
           </p>
-        </div>
+        </button>
       </Panel>
 
+      {mode === 'sync' ? (
+        <CalendarFeedsPage embedded />
+      ) : (
       <div className="grid gap-4 lg:grid-cols-[340px_1fr]">
         <div className="space-y-4">
           <Panel>
@@ -236,6 +262,7 @@ export function ExportStudioPage() {
           )}
         </Panel>
       </div>
+      )}
     </div>
   )
 }

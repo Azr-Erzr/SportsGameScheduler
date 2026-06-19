@@ -42,38 +42,40 @@ function ProgramCoverCard({
 }) {
   const theme = withSurfaceMode(getTheme(event.sportKey), surfaceMode)
   const live = event.label === 'Live now'
+  const statusColor = live ? 'var(--color-flap-ok)' : index % 2 ? 'var(--color-flap-tbd)' : 'var(--color-flap-chg)'
 
   return (
-    <Link to={event.href} className="w-[270px] min-w-[270px] snap-start sm:w-[320px] sm:min-w-[320px]">
+    <Link to={event.href} className="w-[286px] min-w-[286px] snap-start sm:w-[344px] sm:min-w-[344px]">
       <article
-        className="group relative h-[178px] overflow-hidden rounded-card border-2 bg-surface p-4 transition-transform hover:-translate-y-1"
+        className="group relative h-[152px] overflow-hidden border-y border-r bg-surface/72 px-4 py-3 transition-colors hover:bg-primary/6"
         style={{
-          borderColor: `${theme.colors.primary}55`,
-          boxShadow: `inset 0 0 0 1px ${theme.colors.primary}14`,
+          borderColor: `${theme.colors.primary}44`,
+          borderLeft: `5px solid ${theme.colors.primary}`,
+          clipPath: 'polygon(0 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 0 100%)',
         }}
       >
-        <div
-          className="absolute -right-14 -top-20 h-52 w-52 rounded-full opacity-25 transition-transform group-hover:scale-110"
-          style={{
-            background: `repeating-radial-gradient(circle, ${theme.colors.primary} 0 7px, transparent 7px 23px, ${theme.colors.accent} 23px 28px, transparent 28px 46px)`,
-          }}
-          aria-hidden="true"
-        />
+        <div className="absolute inset-x-0 top-0 h-px opacity-70" style={{ background: theme.colors.primary }} aria-hidden="true" />
         <div className="relative flex h-full flex-col justify-between">
-          <div className="flex items-start justify-between gap-3">
-            <span className={`flap ${live ? 'flap-ok' : index % 2 ? 'flap-tbd' : 'flap-chg'}`}>
+          <div className="flex items-center justify-between gap-3">
+            <span
+              className="font-mono text-[10px] font-bold uppercase tracking-[0.2em]"
+              style={{ color: statusColor }}
+            >
               {event.label}
             </span>
-            <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-ink/40">
+            <span className="font-mono text-[10px] uppercase tracking-[0.24em] text-ink/35">
               Ch {String(index + 1).padStart(2, '0')}
             </span>
           </div>
           <div>
-            <div className="mb-3 h-1.5 w-20 rounded-full" style={{ background: theme.colors.primary }} aria-hidden="true" />
-            <h3 className="max-w-[15rem] text-xl font-black leading-tight" style={{ color: theme.colors.primary }}>
+            <div className="mb-3 grid grid-cols-[2.75rem_1fr] items-center gap-3" aria-hidden="true">
+              <span className="h-px" style={{ background: theme.colors.primary }} />
+              <span className="h-px bg-ink/10" />
+            </div>
+            <h3 className="max-w-[17rem] text-[1.05rem] font-black leading-tight sm:text-lg" style={{ color: theme.colors.primary }}>
               {event.title}
             </h3>
-            <p className="mt-2 text-sm text-ink/62">{event.detail}</p>
+            <p className="mt-2 line-clamp-2 text-[13px] leading-relaxed text-ink/62">{event.detail}</p>
           </div>
         </div>
       </article>

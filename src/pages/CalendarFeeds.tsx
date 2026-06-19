@@ -27,7 +27,7 @@ async function sha256Hex(value: string): Promise<string> {
     .join('')
 }
 
-export function CalendarFeedsPage() {
+export function CalendarFeedsPage({ embedded = false }: { embedded?: boolean } = {}) {
   const { followedLeagueIds, followedCompetitorIds, prefs, auth } = useAppState()
   const [feeds, setFeeds] = useState<CalendarFeed[]>(() => getFeeds())
   const [name, setName] = useState('My sports schedule')
@@ -180,13 +180,15 @@ export function CalendarFeedsPage() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-xl font-extrabold text-primary">Silbo Sync</h1>
-        <p className="text-sm text-ink/60">
-          A <strong>subscribed calendar feed</strong> keeps itself up to date when match times change. A
-          one-time <strong>.ics download</strong> is just a snapshot. Prefer feeds for anything ongoing.
-        </p>
-      </div>
+      {!embedded && (
+        <div>
+          <h1 className="text-xl font-extrabold text-primary">Silbo Sync</h1>
+          <p className="text-sm text-ink/60">
+            A <strong>subscribed calendar feed</strong> keeps itself up to date when match times change. A
+            one-time <strong>.ics download</strong> is just a snapshot. Prefer feeds for anything ongoing.
+          </p>
+        </div>
+      )}
 
       <div className="grid min-w-0 gap-4 lg:grid-cols-[360px_minmax(0,1fr)]">
         <Panel className="min-w-0 h-fit">
