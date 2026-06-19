@@ -204,11 +204,88 @@
     overflow: visible;
   }
 
+  .silbo-mark {
+    color: var(--silbo-color, var(--mp-primary));
+    filter:
+      drop-shadow(0 0 4px color-mix(in srgb, var(--silbo-color, var(--mp-primary)) 58%, transparent))
+      drop-shadow(0 0 15px color-mix(in srgb, var(--silbo-color, var(--mp-primary)) 30%, transparent));
+  }
+
+  .silbo-trace-mark {
+    position: relative;
+    display: inline-block;
+    flex: 0 0 auto;
+    color: var(--silbo-color, var(--mp-primary));
+    transform: translateZ(0);
+  }
+
+  .silbo-trace-mark::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: currentColor;
+    -webkit-mask-image: url('/assets/brand/silbo-whistle-trace.svg');
+    mask-image: url('/assets/brand/silbo-whistle-trace.svg');
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-position: center;
+    -webkit-mask-size: contain;
+    mask-size: contain;
+  }
+
+  .silbo-orbit-fill {
+    opacity: 0.96;
+  }
+
+  .silbo-whistle-line,
+  .silbo-chamber-ring,
+  .silbo-chamber-inner,
+  .signal-arc {
+    vector-effect: non-scaling-stroke;
+  }
+
+  .silbo-chamber-inner {
+    opacity: 0.9;
+  }
+
+  .signal-arc {
+    opacity: 0.96;
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+
+  .signal-arc.s2 {
+    opacity: 0.82;
+  }
+
+  .signal-arc.s3 {
+    opacity: 0.68;
+  }
+
+  [data-paper] .silbo-mark {
+    filter: drop-shadow(0 1px 0 rgba(29, 24, 18, 0.16));
+  }
+
+  [data-paper] .silbo-orbit-fill {
+    opacity: 0.9;
+  }
+
+  [data-paper] .signal-arc {
+    opacity: 0.82;
+  }
+
   .silbo-channel-badge {
     --silbo-color: var(--mp-primary);
     border-radius: 999px;
-    overflow: hidden;
+    overflow: visible;
     transform-origin: center;
+  }
+
+  .silbo-channel-badge svg {
+    filter:
+      drop-shadow(0 0 3px color-mix(in srgb, var(--silbo-color) 44%, transparent))
+      drop-shadow(0 0 10px color-mix(in srgb, var(--silbo-color) 22%, transparent));
   }
 
   .sport-switcher-trigger:active {
@@ -219,6 +296,27 @@
   .sport-switcher-menu,
   .auth-popover {
     animation: silbo-pop-in 180ms ease-out both;
+  }
+
+  .sport-switcher-mark {
+    position: relative;
+    isolation: isolate;
+    min-width: 58px;
+  }
+
+  .sport-switcher-mark::before {
+    content: '';
+    position: absolute;
+    inset: -18%;
+    z-index: -1;
+    border-radius: 999px;
+    background:
+      radial-gradient(circle, color-mix(in srgb, var(--silbo-color, var(--mp-primary)) 24%, transparent), transparent 68%);
+    opacity: 0.9;
+  }
+
+  [data-paper] .sport-switcher-mark::before {
+    opacity: 0.34;
   }
 
   .sport-switcher-menu .channel-tile {
@@ -501,10 +599,6 @@
     transform: scale(1);
   }
 
-  .silbo-whistle-line {
-    vector-effect: non-scaling-stroke;
-  }
-
   .silbo-sheen {
     position: absolute;
     inset: 0;
@@ -520,21 +614,6 @@
   button:hover .silbo-channel-badge .silbo-sheen,
   a:hover .silbo-channel-badge .silbo-sheen {
     animation: silbo-sheen 900ms ease-out;
-  }
-
-  .signal-arc {
-    opacity: 0.9;
-    transform-box: fill-box;
-    transform-origin: center;
-  }
-
-  .signal-arc.s2 {
-    opacity: 0.72;
-  }
-
-  .silbo-clock-hand {
-    transform-box: fill-box;
-    transform-origin: 44.5px 32.5px;
   }
 
   @keyframes ticket-open {
@@ -994,44 +1073,41 @@
     box-shadow: 0 6px 14px rgba(29, 24, 18, 0.14);
   }
 
-  /* Continuous ambient bob. Animates `transform` only (keeps the -50%/-50% centering), so it
-     composes with the `translate`-based entrance below. Transform animations run on the
-     compositor in every engine (incl. Firefox), so this is cheap even on weaker devices. */
-  @keyframes pip-float {
-    0%,
-    100% {
-      transform: translate(-50%, -50%) rotate(-1.5deg);
+  /* The pips wait hovering above their cards, then drop down and settle when the board scrolls
+     into view (JS adds `.is-revealed` via IntersectionObserver). This is a ONE-TIME entrance with
+     NO perpetual animation: a continuous bob was repainting the heavy gradient board every frame
+     in Firefox (it doesn't layer-promote the pips like Chromium) and roughly halved its FPS. The
+     drop rides the `translate` property; the `transform` centering (-50%/-50%) is left untouched.
+     Universal — no scroll-driven timeline, no @supports gate — so it behaves the same in every
+     engine. */
+  @keyframes pip-drop {
+    0% {
+      translate: calc(var(--pip-x, 0px) * 0.55) calc(var(--pip-y, -280px) * 0.52);
     }
-    50% {
-      transform: translate(-50%, -64%) rotate(1.5deg);
+    78% {
+      translate: 0px 7px; /* slight overshoot below the resting point, then settle */
+    }
+    100% {
+      translate: 0px 0px;
     }
   }
 
-  /* UNIVERSAL pip motion — no scroll-driven timeline, no @supports gate, so it behaves
-     identically in Chromium, Firefox, Safari, and mobile. Pips drift up in the orbit zone and
-     gently bob; when the board scrolls into view the JS adds `.is-revealed` (IntersectionObserver)
-     and they settle onto their cards. `translate` (entrance) and `transform` (bob) are independent
-     properties, so the two compose without fighting. */
   @media (prefers-reduced-motion: no-preference) {
+    /* Default (board not yet scrolled to): pips hover up in the orbit zone above their cards. */
     .poster-pip {
-      animation: pip-float 5s ease-in-out infinite;
-      /* Desync each pip so they don't bob in lockstep. */
-      animation-delay: calc(var(--pip-index, 0) * -0.8s);
-      /* Start scattered in the orbit zone (scaled so it stays within the board's clip). */
-      translate: calc(var(--pip-x, 0px) * 0.55) calc(var(--pip-y, -280px) * 0.5);
-      transition: translate 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+      translate: calc(var(--pip-x, 0px) * 0.55) calc(var(--pip-y, -280px) * 0.52);
     }
 
     .global-event-board.is-revealed .poster-pip {
-      translate: 0px 0px;
-      transition-delay: calc(var(--pip-index, 0) * 70ms);
+      animation: pip-drop 1.05s cubic-bezier(0.3, 0.9, 0.3, 1) forwards;
+      /* Stagger so they rain down one after another. */
+      animation-delay: calc(var(--pip-index, 0) * 95ms);
     }
   }
 
-  /* Respect reduced-motion: no bob, no drift — pips just sit landed on their cards. */
+  /* Reduced motion: no hover, no drop — pips simply rest on their cards. */
   @media (prefers-reduced-motion: reduce) {
     .poster-pip {
-      animation: none;
       translate: 0px 0px;
     }
   }
@@ -1945,17 +2021,6 @@
     opacity: 0.3;
   }
 
-  .sport-channel-banner::after {
-    content: '';
-    position: absolute;
-    inset: auto 18px 12px;
-    height: 3px;
-    pointer-events: none;
-    z-index: 3;
-    background: linear-gradient(90deg, var(--mp-primary), var(--mp-accent), var(--mp-export), transparent);
-    opacity: 0.72;
-  }
-
   .sport-channel-panel,
   .sport-channel-title,
   .sport-channel-copy {
@@ -2050,15 +2115,29 @@
     background-size: cover;
     mix-blend-mode: normal;
     filter: saturate(1.04) contrast(1.03) drop-shadow(0 0 14px color-mix(in srgb, var(--mp-primary) 20%, transparent));
-    /* Full banner-height: horizontal feather only (left blends into the centre field, right bleeds
-       off the edge); top & bottom stay solid so the scene fills the whole height. The cream scene
-       edges blend into the matching pale field, so no vertical feather is needed. */
-    -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 18%, #000 100%);
-    mask-image: linear-gradient(90deg, transparent 0, #000 18%, #000 100%);
+    /* Fills the banner height: left feather blends into the centre field, right bleeds off the
+       edge. A gentle top/bottom feather dissolves the cream WebP border line into the field (and at
+       the top-right reveals the dark corner vignette), cleaning the "hint of cream" on creamier
+       scenes (combat/basketball) without losing the full-height read. */
+    -webkit-mask-image:
+      linear-gradient(90deg, transparent 0, #000 18%, #000 100%),
+      linear-gradient(180deg, transparent 0, #000 6%, #000 94%, transparent 100%);
+    -webkit-mask-composite: source-in;
+    mask-image:
+      linear-gradient(90deg, transparent 0, #000 18%, #000 100%),
+      linear-gradient(180deg, transparent 0, #000 6%, #000 94%, transparent 100%);
+    mask-composite: intersect;
   }
 
+  /* Tones the cream-backed scenes (combat/basketball) toward the dark field at the top/bottom/right
+     edges so the banner reads dark like soccer, instead of cream "coming up" at the boundary. The
+     left/centre is left clear so the scene blends into the pale title band and the neon survives. */
   .sport-channel-action-panel::after {
-    background: none;
+    background:
+      linear-gradient(180deg, color-mix(in srgb, var(--scf-deep) 62%, transparent) 0, transparent 24%, transparent 80%, color-mix(in srgb, var(--scf-deep) 62%, transparent) 100%),
+      linear-gradient(90deg, transparent 0 66%, color-mix(in srgb, var(--scf-deep) 54%, transparent) 100%);
+    mix-blend-mode: multiply;
+    opacity: 0.6;
   }
 
   .sport-channel-title {
@@ -2170,7 +2249,12 @@
   [data-paper] .sport-channel-banner {
     --sport-channel-ink: var(--sport-channel-paper-ink);
     min-height: calc(var(--sport-channel-art-height) + var(--sport-channel-pad) + var(--sport-channel-pad) + 2px);
-    border-color: color-mix(in srgb, var(--mp-primary) 24%, rgba(29, 24, 18, 0.12));
+    /* Let the inked brush art spill a touch past the banner edges — the imperfect brush-stroke
+       style reads better breaking the frame than clipped square. (Broadcast keeps overflow hidden
+       to clip its bled WebP art.) */
+    overflow: visible;
+    /* Softer border so the brush art that hangs over it blends rather than getting a hard line. */
+    border-color: color-mix(in srgb, var(--mp-primary) 12%, rgba(29, 24, 18, 0.04));
     background:
       radial-gradient(ellipse at 86% 36%, color-mix(in srgb, var(--mp-primary) 15%, transparent), transparent 38%),
       radial-gradient(ellipse at 16% 62%, color-mix(in srgb, var(--mp-primary) 11%, transparent), transparent 34%),
@@ -2186,11 +2270,6 @@
     opacity: 0.75;
   }
 
-  [data-paper] .sport-channel-banner::after {
-    background: linear-gradient(90deg, var(--mp-primary), var(--mp-accent), var(--mp-export), transparent);
-    opacity: 0.52;
-  }
-
   [data-paper] .sport-channel-panel {
     min-height: var(--sport-channel-art-height);
     background:
@@ -2199,11 +2278,10 @@
       transparent;
     border-color: transparent;
     box-shadow: none;
-    /* Fill the full banner height in light mode too: feather only on the sides into the paper
-       (vertical stays solid) so the inked art zone lines up with the banner background instead of
-       floating with paper above and below it — mirrors the broadcast full-height treatment. */
-    -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 11%, #000 89%, transparent 100%);
-    mask-image: linear-gradient(90deg, transparent 0, #000 11%, #000 89%, transparent 100%);
+    /* No box mask: the brush PNGs already have soft splattered alpha edges, so they blend into the
+       paper on their own AND can hang past the banner border (a box mask would clip the spill). */
+    -webkit-mask-image: none;
+    mask-image: none;
   }
 
   [data-paper] .sport-channel-panel::before {
@@ -2251,6 +2329,12 @@
     opacity: 0.84;
     -webkit-mask-image: var(--sport-channel-icon);
     mask-image: var(--sport-channel-icon);
+    /* Cover so the brush fills the zone at natural framing (the size of the banner, like dark
+       soccer) instead of being scaled/zoomed in place. */
+    -webkit-mask-size: cover;
+    -webkit-mask-position: center;
+    mask-size: cover;
+    mask-position: center;
   }
 
   [data-paper] .sport-channel-icon-panel {
@@ -2282,7 +2366,8 @@
   }
 
   [data-paper] .sport-channel-action-panel::before {
-    inset: -2%;
+    /* Box extends past the bottom edge so the cover-filled brush hangs over the border. */
+    inset: -2% -2% -14% -2%;
     background-image:
       radial-gradient(
         ellipse at var(--sport-channel-action-wash-x, 56%) var(--sport-channel-action-wash-y, 54%),
@@ -2297,6 +2382,12 @@
       drop-shadow(0 0 16px color-mix(in srgb, var(--mp-primary) 18%, transparent));
     -webkit-mask-image: var(--sport-channel-action);
     mask-image: var(--sport-channel-action);
+    /* Cover (size of the banner, like dark soccer), TOP-anchored so the figure's top isn't cropped
+       and its bottom brush hangs past the border via the extended box + overflow:visible. */
+    -webkit-mask-size: cover;
+    -webkit-mask-position: 50% 0%;
+    mask-size: cover;
+    mask-position: 50% 0%;
   }
 
   [data-paper] .sport-channel-action-panel {
@@ -2838,7 +2929,6 @@
   .globe-signal {
     animation: none !important;
   }
-  .silbo-clock-hand,
   .silbo-channel-badge .silbo-sheen {
     animation: none !important;
   }

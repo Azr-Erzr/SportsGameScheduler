@@ -7,6 +7,7 @@ import { matchWatchProvider, watchLinkFor, WATCH_PROVIDERS } from '../lib/ads'
 import { exportFilename } from '../domain/brand'
 import { downloadBlob } from '../lib/clipboard'
 import { createMultiSportIcsBlob, sportEmoji } from '../lib/ics'
+import { t } from '../lib/i18n'
 import { SEO_ORIGIN, useDocumentMeta, useJsonLd } from '../lib/seo'
 import { formatLongDate, formatTime } from '../lib/time'
 
@@ -62,18 +63,18 @@ export function EventDetailPage() {
   )
 
   if (loading) {
-    return <p className="board-label py-10 text-center text-ink/50">Tuning channel…</p>
+    return <p className="board-label py-10 text-center text-ink/50">{t('event.loading', undefined, prefs.locale)}</p>
   }
 
   if (!configured) {
-    return <EmptyState title="Live data not configured" body="Connect Supabase to view event details." />
+    return <EmptyState title={t('event.liveNotConfiguredTitle', undefined, prefs.locale)} body={t('event.liveNotConfiguredBody', undefined, prefs.locale)} />
   }
 
   if (!event) {
     return (
-      <EmptyState title="Event not found" body="This event may have finished or been removed.">
+      <EmptyState title={t('event.notFoundTitle', undefined, prefs.locale)} body={t('event.notFoundBody', undefined, prefs.locale)}>
         <Link to="/my-schedule">
-          <Button variant="ghost">Back to My Schedule</Button>
+          <Button variant="ghost">{t('event.backSchedule', undefined, prefs.locale)}</Button>
         </Link>
       </EmptyState>
     )
@@ -82,7 +83,7 @@ export function EventDetailPage() {
   const timeOpts = { locale: prefs.locale, hour12: prefs.hour12 ?? undefined }
   const when = event.startsAt
     ? `${formatLongDate(event.startsAt, prefs.timezone, timeOpts)} · ${formatTime(event.startsAt, prefs.timezone, timeOpts)}`
-    : 'Time to be confirmed'
+    : t('event.timeTbd', undefined, prefs.locale)
   const venue = [event.venue, event.venueCity, event.venueCountry].filter(Boolean).join(', ')
   const leagueFollowed = event.leagueId ? followedLeagueIds.includes(event.leagueId) : false
   const regionCode = prefs.regionCode
@@ -94,7 +95,7 @@ export function EventDetailPage() {
   return (
     <div className="space-y-4">
       <Link to="/my-schedule" className="inline-flex items-center gap-1.5 text-sm text-ink/60 hover:text-primary">
-        <ArrowLeft size={15} /> Back to My Schedule
+        <ArrowLeft size={15} /> {t('event.backSchedule', undefined, prefs.locale)}
       </Link>
 
       <Panel className="space-y-3">
@@ -107,7 +108,7 @@ export function EventDetailPage() {
                   {event.leagueName}
                 </Link>
               ) : (
-                event.leagueName || 'Event'
+                event.leagueName || t('event.generic', undefined, prefs.locale)
               )}
             </p>
             <h1 className="text-2xl font-extrabold text-primary">{event.title}</h1>
@@ -135,18 +136,21 @@ export function EventDetailPage() {
               onClick={() => toggleFollow({ targetType: 'league', targetId: event.leagueId!, intent: 'watch' })}
             >
               <Star size={15} className={leagueFollowed ? 'fill-current' : ''} />
-              {leagueFollowed ? 'Following league' : 'Follow league'}
+              {leagueFollowed ? t('event.followingLeague', undefined, prefs.locale) : t('event.followLeague', undefined, prefs.locale)}
             </Button>
           )}
           <Button variant="ghost" onClick={exportIcs}>
-            <Download size={15} /> Add to calendar (.ics)
+            <Download size={15} /> {t('event.addCalendar', undefined, prefs.locale)}
           </Button>
         </div>
       </Panel>
 
       {event.competitors.length > 0 && (
         <Panel>
-          <PanelHeading title="Competitors" subtitle={`${event.competitors.length} in this event`} />
+          <PanelHeading
+            title={t('event.competitors', undefined, prefs.locale)}
+            subtitle={t('event.competitorsSubtitle', { count: event.competitors.length }, prefs.locale)}
+          />
           <ul className="space-y-1">
             {event.competitors.map((c) => {
               const following = followedCompetitorIds.includes(c.id)
@@ -178,7 +182,7 @@ export function EventDetailPage() {
       )}
 
       <Panel>
-        <PanelHeading title="Where to watch">
+        <PanelHeading title={t('home.watchTitle', undefined, prefs.locale)}>
           <Tv size={18} className="text-primary" />
         </PanelHeading>
         {event.broadcasts.length > 0 ? (
@@ -208,7 +212,7 @@ export function EventDetailPage() {
             })}
           </ul>
         ) : (
-          <WatchOptions regionCode={regionCode} />
+          <WatchOptions regionCode={regionCode} locale={prefs.locale} />
         )}
       </Panel>
     </div>
@@ -218,7 +222,7 @@ export function EventDetailPage() {
 // No specific broadcast yet: surface region-relevant streaming destinations. These are
 // affiliate links when an affiliate id is configured (see lib/ads.ts), with the required
 // disclosure. Useful even unmonetized — it answers "where could I watch this?".
-function WatchOptions({ regionCode }: { regionCode?: string | null }) {
+function WatchOptions({ regionCode, locale }: { regionCode?: string | null; locale?: string | null }) {
   const region = (regionCode ?? 'US').toUpperCase()
   const regional = WATCH_PROVIDERS.filter((p) => p.regions.includes(region))
   const providers = (regional.length ? regional : WATCH_PROVIDERS).slice(0, 5)
@@ -228,7 +232,7 @@ function WatchOptions({ regionCode }: { regionCode?: string | null }) {
   return (
     <div className="space-y-2">
       <p className="text-sm text-ink/55">
-        No confirmed broadcast yet. Common ways to watch in your region:
+        {t('event.watchNoBroadcast', undefined, locale)}
       </p>
       <div className="flex flex-wrap gap-2">
         {links.map((l) => (
@@ -245,8 +249,8 @@ function WatchOptions({ regionCode }: { regionCode?: string | null }) {
       </div>
       <p className="text-[11px] text-ink/40">
         {anyAffiliate
-          ? 'Some links are affiliate links — Silbo may earn a commission, at no cost to you.'
-          : 'Availability varies by region — check your local listings.'}
+          ? t('event.watchAffiliate', undefined, locale)
+          : t('event.watchAvailability', undefined, locale)}
       </p>
     </div>
   )

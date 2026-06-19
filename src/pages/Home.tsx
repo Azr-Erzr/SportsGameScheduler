@@ -18,110 +18,17 @@ import { GlobalEventBoard, PosterFeatureStrip } from '../components/PosterMotifs
 import { Button, Panel, PanelHeading } from '../components/ui'
 import { WorldClock } from '../components/WorldClock'
 import { deriveTeams, filterMatchesForTeams, useMatches } from '../data/liveMatches'
+import { useSpotlightEvents, type SpotlightEvent } from '../data/spotlight'
 import { brand } from '../domain/brand'
 import { associationFootballLabel, t } from '../lib/i18n'
 import { formatLongDate, formatTime } from '../lib/time'
 import { getTheme, withSurfaceMode } from '../theme/themes'
 
-// Spotlight ordering rule (locked): always rank by expected viewership/importance, highest
-// first. `importance` is 0-100 and maps onto the future spotlight_events.global_importance
-// column, so the backend-driven version inherits the same contract.
-const spotlightEvents = [
-  {
-    title: 'FIFA World Cup 2026',
-    sportKey: 'soccer',
-    label: 'Live now',
-    detail: 'Follow countries, bracket slots, and kickoff changes.',
-    href: '/sports/soccer',
-    importance: 100,
-  },
-  {
-    title: 'Formula 1 race weekends',
-    sportKey: 'motorsport',
-    label: 'Staged',
-    detail: 'Practice, qualifying, sprint, and race sessions.',
-    href: '/sports/f1',
-    importance: 84,
-  },
-  {
-    title: 'UFC / PFL fight cards',
-    sportKey: 'combat',
-    label: 'Model ready',
-    detail: 'Main cards, prelims, fighters, and late changes.',
-    href: '/sports/ufc',
-    importance: 72,
-  },
-  {
-    title: 'WNBA schedule tracking',
-    sportKey: 'basketball',
-    label: 'Source testing',
-    detail: 'TheSportsDB premium, SportsDataIO, and Sportradar candidates.',
-    href: '/sports/wnba',
-    importance: 55,
-  },
-  {
-    title: 'CFL and Grey Cup path',
-    sportKey: 'football',
-    label: 'Canada focus',
-    detail: 'Canadian kickoff times and broadcast-region fit.',
-    href: '/sports/cfl',
-    importance: 45,
-  },
-  {
-    title: 'NHL and world hockey nights',
-    sportKey: 'hockey',
-    label: 'Model ready',
-    detail: 'Puck drops, IIHF windows, and playoff calendar testing.',
-    href: '/sports/hockey',
-    importance: 42,
-  },
-  {
-    title: 'Grand slam watch windows',
-    sportKey: 'tennis',
-    label: 'Template ready',
-    detail: 'Player follows, court order, and day/night session exports.',
-    href: '/sports/tennis',
-    importance: 39,
-  },
-  {
-    title: 'Major golf weekend board',
-    sportKey: 'golf',
-    label: 'Template ready',
-    detail: 'Rounds, tee sheets, cuts, and final-day broadcast windows.',
-    href: '/sports/golf',
-    importance: 36,
-  },
-  {
-    title: 'Diamond League and trials',
-    sportKey: 'track',
-    label: 'Source testing',
-    detail: 'Heats, finals, start lists, and athlete-follow scheduling.',
-    href: '/sports/track',
-    importance: 32,
-  },
-  {
-    title: 'Olympic sports capsule',
-    sportKey: 'olympic',
-    label: 'Source testing',
-    detail: 'Swimming, gymnastics, medal events, and federation feeds.',
-    href: '/sports/olympic',
-    importance: 30,
-  },
-  {
-    title: 'Community league schedules',
-    sportKey: 'custom',
-    label: 'On air',
-    detail: 'Create local schedules for families, teams, and clubs.',
-    href: '/custom-leagues',
-    importance: 24,
-  },
-].sort((a, b) => b.importance - a.importance)
-
 const exportPaths = [
-  { icon: CalendarDays, title: 'Live calendar feeds', body: 'Subscribe once and let schedule changes update in place.' },
-  { icon: Camera, title: 'Photo schedules', body: 'Readable poster exports for Photos, messages, and group chats.' },
-  { icon: FileText, title: 'Notes text', body: 'Clean plain text grouped for notes, email, or family planning.' },
-  { icon: Bell, title: 'Email and push alerts', body: 'Reminder and change alerts without SMS in the MVP.' },
+  { icon: CalendarDays, titleKey: 'home.export.liveTitle', bodyKey: 'home.export.liveBody' },
+  { icon: Camera, titleKey: 'home.export.photoTitle', bodyKey: 'home.export.photoBody' },
+  { icon: FileText, titleKey: 'home.export.notesTitle', bodyKey: 'home.export.notesBody' },
+  { icon: Bell, titleKey: 'home.export.alertsTitle', bodyKey: 'home.export.alertsBody' },
 ]
 
 function ProgramCoverCard({
@@ -129,44 +36,46 @@ function ProgramCoverCard({
   index,
   surfaceMode,
 }: {
-  event: (typeof spotlightEvents)[number]
+  event: SpotlightEvent
   index: number
   surfaceMode: 'broadcast' | 'program'
 }) {
   const theme = withSurfaceMode(getTheme(event.sportKey), surfaceMode)
   const live = event.label === 'Live now'
+  const statusColor = live ? 'var(--color-flap-ok)' : index % 2 ? 'var(--color-flap-tbd)' : 'var(--color-flap-chg)'
 
   return (
-    <Link to={event.href} className="w-[270px] min-w-[270px] snap-start sm:w-[320px] sm:min-w-[320px]">
+    <Link to={event.href} className="w-[286px] min-w-[286px] snap-start sm:w-[344px] sm:min-w-[344px]">
       <article
-        className="group relative h-[178px] overflow-hidden rounded-card border-2 bg-surface p-4 transition-transform hover:-translate-y-1"
+        className="group relative h-[152px] overflow-hidden border-y border-r bg-surface/72 px-4 py-3 transition-colors hover:bg-primary/6"
         style={{
-          borderColor: `${theme.colors.primary}55`,
-          boxShadow: `inset 0 0 0 1px ${theme.colors.primary}14`,
+          borderColor: `${theme.colors.primary}44`,
+          borderLeft: `5px solid ${theme.colors.primary}`,
+          clipPath: 'polygon(0 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 0 100%)',
         }}
       >
-        <div
-          className="absolute -right-14 -top-20 h-52 w-52 rounded-full opacity-25 transition-transform group-hover:scale-110"
-          style={{
-            background: `repeating-radial-gradient(circle, ${theme.colors.primary} 0 7px, transparent 7px 23px, ${theme.colors.accent} 23px 28px, transparent 28px 46px)`,
-          }}
-          aria-hidden="true"
-        />
+        <div className="absolute inset-x-0 top-0 h-px opacity-70" style={{ background: theme.colors.primary }} aria-hidden="true" />
         <div className="relative flex h-full flex-col justify-between">
-          <div className="flex items-start justify-between gap-3">
-            <span className={`flap ${live ? 'flap-ok' : index % 2 ? 'flap-tbd' : 'flap-chg'}`}>
+          <div className="flex items-center justify-between gap-3">
+            <span
+              className="font-mono text-[10px] font-bold uppercase tracking-[0.2em]"
+              style={{ color: statusColor }}
+            >
               {event.label}
             </span>
-            <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-ink/40">
+            <span className="font-mono text-[10px] uppercase tracking-[0.24em] text-ink/35">
               Ch {String(index + 1).padStart(2, '0')}
             </span>
           </div>
           <div>
-            <div className="mb-3 h-1.5 w-20 rounded-full" style={{ background: theme.colors.primary }} aria-hidden="true" />
-            <h3 className="max-w-[15rem] text-xl font-black leading-tight" style={{ color: theme.colors.primary }}>
+            <div className="mb-3 grid grid-cols-[2.75rem_1fr] items-center gap-3" aria-hidden="true">
+              <span className="h-px" style={{ background: theme.colors.primary }} />
+              <span className="h-px bg-ink/10" />
+            </div>
+            <h3 className="max-w-[17rem] text-[1.05rem] font-black leading-tight sm:text-lg" style={{ color: theme.colors.primary }}>
               {event.title}
             </h3>
-            <p className="mt-2 text-sm text-ink/62">{event.detail}</p>
+            <p className="mt-2 line-clamp-2 text-[13px] leading-relaxed text-ink/62">{event.detail}</p>
           </div>
         </div>
       </article>
@@ -177,6 +86,7 @@ function ProgramCoverCard({
 export function HomePage() {
   const { followedTeams, toggleFollow, prefs } = useAppState()
   const { matches } = useMatches()
+  const spotlightEvents = useSpotlightEvents()
   const [query, setQuery] = useState('')
 
   const upcomingMatches = useMemo(() => {
@@ -203,7 +113,7 @@ export function HomePage() {
           <div className="max-w-4xl">
             <div>
               <p className="board-label mb-4 flex items-center gap-2 text-neon-magenta">
-                <Sparkles size={13} /> Whistle to whistle / in your timezone
+                <Sparkles size={13} /> {t('home.kicker', undefined, prefs.locale)}
               </p>
               <h1 className="chrome-text max-w-3xl text-4xl sm:text-6xl">
                 {t('home.headline', undefined, prefs.locale)}
@@ -248,7 +158,7 @@ export function HomePage() {
 
               <div className="mt-5 flex flex-wrap gap-2">
                 <Link to="/sports/soccer">
-                  <Button>{footballLabel}: World Cup</Button>
+                  <Button>{t('home.worldCupCta', { footballLabel }, prefs.locale)}</Button>
                 </Link>
                 <Link to="/explore">
                   <Button variant="ghost">{t('home.exploreSports', undefined, prefs.locale)}</Button>
@@ -266,10 +176,10 @@ export function HomePage() {
                 </div>
                 <div>
                   <h2 className="max-w-2xl font-head text-2xl uppercase leading-none text-paper sm:text-4xl">
-                    Every game, match, race, and card <span className="text-primary">in your calendar.</span>
+                    {t('home.manifestoTitle', undefined, prefs.locale)}
                   </h2>
                   <p className="mt-2 max-w-xl text-sm text-ink/62">
-                    Follow what you love across every sport and league. Sync, export, get alerted, and stay in the game.
+                    {t('home.manifestoBody', undefined, prefs.locale)}
                   </p>
                 </div>
               </div>
@@ -280,8 +190,8 @@ export function HomePage() {
 
         <Panel className="flex flex-col">
           <PanelHeading
-            title={followedTeams.length ? 'Your next events' : 'Start with what you follow'}
-            subtitle={`${prefs.timezone} local time`}
+            title={t(followedTeams.length ? 'home.nextEvents' : 'home.startFollowing', undefined, prefs.locale)}
+            subtitle={t('home.localTime', { timezone: prefs.timezone }, prefs.locale)}
           >
             <Clock size={18} className="text-primary" />
           </PanelHeading>
@@ -307,13 +217,12 @@ export function HomePage() {
             <div className="flex flex-1 flex-col justify-center rounded-xl bg-page/70 p-4">
               <Trophy size={26} className="text-primary" />
               <p className="mt-3 text-sm text-ink/65">
-                Pick a few teams, countries, players, drivers, leagues, or custom schedules. Your combined {brand.modules.schedule.toLowerCase()}
-                appears here first.
+                {t('home.pickPrompt', { module: brand.modules.schedule.toLowerCase() }, prefs.locale)}
               </p>
             </div>
           )}
           <Link to="/my-schedule" className="mt-3 inline-flex items-center gap-1 text-sm font-bold text-primary">
-            Continue to My Schedule <ChevronRight size={15} />
+            {t('home.continueSchedule', undefined, prefs.locale)} <ChevronRight size={15} />
           </Link>
         </Panel>
       </section>
@@ -327,7 +236,7 @@ export function HomePage() {
             <p className="text-sm text-ink/60">{t('home.spotlightSubtitle', undefined, prefs.locale)}</p>
           </div>
           <Link to="/explore" className="text-sm font-bold text-primary">
-            Explore all
+            {t('home.exploreAll', undefined, prefs.locale)}
           </Link>
         </div>
         <div className="silbo-scrollbar flex snap-x gap-3 overflow-x-auto pb-3">
@@ -339,14 +248,14 @@ export function HomePage() {
 
       <section className="grid gap-4 lg:grid-cols-[1fr_320px]">
         <div className="grid gap-3 sm:grid-cols-2">
-          {exportPaths.map(({ icon: Icon, title, body }) => (
-            <Panel key={title} className="flex gap-3">
+          {exportPaths.map(({ icon: Icon, titleKey, bodyKey }) => (
+            <Panel key={titleKey} className="flex gap-3">
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
                 <Icon size={19} />
               </span>
               <div>
-                <h3 className="font-bold text-primary">{title}</h3>
-                <p className="mt-1 text-sm text-ink/60">{body}</p>
+                <h3 className="font-bold text-primary">{t(titleKey, undefined, prefs.locale)}</h3>
+                <p className="mt-1 text-sm text-ink/60">{t(bodyKey, undefined, prefs.locale)}</p>
               </div>
             </Panel>
           ))}
@@ -354,20 +263,20 @@ export function HomePage() {
 
         <div className="space-y-3">
           <Panel>
-            <PanelHeading title="Where to watch" subtitle="Factual first, sponsored clearly labeled.">
+            <PanelHeading title={t('home.watchTitle', undefined, prefs.locale)} subtitle={t('home.watchSubtitle', undefined, prefs.locale)}>
               <Tv size={18} className="text-primary" />
             </PanelHeading>
             <p className="text-sm text-ink/60">
-              Broadcast regions and provider links will sit on event pages once licensed source data is connected.
+              {t('home.watchBody', undefined, prefs.locale)}
             </p>
           </Panel>
           <Panel>
-            <PanelHeading title={t('home.customTitle', undefined, prefs.locale)} subtitle="Families, coaches, and local clubs." >
+            <PanelHeading title={t('home.customTitle', undefined, prefs.locale)} subtitle={t('home.customSubtitle', undefined, prefs.locale)}>
               <Users size={18} className="text-primary" />
             </PanelHeading>
             <Link to="/custom-leagues">
               <Button className="w-full" variant="export">
-                Create a community schedule
+                {t('home.customCta', undefined, prefs.locale)}
               </Button>
             </Link>
           </Panel>

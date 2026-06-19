@@ -1,4 +1,5 @@
 import { ChevronDown } from 'lucide-react'
+import type { CSSProperties } from 'react'
 import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useAppState } from '../app/state-context'
@@ -57,8 +58,9 @@ export function SportSwitcher() {
         <span
           key={activeKey}
           className="sport-switcher-mark flex items-center justify-center"
+          style={{ '--silbo-color': activeTheme.colors.primary } as CSSProperties}
         >
-          <SilboBrandMark size={44} color={activeTheme.colors.primary} />
+          <SilboBrandMark size={58} color={activeTheme.colors.primary} />
         </span>
         <span className="text-left">
           <span className="neon-text block font-display text-base leading-tight tracking-wide">
