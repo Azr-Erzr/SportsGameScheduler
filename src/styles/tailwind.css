@@ -204,11 +204,88 @@
     overflow: visible;
   }
 
+  .silbo-mark {
+    color: var(--silbo-color, var(--mp-primary));
+    filter:
+      drop-shadow(0 0 4px color-mix(in srgb, var(--silbo-color, var(--mp-primary)) 58%, transparent))
+      drop-shadow(0 0 15px color-mix(in srgb, var(--silbo-color, var(--mp-primary)) 30%, transparent));
+  }
+
+  .silbo-trace-mark {
+    position: relative;
+    display: inline-block;
+    flex: 0 0 auto;
+    color: var(--silbo-color, var(--mp-primary));
+    transform: translateZ(0);
+  }
+
+  .silbo-trace-mark::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: currentColor;
+    -webkit-mask-image: url('/assets/brand/silbo-whistle-trace.svg');
+    mask-image: url('/assets/brand/silbo-whistle-trace.svg');
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-position: center;
+    -webkit-mask-size: contain;
+    mask-size: contain;
+  }
+
+  .silbo-orbit-fill {
+    opacity: 0.96;
+  }
+
+  .silbo-whistle-line,
+  .silbo-chamber-ring,
+  .silbo-chamber-inner,
+  .signal-arc {
+    vector-effect: non-scaling-stroke;
+  }
+
+  .silbo-chamber-inner {
+    opacity: 0.9;
+  }
+
+  .signal-arc {
+    opacity: 0.96;
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+
+  .signal-arc.s2 {
+    opacity: 0.82;
+  }
+
+  .signal-arc.s3 {
+    opacity: 0.68;
+  }
+
+  [data-paper] .silbo-mark {
+    filter: drop-shadow(0 1px 0 rgba(29, 24, 18, 0.16));
+  }
+
+  [data-paper] .silbo-orbit-fill {
+    opacity: 0.9;
+  }
+
+  [data-paper] .signal-arc {
+    opacity: 0.82;
+  }
+
   .silbo-channel-badge {
     --silbo-color: var(--mp-primary);
     border-radius: 999px;
-    overflow: hidden;
+    overflow: visible;
     transform-origin: center;
+  }
+
+  .silbo-channel-badge svg {
+    filter:
+      drop-shadow(0 0 3px color-mix(in srgb, var(--silbo-color) 44%, transparent))
+      drop-shadow(0 0 10px color-mix(in srgb, var(--silbo-color) 22%, transparent));
   }
 
   .sport-switcher-trigger:active {
@@ -219,6 +296,27 @@
   .sport-switcher-menu,
   .auth-popover {
     animation: silbo-pop-in 180ms ease-out both;
+  }
+
+  .sport-switcher-mark {
+    position: relative;
+    isolation: isolate;
+    min-width: 58px;
+  }
+
+  .sport-switcher-mark::before {
+    content: '';
+    position: absolute;
+    inset: -18%;
+    z-index: -1;
+    border-radius: 999px;
+    background:
+      radial-gradient(circle, color-mix(in srgb, var(--silbo-color, var(--mp-primary)) 24%, transparent), transparent 68%);
+    opacity: 0.9;
+  }
+
+  [data-paper] .sport-switcher-mark::before {
+    opacity: 0.34;
   }
 
   .sport-switcher-menu .channel-tile {
@@ -501,10 +599,6 @@
     transform: scale(1);
   }
 
-  .silbo-whistle-line {
-    vector-effect: non-scaling-stroke;
-  }
-
   .silbo-sheen {
     position: absolute;
     inset: 0;
@@ -520,21 +614,6 @@
   button:hover .silbo-channel-badge .silbo-sheen,
   a:hover .silbo-channel-badge .silbo-sheen {
     animation: silbo-sheen 900ms ease-out;
-  }
-
-  .signal-arc {
-    opacity: 0.9;
-    transform-box: fill-box;
-    transform-origin: center;
-  }
-
-  .signal-arc.s2 {
-    opacity: 0.72;
-  }
-
-  .silbo-clock-hand {
-    transform-box: fill-box;
-    transform-origin: 44.5px 32.5px;
   }
 
   @keyframes ticket-open {
@@ -2841,7 +2920,6 @@
   .globe-signal {
     animation: none !important;
   }
-  .silbo-clock-hand,
   .silbo-channel-badge .silbo-sheen {
     animation: none !important;
   }

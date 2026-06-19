@@ -352,3 +352,11 @@ tables so the homepage runs from data.
 that ride on them — including "alert me when my fighter walks."
 
 **Ongoing:** flood `provider_targets`; add `payload_hash`/phase-aware cadence as volume grows.
+
+### IA Note: My Schedule as the Hub
+
+Merge export functionality into **My Schedule** instead of treating Exports as a main page. My
+Schedule should be the post-selection home base: review saved matches, choose calendar sync,
+download static files, print/share, and manage reminders/settings from one surface.
+
+Later, make the schedule hub smarter with DB-backed saved schedule summaries and reminder state.

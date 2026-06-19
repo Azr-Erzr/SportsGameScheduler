@@ -1,4 +1,4 @@
-import { Home, ListChecks, Moon, Share2, Sun, Users } from 'lucide-react'
+import { Home, ListChecks, Moon, Sun, Users } from 'lucide-react'
 import { NavLink, Outlet, useLocation, useParams } from 'react-router-dom'
 import { AuthButton } from '../components/AuthButton'
 import { SportSwitcher } from '../components/SportSwitcher'
@@ -11,7 +11,6 @@ import { SportThemeProvider } from '../theme/SportThemeProvider'
 const navItems = [
   { to: '/', labelKey: 'nav.home', mobileLabelKey: 'nav.mobile.home', icon: Home },
   { to: '/my-schedule', labelKey: 'nav.mySchedule', mobileLabelKey: 'nav.mobile.schedule', icon: ListChecks },
-  { to: '/exports', labelKey: 'nav.exports', mobileLabelKey: 'nav.mobile.exports', icon: Share2 },
   { to: '/custom-leagues', labelKey: 'nav.customLeagues', mobileLabelKey: 'nav.mobile.local', icon: Users },
 ]
 
