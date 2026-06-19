@@ -2167,7 +2167,8 @@
        style reads better breaking the frame than clipped square. (Broadcast keeps overflow hidden
        to clip its bled WebP art.) */
     overflow: visible;
-    border-color: color-mix(in srgb, var(--mp-primary) 24%, rgba(29, 24, 18, 0.12));
+    /* Softer border so the brush art that hangs over it blends rather than getting a hard line. */
+    border-color: color-mix(in srgb, var(--mp-primary) 12%, rgba(29, 24, 18, 0.04));
     background:
       radial-gradient(ellipse at 86% 36%, color-mix(in srgb, var(--mp-primary) 15%, transparent), transparent 38%),
       radial-gradient(ellipse at 16% 62%, color-mix(in srgb, var(--mp-primary) 11%, transparent), transparent 34%),
@@ -2292,11 +2293,13 @@
       drop-shadow(0 0 16px color-mix(in srgb, var(--mp-primary) 18%, transparent));
     -webkit-mask-image: var(--sport-channel-action);
     mask-image: var(--sport-channel-action);
-    /* Right brush stays level but scaled up so its strokes spill a little past the banner edge. */
-    -webkit-mask-size: auto 114%;
-    -webkit-mask-position: 60% center;
-    mask-size: auto 114%;
-    mask-position: 60% center;
+    /* Near-natural size, TOP-anchored so the small extra height grows downward — the figure's top
+       isn't cropped and its bottom brush hangs past the (softened) bottom border instead of being
+       zoomed/centre-cropped. */
+    -webkit-mask-size: auto 108%;
+    -webkit-mask-position: 50% 0%;
+    mask-size: auto 108%;
+    mask-position: 50% 0%;
   }
 
   [data-paper] .sport-channel-action-panel {
