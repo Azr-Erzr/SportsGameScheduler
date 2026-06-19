@@ -2,9 +2,11 @@ import {
   BellRing,
   CalendarCheck,
   CalendarDays,
+  ChevronLeft,
   Copy,
   Download,
   FileImage,
+  FileSpreadsheet,
   Globe2,
   ListFilter,
   Plus,
@@ -15,7 +17,8 @@ import {
   X,
   Zap,
 } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { useAppState } from '../app/state-context'
 import { AdSlot } from '../components/AdSlot'
@@ -42,7 +45,11 @@ import { posterChromeTheme } from '../theme/themes'
 import { CalendarFeedsPage } from './CalendarFeeds'
 
 type RangeKey = 'all' | 'today' | 'weekend' | 'week'
-type ScheduleSection = 'calendar' | 'downloads' | 'reminders' | 'settings'
+type GuidedFlowId = 'calendar' | 'download' | 'reminders' | 'settings'
+type FlowState = { flowId: GuidedFlowId | null; stepIndex: number; answers: Record<string, string> }
+type StepOption = { id: string; label: string; description?: string; recommended?: boolean }
+type FlowStep = { id: string; question: string; options?: StepOption[]; final?: boolean }
+type FlowConfig = { title: string; steps: FlowStep[] }
 
 const ranges: Array<{ key: RangeKey; labelKey: string }> = [
   { key: 'all', labelKey: 'schedule.range.all' },
@@ -57,6 +64,109 @@ const templates: Array<{ key: ExportTemplate; labelKey: string; hint: string }> 
   { key: 'compact', labelKey: 'export.template.compact', hint: '12 events/page' },
   { key: 'family', labelKey: 'export.template.family', hint: '6 events/page' },
 ]
+
+const guidedFlows: Record<GuidedFlowId, FlowConfig> = {
+  calendar: {
+    title: 'Add to calendar',
+    steps: [
+      {
+        id: 'calendar_update_mode',
+        question: 'How should your calendar stay updated?',
+        options: [
+          {
+            id: 'live_subscription',
+            label: 'Keep it updated automatically',
+            description: 'Best if match details, TBD teams, or times may change.',
+            recommended: true,
+          },
+          {
+            id: 'one_time_import',
+            label: 'Add these matches once',
+            description: 'Creates calendar events now, but future changes may not update.',
+          },
+        ],
+      },
+      {
+        id: 'calendar_scope',
+        question: 'What should be included?',
+        options: [
+          { id: 'all_saved', label: 'All saved matches', description: 'Everything you follow in My Schedule.', recommended: true },
+          { id: 'visible_matches', label: 'Visible matches', description: 'Only the schedule currently shown on this page.' },
+          { id: 'full_tournament', label: 'Full World Cup', description: 'Every available World Cup match.' },
+        ],
+      },
+      {
+        id: 'calendar_provider',
+        question: 'Which calendar do you use?',
+        options: [
+          { id: 'google', label: 'Google Calendar' },
+          { id: 'apple', label: 'Apple Calendar' },
+          { id: 'outlook', label: 'Outlook' },
+          { id: 'other', label: 'Other calendar app' },
+        ],
+      },
+      { id: 'calendar_confirm', question: 'Ready to add your schedule', final: true },
+    ],
+  },
+  download: {
+    title: 'Download',
+    steps: [
+      {
+        id: 'download_intent',
+        question: 'What do you need this for?',
+        options: [
+          {
+            id: 'print_or_save',
+            label: 'Print or save a clean copy',
+            description: 'Recommended path: print dialog, then save as PDF.',
+            recommended: true,
+          },
+          { id: 'edit_spreadsheet', label: 'Edit in a spreadsheet', description: 'Recommended format: CSV.' },
+          { id: 'calendar_import', label: 'Import into a calendar', description: 'Recommended format: ICS.' },
+          { id: 'share_copy', label: 'Send to someone', description: 'Recommended path: image or share sheet.' },
+        ],
+      },
+      {
+        id: 'download_scope',
+        question: 'What should it include?',
+        options: [
+          { id: 'all_saved', label: 'All saved matches', recommended: true },
+          { id: 'visible_matches', label: 'Visible matches' },
+          { id: 'full_tournament', label: 'Full World Cup' },
+        ],
+      },
+      { id: 'download_confirm', question: 'Ready to download', final: true },
+    ],
+  },
+  reminders: {
+    title: 'Reminders',
+    steps: [
+      {
+        id: 'reminder_scope',
+        question: 'What should we remind you about?',
+        options: [
+          { id: 'all_saved', label: 'All saved matches', recommended: true },
+          { id: 'visible_matches', label: 'Visible matches' },
+          { id: 'world_cup_only', label: 'World Cup picks only' },
+        ],
+      },
+      {
+        id: 'reminder_timing',
+        question: 'When should reminders arrive?',
+        options: [
+          { id: '15_minutes', label: '15 minutes before' },
+          { id: '1_hour', label: '1 hour before', recommended: true },
+          { id: '1_day', label: '1 day before' },
+        ],
+      },
+      { id: 'reminder_confirm', question: 'Ready to turn on reminders', final: true },
+    ],
+  },
+  settings: {
+    title: 'Schedule settings',
+    steps: [{ id: 'settings_confirm', question: 'Tune how your schedule displays', final: true }],
+  },
+}
 
 function inRange(date: Date, range: RangeKey, nowMs: number): boolean {
   if (range === 'all') return true
@@ -102,13 +212,41 @@ function groupByLocalDate(matches: Match[], timeZone: string, locale?: string | 
   return Array.from(groups.values())
 }
 
+function csvCell(value: string | number | null | undefined) {
+  const text = String(value ?? '')
+  return `"${text.replace(/"/g, '""')}"`
+}
+
+function createScheduleCsv(matches: Match[], timeZone: string, locale?: string | null, hour12?: boolean | null) {
+  const timeOptions = displayTimeOptions(locale, hour12)
+  const rows = [
+    ['Date', 'Time', 'Team 1', 'Team 2', 'Round', 'Group', 'Venue', 'Timezone'],
+    ...matches.map((match) => [
+      formatLongDate(match.startsAt, timeZone, timeOptions),
+      formatTime(match.startsAt, timeZone, timeOptions),
+      match.team1,
+      match.team2,
+      match.round,
+      match.group ?? '',
+      match.ground,
+      timeZone,
+    ]),
+  ]
+  return rows.map((row) => row.map(csvCell).join(',')).join('\r\n')
+}
+
+function optionLabel(step: FlowStep | undefined, answer: string | undefined, fallback: string) {
+  return step?.options?.find((option) => option.id === answer)?.label ?? fallback
+}
+
 export function MySchedulePage() {
   const { followedTeams, followedLeagueIds, followedCompetitorIds, toggleFollow, prefs } = useAppState()
   const [range, setRange] = useState<RangeKey>('all')
   const [hidePast, setHidePast] = useState(true)
-  const [activeSection, setActiveSection] = useState<ScheduleSection>('calendar')
+  const [flow, setFlow] = useState<FlowState>({ flowId: null, stepIndex: 0, answers: {} })
   const [template, setTemplate] = useState<ExportTemplate>('poster')
   const [message, setMessage] = useState('')
+  const [reminderSummary, setReminderSummary] = useState('')
 
   const timeZone = prefs.timezone
   const cityLabel = cityLabelFor(prefs.timezone, prefs.city)
@@ -116,6 +254,15 @@ export function MySchedulePage() {
   const { matches } = useMatches()
   const myEvents = useMyEvents(followedLeagueIds, followedCompetitorIds)
   const hasLiveFollows = followedLeagueIds.length > 0 || followedCompetitorIds.length > 0
+
+  useEffect(() => {
+    if (!flow.flowId) return
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setFlow({ flowId: null, stepIndex: 0, answers: {} })
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [flow.flowId])
 
   const schedule = useMemo(() => {
     return filterMatchesForTeams(matches, followedTeams)
@@ -126,6 +273,16 @@ export function MySchedulePage() {
       )
       .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime())
   }, [matches, followedTeams, range, hidePast, nowMs])
+
+  const savedWorldCupSchedule = useMemo(
+    () => filterMatchesForTeams(matches, followedTeams).sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime()),
+    [matches, followedTeams],
+  )
+
+  const fullWorldCupSchedule = useMemo(
+    () => [...matches].sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime()),
+    [matches],
+  )
 
   const liveSchedule = useMemo(
     () =>
@@ -145,8 +302,6 @@ export function MySchedulePage() {
     () => groupByLocalDate(schedule, timeZone, prefs.locale, prefs.hour12),
     [schedule, timeZone, prefs.locale, prefs.hour12],
   )
-  const pages = useMemo(() => paginateEvents(schedule, template), [schedule, template])
-
   const allVisibleDates = useMemo(
     () => [
       ...schedule.map((match) => match.startsAt),
@@ -167,6 +322,9 @@ export function MySchedulePage() {
   const totalVisible = schedule.length + liveSchedule.length
   const followCount = followedTeams.length + followedLeagueIds.length + followedCompetitorIds.length
   const tbdSlotCount = allMatches.length - groupMatches.length
+  const activeFlow = flow.flowId ? guidedFlows[flow.flowId] : null
+  const currentStep = activeFlow?.steps[flow.stepIndex]
+  const currentAnswer = currentStep ? flow.answers[currentStep.id] : undefined
 
   const selectedTeamsSummary =
     followedTeams.length === 0
@@ -192,16 +350,32 @@ export function MySchedulePage() {
       exportFilename('live-schedule', 'ics'),
     )
     setMessage('All-sports calendar downloaded with 1-hour reminders.')
+    closeFlow()
   }
 
-  async function exportIcs() {
-    downloadBlob(createIcsBlob(schedule, timeZone, prefs.locale, prefs.hour12), exportFilename('schedule', 'ics'))
+  function matchesForScope(scope = 'all_saved') {
+    if (scope === 'visible_matches') return schedule
+    if (scope === 'full_tournament') return fullWorldCupSchedule
+    return savedWorldCupSchedule
+  }
+
+  async function exportIcs(matchesToExport = schedule) {
+    downloadBlob(createIcsBlob(matchesToExport, timeZone, prefs.locale, prefs.hour12), exportFilename('schedule', 'ics'))
     setMessage('Calendar snapshot downloaded. Use a subscribed calendar feed for automatic updates.')
+    closeFlow()
   }
 
-  async function exportImages(share: boolean) {
+  async function exportCsv(matchesToExport = schedule) {
+    const csv = createScheduleCsv(matchesToExport, timeZone, prefs.locale, prefs.hour12)
+    downloadBlob(new Blob([csv], { type: 'text/csv;charset=utf-8' }), exportFilename('schedule', 'csv'))
+    setMessage('Spreadsheet-ready CSV downloaded.')
+    closeFlow()
+  }
+
+  async function exportImages(share: boolean, matchesToExport = schedule) {
     let pageNumber = 1
-    for (const pageEvents of pages) {
+    const exportPages = paginateEvents(matchesToExport, template)
+    for (const pageEvents of exportPages) {
       const canvas = createScheduleCanvas(
         pageEvents,
         followedTeams,
@@ -209,7 +383,7 @@ export function MySchedulePage() {
         cityLabel,
         {
           page: pageNumber,
-          pageCount: pages.length,
+          pageCount: exportPages.length,
         },
         posterChromeTheme,
         prefs.locale,
@@ -218,44 +392,170 @@ export function MySchedulePage() {
       if (!canvas) continue
       const blob = await canvasToBlob(canvas)
       const filename =
-        pages.length > 1 ? `silbo-schedule-${pageNumber}-of-${pages.length}.png` : exportFilename('schedule', 'png')
+        exportPages.length > 1 ? `silbo-schedule-${pageNumber}-of-${exportPages.length}.png` : exportFilename('schedule', 'png')
       const file = new File([blob], filename, { type: 'image/png' })
 
-      if (share && pages.length === 1 && navigator.canShare?.({ files: [file] })) {
+      if (share && exportPages.length === 1 && navigator.canShare?.({ files: [file] })) {
         await navigator.share({ title: brand.scheduleTitle, files: [file] })
         setMessage('Image opened in your share sheet.')
+        closeFlow()
         return
       }
       downloadBlob(blob, filename)
       pageNumber += 1
     }
     setMessage(
-      pages.length > 1
-        ? `${pages.length} readable pages downloaded - long schedules stay legible.`
+      exportPages.length > 1
+        ? `${exportPages.length} readable pages downloaded - long schedules stay legible.`
         : 'Schedule image downloaded.',
     )
+    closeFlow()
   }
 
-  async function copyNotes() {
-    const text = createNotesText(schedule, followedTeams, timeZone, cityLabel, prefs.locale, prefs.hour12)
+  async function copyNotes(matchesToExport = schedule) {
+    const text = createNotesText(matchesToExport, followedTeams, timeZone, cityLabel, prefs.locale, prefs.hour12)
     await copyToClipboard(text)
     setMessage('Plain-text schedule copied - paste it into Notes or a group chat.')
+    closeFlow()
   }
 
-  async function shareSchedule() {
-    const text = createNotesText(schedule, followedTeams, timeZone, cityLabel, prefs.locale, prefs.hour12)
+  async function shareSchedule(matchesToExport = schedule) {
+    const text = createNotesText(matchesToExport, followedTeams, timeZone, cityLabel, prefs.locale, prefs.hour12)
     if (navigator.share) {
       await navigator.share({ title: brand.scheduleTitle, text })
       setMessage('Schedule opened in your share sheet.')
+      closeFlow()
       return
     }
     await copyToClipboard(text)
     setMessage('Schedule copied for sharing.')
+    closeFlow()
   }
 
   function printSchedule() {
     window.print()
-    setMessage('Print dialog opened.')
+    setMessage('Print dialog opened. Choose "Save as PDF" if you want a PDF copy.')
+    closeFlow()
+  }
+
+  function openFlow(flowId: GuidedFlowId) {
+    setFlow({ flowId, stepIndex: 0, answers: {} })
+  }
+
+  function closeFlow() {
+    setFlow({ flowId: null, stepIndex: 0, answers: {} })
+  }
+
+  function answerStep(step: FlowStep, answer: string) {
+    setFlow((current) => ({
+      ...current,
+      answers: { ...current.answers, [step.id]: answer },
+    }))
+  }
+
+  function nextStep() {
+    if (!activeFlow || !currentStep) return
+    const answer = currentAnswer || defaultAnswer(currentStep)
+    setFlow((current) => ({
+      ...current,
+      answers: answer ? { ...current.answers, [currentStep.id]: answer } : current.answers,
+      stepIndex: Math.min(current.stepIndex + 1, activeFlow.steps.length - 1),
+    }))
+  }
+
+  function previousStep() {
+    setFlow((current) => ({
+      ...current,
+      stepIndex: Math.max(current.stepIndex - 1, 0),
+    }))
+  }
+
+  function defaultAnswer(step: FlowStep | undefined) {
+    return step?.options?.find((option) => option.recommended)?.id ?? step?.options?.[0]?.id ?? ''
+  }
+
+  async function runDownloadAction() {
+    const matchesToExport = matchesForScope(flow.answers.download_scope)
+    const intent = flow.answers.download_intent ?? 'print_or_save'
+    if (intent === 'edit_spreadsheet') return exportCsv(matchesToExport)
+    if (intent === 'calendar_import') return exportIcs(matchesToExport)
+    if (intent === 'share_copy') return shareSchedule(matchesToExport)
+    return printSchedule()
+  }
+
+  async function runCalendarAction() {
+    const matchesToExport = matchesForScope(flow.answers.calendar_scope)
+    if ((flow.answers.calendar_update_mode ?? 'live_subscription') === 'one_time_import') {
+      return exportIcs(matchesToExport)
+    }
+  }
+
+  function enableReminderFlow() {
+    const scope = optionLabel(
+      guidedFlows.reminders.steps.find((step) => step.id === 'reminder_scope'),
+      flow.answers.reminder_scope,
+      'All saved matches',
+    )
+    const timing = optionLabel(
+      guidedFlows.reminders.steps.find((step) => step.id === 'reminder_timing'),
+      flow.answers.reminder_timing,
+      '1 hour before',
+    )
+    setReminderSummary(`${scope}, ${timing.toLowerCase()}`)
+    setMessage('Reminder preference noted. The notification setup page still controls delivery channels.')
+    closeFlow()
+  }
+
+  function finalActionLabel() {
+    if (flow.flowId === 'calendar') {
+      return (flow.answers.calendar_update_mode ?? 'live_subscription') === 'one_time_import'
+        ? 'Download calendar file'
+        : 'Use live calendar setup'
+    }
+    if (flow.flowId === 'download') {
+      const intent = flow.answers.download_intent ?? 'print_or_save'
+      if (intent === 'edit_spreadsheet') return 'Download CSV'
+      if (intent === 'calendar_import') return 'Download ICS'
+      if (intent === 'share_copy') return 'Share schedule'
+      return 'Print or save PDF'
+    }
+    if (flow.flowId === 'reminders') return 'Enable reminders'
+    return 'Save settings'
+  }
+
+  function finalRecommendation() {
+    if (flow.flowId === 'calendar') {
+      const live = (flow.answers.calendar_update_mode ?? 'live_subscription') === 'live_subscription'
+      const scope = optionLabel(guidedFlows.calendar.steps[1], flow.answers.calendar_scope, 'All saved matches')
+      const provider = optionLabel(guidedFlows.calendar.steps[2], flow.answers.calendar_provider, 'your calendar app')
+      return live
+        ? `Recommended: live subscription for ${scope.toLowerCase()} in ${provider}. It can update when details change.`
+        : `Recommended: one-time ICS file for ${scope.toLowerCase()} in ${provider}. Future changes will not auto-update.`
+    }
+    if (flow.flowId === 'download') {
+      const intent = flow.answers.download_intent ?? 'print_or_save'
+      const scope = optionLabel(guidedFlows.download.steps[1], flow.answers.download_scope, 'All saved matches')
+      if (intent === 'edit_spreadsheet') return `Recommended: CSV for ${scope.toLowerCase()}, ready for spreadsheet editing.`
+      if (intent === 'calendar_import') return `Recommended: ICS for ${scope.toLowerCase()}, imported once into a calendar.`
+      if (intent === 'share_copy') return `Recommended: share text for ${scope.toLowerCase()}, easy to send from this device.`
+      return `Recommended: print this page and choose Save as PDF for a clean copy of the visible schedule.`
+    }
+    if (flow.flowId === 'reminders') {
+      const scope = optionLabel(guidedFlows.reminders.steps[0], flow.answers.reminder_scope, 'All saved matches')
+      const timing = optionLabel(guidedFlows.reminders.steps[1], flow.answers.reminder_timing, '1 hour before')
+      return `We will mark ${scope.toLowerCase()} for reminders ${timing.toLowerCase()}, using ${timeZone}.`
+    }
+    return `Times are shown in ${cityLabel}. Hide finished matches is ${hidePast ? 'on' : 'off'}.`
+  }
+
+  function runFinalAction() {
+    if (flow.flowId === 'download') void runDownloadAction()
+    if (flow.flowId === 'calendar') void runCalendarAction()
+    if (flow.flowId === 'reminders') enableReminderFlow()
+    if (flow.flowId === 'settings') {
+      setMessage('Schedule settings saved for this view.')
+      closeFlow()
+    }
   }
 
   if (followedTeams.length === 0 && !hasLiveFollows) {
@@ -328,202 +628,238 @@ export function MySchedulePage() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <PanelHeading
             title="Use your schedule"
-            subtitle="Choose a live calendar feed for changes, or a static download when you just need a copy."
+            subtitle="Choose one next step. The details open in a focused guide, while your schedule stays here."
           />
           {message && <p className="text-sm font-medium text-primary">{message}</p>}
+          {!message && reminderSummary && <p className="text-sm font-medium text-primary">Reminders: {reminderSummary}</p>}
         </div>
         <div className="grid gap-2 md:grid-cols-4">
           <button
             type="button"
-            onClick={() => setActiveSection('calendar')}
-            aria-pressed={activeSection === 'calendar'}
-            className={`rounded-lg border px-3 py-3 text-left transition-colors ${
-              activeSection === 'calendar'
-                ? 'border-primary bg-primary text-void'
-                : 'border-primary/20 bg-page/60 hover:bg-primary/8'
-            }`}
+            onClick={() => openFlow('calendar')}
+            className="rounded-lg border border-primary/20 bg-page/60 px-3 py-3 text-left transition-colors hover:bg-primary/8"
           >
             <CalendarCheck size={18} />
             <span className="mt-2 block text-sm font-bold">Add to calendar</span>
-            <span className={`mt-1 block text-xs ${activeSection === 'calendar' ? 'text-void/70' : 'text-ink/55'}`}>
-              Subscribe once for updates.
-            </span>
+            <span className="mt-1 block text-xs text-ink/55">Live updates or one-time import.</span>
           </button>
           <button
             type="button"
-            onClick={() => setActiveSection('downloads')}
-            aria-pressed={activeSection === 'downloads'}
-            className={`rounded-lg border px-3 py-3 text-left transition-colors ${
-              activeSection === 'downloads'
-                ? 'border-export bg-export text-void'
-                : 'border-export/25 bg-page/60 hover:bg-export/8'
-            }`}
+            onClick={() => openFlow('download')}
+            className="rounded-lg border border-export/25 bg-page/60 px-3 py-3 text-left transition-colors hover:bg-export/8"
           >
             <Download size={18} />
             <span className="mt-2 block text-sm font-bold">Download</span>
-            <span className={`mt-1 block text-xs ${activeSection === 'downloads' ? 'text-void/70' : 'text-ink/55'}`}>
-              Image, .ics, text, print.
-            </span>
+            <span className="mt-1 block text-xs text-ink/55">Print, CSV, ICS, or share.</span>
           </button>
           <button
             type="button"
-            onClick={() => setActiveSection('reminders')}
-            aria-pressed={activeSection === 'reminders'}
-            className={`rounded-lg border px-3 py-3 text-left transition-colors ${
-              activeSection === 'reminders'
-                ? 'border-primary bg-primary/90 text-void'
-                : 'border-primary/20 bg-page/60 hover:bg-primary/8'
-            }`}
+            onClick={() => openFlow('reminders')}
+            className="rounded-lg border border-primary/20 bg-page/60 px-3 py-3 text-left transition-colors hover:bg-primary/8"
           >
             <BellRing size={18} />
             <span className="mt-2 block text-sm font-bold">Reminders</span>
-            <span className={`mt-1 block text-xs ${activeSection === 'reminders' ? 'text-void/70' : 'text-ink/55'}`}>
-              Kickoff and change alerts.
-            </span>
+            <span className="mt-1 block text-xs text-ink/55">Kickoff and change alerts.</span>
           </button>
           <button
             type="button"
-            onClick={() => setActiveSection('settings')}
-            aria-pressed={activeSection === 'settings'}
-            className={`rounded-lg border px-3 py-3 text-left transition-colors ${
-              activeSection === 'settings'
-                ? 'border-primary bg-primary/90 text-void'
-                : 'border-primary/20 bg-page/60 hover:bg-primary/8'
-            }`}
+            onClick={() => openFlow('settings')}
+            className="rounded-lg border border-primary/20 bg-page/60 px-3 py-3 text-left transition-colors hover:bg-primary/8"
           >
             <SlidersHorizontal size={18} />
             <span className="mt-2 block text-sm font-bold">Settings</span>
-            <span className={`mt-1 block text-xs ${activeSection === 'settings' ? 'text-void/70' : 'text-ink/55'}`}>
-              Timezone and display.
-            </span>
+            <span className="mt-1 block text-xs text-ink/55">Timezone and display.</span>
           </button>
         </div>
+      </Panel>
 
-        {activeSection === 'calendar' && <CalendarFeedsPage embedded />}
+      {activeFlow && currentStep &&
+        createPortal(
+        <div className="fixed inset-0 z-50 bg-void/65 backdrop-blur-sm">
+          <button type="button" className="absolute inset-0 cursor-default" aria-label="Close guide" onClick={closeFlow} />
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-label={activeFlow.title}
+            className="absolute inset-x-0 bottom-0 max-h-[92svh] overflow-y-auto rounded-t-card border border-primary/20 bg-surface p-4 shadow-2xl sm:bottom-4 sm:left-auto sm:right-4 sm:top-24 sm:w-[min(520px,calc(100vw-2rem))] sm:rounded-card"
+          >
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div>
+                <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-primary">
+                  Step {flow.stepIndex + 1} of {activeFlow.steps.length}
+                </p>
+                <h2 className="mt-1 text-xl font-extrabold text-primary">{activeFlow.title}</h2>
+                <p className="mt-1 text-sm text-ink/60">{currentStep.question}</p>
+              </div>
+              <Button variant="ghost" className="px-2" onClick={closeFlow} aria-label="Close guide">
+                <X size={16} />
+              </Button>
+            </div>
 
-        {activeSection === 'downloads' && (
-          <div className="grid gap-4 lg:grid-cols-[340px_1fr]">
-            <div className="space-y-3">
-              <Panel className="bg-page/45">
-                <PanelHeading title="Image template" subtitle="Photo exports paginate instead of shrinking text." />
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  {templates.map((item) => (
+            {!currentStep.final && currentStep.options && (
+              <div className="space-y-2">
+                {currentStep.options.map((option) => {
+                  const selected = (currentAnswer || defaultAnswer(currentStep)) === option.id
+                  return (
                     <button
-                      key={item.key}
+                      key={option.id}
                       type="button"
-                      onClick={() => setTemplate(item.key)}
-                      className={`rounded-lg border px-3 py-2 text-left text-sm font-semibold transition-colors ${
-                        template === item.key
-                          ? 'border-primary bg-primary text-void'
-                          : 'border-primary/20 bg-surface hover:bg-primary/5'
+                      onClick={() => answerStep(currentStep, option.id)}
+                      className={`w-full rounded-lg border px-3 py-3 text-left transition-colors ${
+                        selected ? 'border-primary bg-primary text-void' : 'border-primary/20 bg-page/60 hover:bg-primary/8'
                       }`}
                     >
-                      {t(item.labelKey, undefined, prefs.locale)}
-                      <span
-                        className={`block text-xs font-normal ${template === item.key ? 'text-void/70' : 'text-ink/50'}`}
-                      >
-                        {item.hint}
+                      <span className="flex items-center justify-between gap-2 text-sm font-bold">
+                        {option.label}
+                        {option.recommended && (
+                          <span className={`font-mono text-[10px] uppercase ${selected ? 'text-void/65' : 'text-primary'}`}>
+                            Recommended
+                          </span>
+                        )}
                       </span>
+                      {option.description && (
+                        <span className={`mt-1 block text-xs ${selected ? 'text-void/70' : 'text-ink/55'}`}>
+                          {option.description}
+                        </span>
+                      )}
                     </button>
-                  ))}
-                </div>
-                <p className="mt-3 text-sm text-ink/70">
-                  {schedule.length} World Cup events {'->'} {pages.length} page{pages.length === 1 ? '' : 's'} (max{' '}
-                  {MAX_EVENTS_BY_TEMPLATE[template]} per page)
-                </p>
-              </Panel>
-              <Panel className="space-y-2 bg-page/45">
-                <PanelHeading title="Static copies" />
-                <Button className="w-full" variant="export" onClick={() => exportImages(true)} disabled={schedule.length === 0}>
-                  <FileImage size={15} /> {pages.length > 1 ? `Save images (${pages.length})` : 'Save image'}
-                </Button>
-                <Button className="w-full" variant="ghost" onClick={exportIcs} disabled={schedule.length === 0}>
-                  <Download size={15} /> Download World Cup .ics
-                </Button>
-                <Button className="w-full" variant="ghost" onClick={exportLiveIcs} disabled={liveSchedule.length === 0}>
-                  <CalendarDays size={15} /> Download all-sports .ics
-                  {liveSchedule.length ? ` (${liveSchedule.length})` : ''}
-                </Button>
-                <Button className="w-full" variant="subtle" onClick={copyNotes} disabled={schedule.length === 0}>
-                  <Copy size={15} /> Copy for Notes
-                </Button>
-                <Button className="w-full" variant="subtle" onClick={shareSchedule} disabled={schedule.length === 0}>
-                  <Share2 size={15} /> Share schedule
-                </Button>
-                <Button className="w-full" variant="ghost" onClick={printSchedule} disabled={schedule.length === 0}>
-                  <Printer size={15} /> Print
-                </Button>
-              </Panel>
-            </div>
-            <Panel className="bg-page/45">
-              <PanelHeading title="Download preview" subtitle={`Page 1 of ${pages.length || 1} - ${cityLabel} local time`} />
-              {schedule.length === 0 ? (
-                <p className="py-10 text-center text-sm text-ink/50">Follow teams to see a download preview.</p>
-              ) : (
-                <div className="space-y-2">
-                  {(pages[0] ?? []).map((match) => (
-                    <div
-                      key={`${match.date}-${match.team1}-${match.team2}`}
-                      className="flex flex-col gap-1 rounded-lg bg-surface px-3 py-2 sm:flex-row sm:items-center sm:gap-3"
-                    >
-                      <span className="font-mono text-xs font-semibold text-primary sm:w-32 sm:shrink-0">
-                        {formatLongDate(match.startsAt, timeZone, {
-                          locale: prefs.locale,
-                          hour12: prefs.hour12 ?? undefined,
-                        })}{' '}
-                        {formatTime(match.startsAt, timeZone, {
-                          locale: prefs.locale,
-                          hour12: prefs.hour12 ?? undefined,
-                        })}
-                      </span>
-                      <span className="min-w-0 flex-1 text-sm font-semibold">
-                        {match.team1} vs {match.team2}
-                      </span>
-                      <span className="hidden truncate text-xs text-ink/50 sm:block">{match.ground}</span>
+                  )
+                })}
+              </div>
+            )}
+
+            {currentStep.final && (
+              <div className="space-y-4">
+                <Panel className="bg-page/55">
+                  <p className="text-sm font-semibold text-ink">{finalRecommendation()}</p>
+                  <p className="mt-2 text-xs text-ink/55">
+                    {flow.flowId === 'download'
+                      ? `${matchesForScope(flow.answers.download_scope).length} World Cup matches selected.`
+                      : flow.flowId === 'calendar'
+                        ? `${matchesForScope(flow.answers.calendar_scope).length} World Cup matches selected.`
+                        : `${totalVisible} visible events in ${cityLabel}.`}
+                  </p>
+                </Panel>
+
+                {flow.flowId === 'download' && (flow.answers.download_intent ?? 'print_or_save') === 'share_copy' && (
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <Button className="w-full" variant="export" onClick={() => exportImages(true, matchesForScope(flow.answers.download_scope))}>
+                      <FileImage size={15} /> Save image instead
+                    </Button>
+                    <Button className="w-full" variant="subtle" onClick={() => copyNotes(matchesForScope(flow.answers.download_scope))}>
+                      <Copy size={15} /> Copy text instead
+                    </Button>
+                  </div>
+                )}
+
+                {flow.flowId === 'download' && (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-2">
+                      {templates.map((item) => (
+                        <button
+                          key={item.key}
+                          type="button"
+                          onClick={() => setTemplate(item.key)}
+                          className={`rounded-lg border px-3 py-2 text-left text-sm font-semibold transition-colors ${
+                            template === item.key
+                              ? 'border-primary bg-primary text-void'
+                              : 'border-primary/20 bg-page/60 hover:bg-primary/8'
+                          }`}
+                        >
+                          {t(item.labelKey, undefined, prefs.locale)}
+                          <span className={`block text-xs font-normal ${template === item.key ? 'text-void/70' : 'text-ink/50'}`}>
+                            {item.hint}
+                          </span>
+                        </button>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                    <p className="text-xs text-ink/50">
+                      Poster images paginate at {MAX_EVENTS_BY_TEMPLATE[template]} events per page if you choose the image path.
+                    </p>
+                    {(flow.answers.download_intent ?? 'print_or_save') === 'calendar_import' && liveSchedule.length > 0 && (
+                      <Button className="w-full" variant="ghost" onClick={exportLiveIcs}>
+                        <CalendarDays size={15} /> Download all-sports ICS ({liveSchedule.length})
+                      </Button>
+                    )}
+                  </div>
+                )}
+
+                {flow.flowId === 'calendar' &&
+                  (flow.answers.calendar_update_mode ?? 'live_subscription') === 'live_subscription' && <CalendarFeedsPage embedded />}
+
+                {flow.flowId === 'reminders' && (
+                  <div className="rounded-lg border border-primary/20 bg-page/50 p-3 text-sm text-ink/65">
+                    Calendar files can include a 1-hour reminder today. Email and push delivery still live in the reminder settings.
+                    <Link to="/settings/alerts" className="mt-3 inline-flex items-center gap-2 font-semibold text-primary">
+                      Open reminder settings
+                    </Link>
+                  </div>
+                )}
+
+                {flow.flowId === 'settings' && (
+                  <div className="space-y-3">
+                    <div className="rounded-lg border border-primary/20 bg-page/50 p-3">
+                      <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink/45">Timezone</p>
+                      <p className="mt-1 text-sm font-semibold">{timeZone}</p>
+                    </div>
+                    <CityPicker />
+                    <label className="flex items-center gap-2 rounded-lg border border-primary/20 bg-page/50 px-3 py-2 text-sm text-ink/70">
+                      <input type="checkbox" checked={hidePast} onChange={(event) => setHidePast(event.target.checked)} />
+                      Hide finished matches
+                    </label>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="sticky bottom-0 -mx-4 mt-5 flex items-center gap-2 border-t border-primary/15 bg-surface px-4 pt-3">
+              {flow.stepIndex > 0 ? (
+                <Button variant="ghost" onClick={previousStep}>
+                  <ChevronLeft size={15} /> Back
+                </Button>
+              ) : (
+                <Button variant="ghost" onClick={closeFlow}>
+                  Close
+                </Button>
               )}
-            </Panel>
-          </div>
-        )}
-
-        {activeSection === 'reminders' && (
-          <Panel className="grid gap-3 bg-page/45 md:grid-cols-[1fr_auto] md:items-center">
-            <div>
-              <PanelHeading
-                title="Reminders & alerts"
-                subtitle="Kickoff reminders, timing changes, TBD confirmations, and quiet-hour controls live here."
-              />
-              <p className="text-sm text-ink/65">
-                Calendar feeds can add a 1-hour VALARM today. Email and push reminders depend on the notification setup
-                tracked in the master plan.
-              </p>
+              <span className="flex-1" />
+              {currentStep.final ? (
+                <Button
+                  variant={flow.flowId === 'download' ? 'export' : 'solid'}
+                  onClick={runFinalAction}
+                  disabled={
+                    (flow.flowId === 'download' && matchesForScope(flow.answers.download_scope).length === 0) ||
+                    (flow.flowId === 'calendar' &&
+                      (flow.answers.calendar_update_mode ?? 'live_subscription') === 'one_time_import' &&
+                      matchesForScope(flow.answers.calendar_scope).length === 0)
+                  }
+                >
+                  {flow.flowId === 'download' && (flow.answers.download_intent ?? 'print_or_save') === 'edit_spreadsheet' && (
+                    <FileSpreadsheet size={15} />
+                  )}
+                  {flow.flowId === 'download' && (flow.answers.download_intent ?? 'print_or_save') === 'print_or_save' && (
+                    <Printer size={15} />
+                  )}
+                  {flow.flowId === 'download' && (flow.answers.download_intent ?? 'print_or_save') === 'share_copy' && (
+                    <Share2 size={15} />
+                  )}
+                  {flow.flowId === 'download' &&
+                    !['edit_spreadsheet', 'print_or_save', 'share_copy'].includes(flow.answers.download_intent ?? 'print_or_save') && (
+                    <Download size={15} />
+                  )}
+                  {flow.flowId === 'calendar' && <CalendarCheck size={15} />}
+                  {flow.flowId === 'reminders' && <BellRing size={15} />}
+                  {flow.flowId === 'settings' && <SlidersHorizontal size={15} />}
+                  {finalActionLabel()}
+                </Button>
+              ) : (
+                <Button onClick={nextStep}>Continue</Button>
+              )}
             </div>
-            <Link to="/settings/alerts">
-              <Button>
-                <BellRing size={15} /> Open reminder settings
-              </Button>
-            </Link>
-          </Panel>
-        )}
-
-        {activeSection === 'settings' && (
-          <Panel className="grid gap-3 bg-page/45 md:grid-cols-3">
-            <div>
-              <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink/45">Timezone</p>
-              <p className="mt-1 text-sm font-semibold">{timeZone}</p>
-            </div>
-            <div>
-              <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink/45">Local city</p>
-              <p className="mt-1 text-sm font-semibold">{cityLabel}</p>
-            </div>
-            <div className="flex items-center md:justify-end">
-              <CityPicker />
-            </div>
-          </Panel>
-        )}
-      </Panel>
+          </section>
+        </div>,
+        document.body,
+      )}
 
       <div className="grid gap-4 lg:grid-cols-[270px_1fr]">
         <Panel className="hidden h-fit lg:sticky lg:top-20 lg:block">
