@@ -2094,8 +2094,13 @@
     mask-composite: intersect;
   }
 
+  /* Tone the icon WebP's cream diagonal stripe/highlights (e.g. combat) toward the dark backing at
+     the top corner, so cream doesn't "come up" on the left. Gentle + corner-weighted so it fades
+     before the neon subject and doesn't dim the glow. */
   .sport-channel-icon-panel::after {
-    background: none;
+    background: linear-gradient(150deg, color-mix(in srgb, var(--scf-deep) 78%, transparent) 0, transparent 42%);
+    mix-blend-mode: multiply;
+    opacity: 0.55;
   }
 
   /* Action zone: the cream-backed telemetry scene blends straight onto the matching field (normal
@@ -2129,15 +2134,8 @@
     mask-composite: intersect;
   }
 
-  /* Tones the cream-backed scenes (combat/basketball) toward the dark field at the top/bottom/right
-     edges so the banner reads dark like soccer, instead of cream "coming up" at the boundary. The
-     left/centre is left clear so the scene blends into the pale title band and the neon survives. */
   .sport-channel-action-panel::after {
-    background:
-      linear-gradient(180deg, color-mix(in srgb, var(--scf-deep) 62%, transparent) 0, transparent 24%, transparent 80%, color-mix(in srgb, var(--scf-deep) 62%, transparent) 100%),
-      linear-gradient(90deg, transparent 0 66%, color-mix(in srgb, var(--scf-deep) 54%, transparent) 100%);
-    mix-blend-mode: multiply;
-    opacity: 0.6;
+    background: none;
   }
 
   .sport-channel-title {
@@ -2249,12 +2247,7 @@
   [data-paper] .sport-channel-banner {
     --sport-channel-ink: var(--sport-channel-paper-ink);
     min-height: calc(var(--sport-channel-art-height) + var(--sport-channel-pad) + var(--sport-channel-pad) + 2px);
-    /* Let the inked brush art spill a touch past the banner edges — the imperfect brush-stroke
-       style reads better breaking the frame than clipped square. (Broadcast keeps overflow hidden
-       to clip its bled WebP art.) */
-    overflow: visible;
-    /* Softer border so the brush art that hangs over it blends rather than getting a hard line. */
-    border-color: color-mix(in srgb, var(--mp-primary) 12%, rgba(29, 24, 18, 0.04));
+    border-color: color-mix(in srgb, var(--mp-primary) 16%, rgba(29, 24, 18, 0.1));
     background:
       radial-gradient(ellipse at 86% 36%, color-mix(in srgb, var(--mp-primary) 15%, transparent), transparent 38%),
       radial-gradient(ellipse at 16% 62%, color-mix(in srgb, var(--mp-primary) 11%, transparent), transparent 34%),
@@ -2329,11 +2322,11 @@
     opacity: 0.84;
     -webkit-mask-image: var(--sport-channel-icon);
     mask-image: var(--sport-channel-icon);
-    /* Cover so the brush fills the zone at natural framing (the size of the banner, like dark
-       soccer) instead of being scaled/zoomed in place. */
-    -webkit-mask-size: cover;
+    /* Contain so the WHOLE brush shows at its natural size, fit to the banner height — not
+       zoomed/cropped. The PNG's own soft alpha edges blend it into the paper. */
+    -webkit-mask-size: contain;
     -webkit-mask-position: center;
-    mask-size: cover;
+    mask-size: contain;
     mask-position: center;
   }
 
@@ -2366,8 +2359,7 @@
   }
 
   [data-paper] .sport-channel-action-panel::before {
-    /* Box extends past the bottom edge so the cover-filled brush hangs over the border. */
-    inset: -2% -2% -14% -2%;
+    inset: -2%;
     background-image:
       radial-gradient(
         ellipse at var(--sport-channel-action-wash-x, 56%) var(--sport-channel-action-wash-y, 54%),
@@ -2382,12 +2374,12 @@
       drop-shadow(0 0 16px color-mix(in srgb, var(--mp-primary) 18%, transparent));
     -webkit-mask-image: var(--sport-channel-action);
     mask-image: var(--sport-channel-action);
-    /* Cover (size of the banner, like dark soccer), TOP-anchored so the figure's top isn't cropped
-       and its bottom brush hangs past the border via the extended box + overflow:visible. */
-    -webkit-mask-size: cover;
-    -webkit-mask-position: 50% 0%;
-    mask-size: cover;
-    mask-position: 50% 0%;
+    /* Contain so the WHOLE figure shows at its natural size, fit to the banner height — not
+       zoomed/cropped. */
+    -webkit-mask-size: contain;
+    -webkit-mask-position: center;
+    mask-size: contain;
+    mask-position: center;
   }
 
   [data-paper] .sport-channel-action-panel {
