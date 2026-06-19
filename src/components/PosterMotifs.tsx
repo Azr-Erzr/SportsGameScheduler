@@ -280,6 +280,7 @@ function fitCount(containerWidth: number, viewportWidth: number, variant: 'compa
 
 export function GlobalEventBoard({ events, variant = 'compact' }: { events: PosterEvent[]; variant?: 'compact' | 'room' }) {
   const [activeIndex, setActiveIndex] = useState(0)
+  const [isMobileCarousel, setIsMobileCarousel] = useState(false)
   const { prefs } = useAppState()
   const activeEvent = events[activeIndex] ?? events[0]
   const activeTheme = getTheme(activeEvent?.sportKey ?? 'neutral')
@@ -292,12 +293,43 @@ export function GlobalEventBoard({ events, variant = 'compact' }: { events: Post
   useEffect(() => {
     const el = stackRef.current
     if (!el) return
-    const recompute = () => setVisibleCount(fitCount(el.clientWidth, window.innerWidth, variant, events.length))
+    const media = window.matchMedia('(max-width: 760px)')
+    const recompute = () => {
+      setIsMobileCarousel(media.matches)
+      if (!media.matches) setVisibleCount(fitCount(el.clientWidth, window.innerWidth, variant, events.length))
+    }
     recompute()
     const observer = new ResizeObserver(recompute)
     observer.observe(el)
-    return () => observer.disconnect()
+    media.addEventListener('change', recompute)
+    return () => {
+      observer.disconnect()
+      media.removeEventListener('change', recompute)
+    }
   }, [variant, events.length])
+
+  const onStackScroll = useCallback(() => {
+    if (!isMobileCarousel) return
+    const stack = stackRef.current
+    if (!stack) return
+    const stackBox = stack.getBoundingClientRect()
+    const stackCenter = stackBox.left + stackBox.width / 2
+    const cards = Array.from(stack.children) as HTMLElement[]
+    const closest = cards.reduce(
+      (best, card, index) => {
+        const box = card.getBoundingClientRect()
+        const distance = Math.abs(box.left + box.width / 2 - stackCenter)
+        return distance < best.distance ? { index, distance } : best
+      },
+      { index: activeIndex, distance: Number.POSITIVE_INFINITY },
+    )
+    activate(closest.index)
+  }, [activate, activeIndex, isMobileCarousel])
+
+  function scrollToCard(index: number) {
+    const card = stackRef.current?.children[index] as HTMLElement | undefined
+    card?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' })
+  }
 
   // Chromium drives the pip entrance off a CSS scroll-timeline. Firefox/Safari don't support
   // scroll-driven animations, so we trigger a one-time time-based entrance when the board scrolls
@@ -320,7 +352,7 @@ export function GlobalEventBoard({ events, variant = 'compact' }: { events: Post
     return () => observer.disconnect()
   }, [revealed])
 
-  const visibleEvents = events.slice(0, visibleCount)
+  const visibleEvents = isMobileCarousel ? events : events.slice(0, visibleCount)
 
   return (
     <section
@@ -354,7 +386,7 @@ export function GlobalEventBoard({ events, variant = 'compact' }: { events: Post
         <Bell size={24} className="text-export max-sm:hidden" />
       </div>
 
-      <div className="poster-stack" ref={stackRef}>
+      <div className="poster-stack" ref={stackRef} onScroll={onStackScroll} aria-label="Featured sports boards">
         {visibleEvents.map((event, index) => (
           <EventPosterCard
             key={event.title}
@@ -363,6 +395,18 @@ export function GlobalEventBoard({ events, variant = 'compact' }: { events: Post
             active={index === activeIndex}
             iconVariant={iconVariant}
             onActivate={activate}
+          />
+        ))}
+      </div>
+
+      <div className="poster-carousel-dots" aria-label="Choose featured board">
+        {visibleEvents.map((event, index) => (
+          <button
+            key={event.title}
+            type="button"
+            aria-label={`Show ${event.title}`}
+            aria-current={index === activeIndex}
+            onClick={() => scrollToCard(index)}
           />
         ))}
       </div>

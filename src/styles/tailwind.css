@@ -1370,6 +1370,10 @@
     box-shadow: 0 0 0 2px color-mix(in srgb, var(--poster-primary) 20%, transparent);
   }
 
+  .poster-carousel-dots {
+    display: none;
+  }
+
   .poster-stack a:nth-child(2n) .event-poster-card { --tilt: 1.5deg; }
   .poster-stack a:nth-child(3n) .event-poster-card { --tilt: -2deg; }
 
@@ -2791,31 +2795,55 @@
     }
 
     .poster-stack {
-      margin-top: 120px;
+      --mobile-card-width: min(78vw, 21rem);
+      --mobile-side-pad: calc((100vw - var(--mobile-card-width)) / 2);
+      justify-content: flex-start;
+      gap: 0.9rem;
+      margin: 88px -18px 0;
+      overflow-x: auto;
+      overscroll-behavior-x: contain;
+      padding: 0.35rem var(--mobile-side-pad) 1rem;
+      scroll-padding-inline: var(--mobile-side-pad);
+      scroll-snap-type: x mandatory;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .poster-stack::-webkit-scrollbar {
+      display: none;
     }
 
     .global-event-board-room .poster-stack {
       justify-content: flex-start;
-      margin-top: 120px;
+      margin: 88px -18px 0;
     }
 
     .poster-stack > a,
-    .poster-stack > .event-poster-card {
-      flex-basis: 178px;
-      width: 178px;
-    }
-
+    .poster-stack > .event-poster-card,
     .global-event-board-room .poster-stack > a,
     .global-event-board-room .poster-stack > .event-poster-card {
-      flex-basis: 196px;
-      width: 196px;
+      flex: 0 0 var(--mobile-card-width);
+      width: var(--mobile-card-width);
+      scroll-snap-align: center;
+      scroll-snap-stop: always;
+    }
+
+    .poster-stack .poster-card-link {
+      opacity: 0.72;
+      transform: scale(0.94);
+      transition: opacity 180ms ease, transform 180ms ease;
+    }
+
+    .poster-stack .poster-card-link:has(.event-poster-card.is-active) {
+      opacity: 1;
+      transform: scale(1);
     }
 
     .global-event-board-room .event-poster-card {
       min-width: 0;
-      height: 286px;
+      height: clamp(286px, 72vw, 350px);
       min-height: 0;
-      grid-template-rows: 138px 1fr;
+      grid-template-rows: minmax(138px, 44%) 1fr;
     }
 
     .event-poster-card {
@@ -2835,6 +2863,30 @@
 
     .event-poster-art::after {
       display: none;
+    }
+
+    .poster-carousel-dots {
+      position: relative;
+      z-index: 3;
+      display: flex;
+      justify-content: center;
+      gap: 0.45rem;
+      margin-top: 0.15rem;
+    }
+
+    .poster-carousel-dots button {
+      width: 0.42rem;
+      height: 0.42rem;
+      border: 0;
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--color-ink) 32%, transparent);
+      padding: 0;
+      transition: width 160ms ease, background 160ms ease;
+    }
+
+    .poster-carousel-dots button[aria-current='true'] {
+      width: 1.4rem;
+      background: var(--mp-primary);
     }
 
     .sport-object {
