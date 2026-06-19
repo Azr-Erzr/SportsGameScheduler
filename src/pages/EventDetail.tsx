@@ -3,7 +3,8 @@ import { Link, useParams } from 'react-router-dom'
 import { useAppState } from '../app/state-context'
 import { Badge, Button, EmptyState, Panel, PanelHeading } from '../components/ui'
 import { useEvent } from '../data/liveSport'
-import { matchWatchProvider, watchLinkFor, WATCH_PROVIDERS } from '../lib/ads'
+import { useWatchOptions } from '../data/watchLinks'
+import { matchWatchProvider, watchLinkFor } from '../lib/ads'
 import { exportFilename } from '../domain/brand'
 import { downloadBlob } from '../lib/clipboard'
 import { createMultiSportIcsBlob, sportEmoji } from '../lib/ics'
@@ -212,7 +213,13 @@ export function EventDetailPage() {
             })}
           </ul>
         ) : (
-          <WatchOptions regionCode={regionCode} locale={prefs.locale} />
+          <WatchOptions
+            eventId={event.id}
+            leagueId={event.leagueId}
+            sportKey={event.sportKey}
+            regionCode={regionCode}
+            locale={prefs.locale}
+          />
         )}
       </Panel>
     </div>
@@ -222,11 +229,20 @@ export function EventDetailPage() {
 // No specific broadcast yet: surface region-relevant streaming destinations. These are
 // affiliate links when an affiliate id is configured (see lib/ads.ts), with the required
 // disclosure. Useful even unmonetized — it answers "where could I watch this?".
-function WatchOptions({ regionCode, locale }: { regionCode?: string | null; locale?: string | null }) {
-  const region = (regionCode ?? 'US').toUpperCase()
-  const regional = WATCH_PROVIDERS.filter((p) => p.regions.includes(region))
-  const providers = (regional.length ? regional : WATCH_PROVIDERS).slice(0, 5)
-  const links = providers.map((p) => watchLinkFor(p.key)!).filter(Boolean)
+function WatchOptions({
+  eventId,
+  leagueId,
+  sportKey,
+  regionCode,
+  locale,
+}: {
+  eventId?: string | null
+  leagueId?: string | null
+  sportKey?: string | null
+  regionCode?: string | null
+  locale?: string | null
+}) {
+  const { links } = useWatchOptions({ eventId, leagueId, sportKey, regionCode, limit: 5 })
   const anyAffiliate = links.some((l) => l.affiliate)
 
   return (

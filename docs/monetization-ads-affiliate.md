@@ -1,6 +1,6 @@
 # Silbo Monetization — Ads + Affiliate (Actionable Playbook)
 
-Last updated: June 17, 2026
+Last updated: June 19, 2026
 
 Two revenue streams, both wired into the app now as *scaffolding* that activates the moment you
 plug in account credentials (env vars). Nothing here commits a partner secret to the repo.
@@ -60,10 +60,26 @@ single-column (no rails) to protect the schedule UX.
 
 ## 2. Affiliate "where to watch"
 
+### June 19 update: DB-backed provider catalogue
+- `watch_providers` is now the source of truth for provider name, country/region coverage,
+  supported sports, direct URL, affiliate URL, network, approval status, notes, and priority.
+- `watch_links` stores event/league/sport/region rules. It lets a US combat card prefer DAZN,
+  Paramount+, UFC Fight Pass, Prime Video, PPV.com, and ESPN+, while a Canadian event can prefer
+  TSN/Sportsnet+ and an India event can prefer SonyLIV/FanCode/JioHotstar.
+- `src/data/watchLinks.ts` reads those rules first and falls back to `WATCH_PROVIDERS` if the DB
+  is unavailable or no row matches.
+- FlexOffers is verified. Impact is parked because site verification repeatedly failed despite
+  correct live tags. Prefer Flex/direct routes where possible.
+- Showtime Sports is not a new sports-link target; it shut down at the end of 2023. Current combat
+  paths are DAZN, Paramount+, UFC Fight Pass/Fight Club, Prime Video/PBC, PPV.com, and regional
+  broadcasters.
+- Start with unpaid official links everywhere. Flip rows to `affiliate_status='approved'` and add
+  `affiliate_url` only after a provider approves Silbo.
+
 ### What's built (live in code)
-- `WATCH_PROVIDERS` registry in `src/lib/ads.ts` — Fubo, Sling, ESPN+, DAZN, Crave, TSN,
-  Sportsnet+, TNT/Max, Peacock, UFC Fight Pass — each tagged with its **affiliate network** and
-  **regions**.
+- `WATCH_PROVIDERS` registry in `src/lib/ads.ts` — static fallback coverage for US, Canada,
+  UK/Ireland, Spain, Africa, India, MENA, and combat-specific services. Each entry is tagged with
+  its **affiliate network**, approval status, **regions**, and sport fit.
 - `watchLinkFor(key)` builds the outbound link, appending the affiliate sub-id when
   `VITE_AFFILIATE_<KEY>` is set; otherwise links direct.
 - `matchWatchProvider(channel)` fuzzy-maps a broadcaster string from the data feed to a provider.
@@ -120,8 +136,12 @@ reliable baseline from day one.
 
 ## 5. Next steps checklist
 - [ ] Apply to AdSense; add loader script to `index.html`; set `VITE_ADSENSE_CLIENT`.
-- [ ] Join Impact / FlexOffers / CJ / Awin; set `VITE_AFFILIATE_*` per approved program.
-- [ ] Apply directly to Crave / TSN / Sportsnet (Canada focus).
+- [x] Verify FlexOffers.
+- [ ] Apply to individual FlexOffers programs: ESPN+, Sling, Fubo, DAZN, Peacock, Paramount+.
+- [ ] Apply directly to DAZN, UFC/Fight Pass, PPV.com, TSN, Sportsnet, Sky/NOW, Movistar, Showmax,
+      DStv/SuperSport, SonyLIV/FanCode/JioHotstar where public partner routes exist.
+- [ ] Add approved affiliate URLs to `watch_providers` / `watch_links`; keep unpaid direct links
+      active everywhere else.
 - [ ] Add a `consent` banner (GDPR/Google consent mode) before serving ads in the EU.
 - [ ] When traffic crosses ~25k pageviews/mo, evaluate Raptive/Mediavine; add GAM for direct deals.
 - [ ] Backfill the `broadcasts` table so event pages show real listings (then affiliate matching

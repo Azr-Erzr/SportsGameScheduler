@@ -55,9 +55,13 @@ export type WatchProvider = {
   key: string
   name: string
   /** Network the affiliate program runs on (where you apply). */
-  network: 'Impact' | 'FlexOffers' | 'CJ' | 'Awin' | 'Direct' | 'Partnerize'
+  network: 'Impact' | 'FlexOffers' | 'CJ' | 'Awin' | 'Direct' | 'Partnerize' | 'Cuelinks'
+  /** Approval state for the programme, if any. */
+  affiliateStatus?: 'none' | 'pending' | 'approved' | 'paused' | 'rejected'
   /** Regions where the provider is relevant (ISO country codes). */
   regions: string[]
+  /** Sport keys where the provider is commonly relevant. Empty means broadly useful. */
+  sports?: string[]
   /** Public site (fallback link). The affiliate deep-link replaces this once approved. */
   url: string
 }
@@ -65,16 +69,33 @@ export type WatchProvider = {
 // Registry of monetizable streaming destinations. Affiliate ids are injected at build time via
 // env (VITE_AFFILIATE_<KEY>) so we never commit partner secrets.
 export const WATCH_PROVIDERS: WatchProvider[] = [
-  { key: 'fubo', name: 'Fubo', network: 'Impact', regions: ['US', 'CA'], url: 'https://www.fubo.tv/' },
-  { key: 'sling', name: 'Sling TV', network: 'FlexOffers', regions: ['US'], url: 'https://www.sling.com/' },
-  { key: 'espn_plus', name: 'ESPN+', network: 'CJ', regions: ['US'], url: 'https://plus.espn.com/' },
-  { key: 'dazn', name: 'DAZN', network: 'Awin', regions: ['US', 'CA', 'GB', 'DE', 'ES', 'IT'], url: 'https://www.dazn.com/' },
-  { key: 'crave', name: 'Crave', network: 'Direct', regions: ['CA'], url: 'https://www.crave.ca/' },
-  { key: 'tsn', name: 'TSN', network: 'Direct', regions: ['CA'], url: 'https://www.tsn.ca/' },
-  { key: 'sportsnet', name: 'Sportsnet+', network: 'Direct', regions: ['CA'], url: 'https://www.sportsnet.ca/plus/' },
-  { key: 'tnt', name: 'TNT / Max', network: 'CJ', regions: ['US'], url: 'https://www.max.com/' },
-  { key: 'peacock', name: 'Peacock', network: 'Impact', regions: ['US'], url: 'https://www.peacocktv.com/' },
-  { key: 'ufc', name: 'UFC Fight Pass', network: 'Direct', regions: ['US', 'CA', 'GB'], url: 'https://ufcfightpass.com/' },
+  { key: 'dazn', name: 'DAZN', network: 'FlexOffers', affiliateStatus: 'pending', regions: ['US', 'CA', 'GB', 'DE', 'ES', 'IT', 'ZA'], sports: ['soccer', 'combat', 'boxing', 'mma'], url: 'https://www.dazn.com/' },
+  { key: 'paramount_plus', name: 'Paramount+', network: 'FlexOffers', affiliateStatus: 'pending', regions: ['US', 'CA', 'GB', 'AU'], sports: ['soccer', 'combat', 'football'], url: 'https://www.paramountplus.com/' },
+  { key: 'ufc_fight_pass', name: 'UFC Fight Pass', network: 'Direct', affiliateStatus: 'pending', regions: ['US', 'CA', 'GB', 'AU', 'IN'], sports: ['combat', 'mma'], url: 'https://ufcfightpass.com/' },
+  { key: 'prime_video', name: 'Prime Video', network: 'Direct', affiliateStatus: 'pending', regions: ['US', 'CA', 'GB', 'ES', 'IN', 'ZA'], sports: ['combat', 'boxing', 'soccer', 'football', 'basketball'], url: 'https://www.primevideo.com/' },
+  { key: 'ppv_com', name: 'PPV.com', network: 'Direct', affiliateStatus: 'pending', regions: ['US', 'CA'], sports: ['combat', 'boxing', 'mma'], url: 'https://www.ppv.com/' },
+  { key: 'espn_plus', name: 'ESPN+', network: 'FlexOffers', affiliateStatus: 'pending', regions: ['US'], sports: ['soccer', 'combat', 'football', 'basketball', 'hockey', 'tennis', 'golf'], url: 'https://plus.espn.com/' },
+  { key: 'fubo', name: 'Fubo', network: 'FlexOffers', affiliateStatus: 'pending', regions: ['US', 'CA'], sports: ['soccer', 'football', 'basketball', 'hockey', 'baseball'], url: 'https://www.fubo.tv/' },
+  { key: 'sling', name: 'Sling TV', network: 'FlexOffers', affiliateStatus: 'pending', regions: ['US'], sports: ['soccer', 'football', 'basketball', 'hockey', 'baseball', 'combat'], url: 'https://www.sling.com/' },
+  { key: 'peacock', name: 'Peacock', network: 'FlexOffers', affiliateStatus: 'pending', regions: ['US'], sports: ['soccer', 'football', 'olympic', 'track'], url: 'https://www.peacocktv.com/' },
+  { key: 'max_tnt', name: 'TNT Sports / Max', network: 'CJ', affiliateStatus: 'pending', regions: ['US'], sports: ['basketball', 'hockey', 'soccer', 'combat'], url: 'https://www.max.com/' },
+  { key: 'tsn', name: 'TSN', network: 'Direct', affiliateStatus: 'none', regions: ['CA'], sports: ['soccer', 'football', 'basketball', 'hockey', 'combat', 'tennis', 'golf'], url: 'https://www.tsn.ca/' },
+  { key: 'sportsnet_plus', name: 'Sportsnet+', network: 'Direct', affiliateStatus: 'none', regions: ['CA'], sports: ['hockey', 'baseball', 'basketball', 'soccer', 'combat'], url: 'https://www.sportsnet.ca/plus/' },
+  { key: 'crave', name: 'Crave', network: 'Direct', affiliateStatus: 'none', regions: ['CA'], sports: ['soccer', 'combat', 'basketball', 'hockey'], url: 'https://www.crave.ca/' },
+  { key: 'cbc_gem', name: 'CBC Gem', network: 'Direct', affiliateStatus: 'none', regions: ['CA'], sports: ['olympic', 'soccer', 'hockey', 'track'], url: 'https://gem.cbc.ca/' },
+  { key: 'sky_sports', name: 'Sky Sports', network: 'Direct', affiliateStatus: 'pending', regions: ['GB', 'IE'], sports: ['soccer', 'football', 'f1', 'motorsport', 'boxing', 'combat', 'golf', 'tennis'], url: 'https://www.skysports.com/' },
+  { key: 'now_sports', name: 'NOW Sports', network: 'Direct', affiliateStatus: 'pending', regions: ['GB', 'IE'], sports: ['soccer', 'football', 'f1', 'motorsport', 'boxing', 'combat', 'golf', 'tennis'], url: 'https://www.nowtv.com/sports' },
+  { key: 'tnt_sports_uk', name: 'TNT Sports UK', network: 'Direct', affiliateStatus: 'pending', regions: ['GB', 'IE'], sports: ['soccer', 'combat', 'boxing', 'mma'], url: 'https://www.tntsports.co.uk/' },
+  { key: 'bbc_iplayer', name: 'BBC iPlayer', network: 'Direct', affiliateStatus: 'none', regions: ['GB'], sports: ['soccer', 'olympic', 'tennis', 'track'], url: 'https://www.bbc.co.uk/iplayer' },
+  { key: 'itvx', name: 'ITVX', network: 'Direct', affiliateStatus: 'none', regions: ['GB'], sports: ['soccer', 'rugby', 'boxing'], url: 'https://www.itv.com/' },
+  { key: 'movistar_plus', name: 'Movistar Plus+', network: 'Direct', affiliateStatus: 'pending', regions: ['ES'], sports: ['soccer', 'f1', 'motorsport', 'basketball', 'tennis', 'golf'], url: 'https://www.movistarplus.es/' },
+  { key: 'rtve', name: 'RTVE Play', network: 'Direct', affiliateStatus: 'none', regions: ['ES'], sports: ['soccer', 'olympic', 'tennis', 'track'], url: 'https://www.rtve.es/play/' },
+  { key: 'showmax', name: 'Showmax', network: 'Direct', affiliateStatus: 'pending', regions: ['ZA', 'NG', 'KE', 'GH'], sports: ['soccer', 'football', 'rugby', 'combat'], url: 'https://www.showmax.com/' },
+  { key: 'dstv_supersport', name: 'DStv / SuperSport', network: 'Direct', affiliateStatus: 'pending', regions: ['ZA', 'NG', 'KE', 'GH'], sports: ['soccer', 'rugby', 'cricket', 'combat', 'motorsport', 'tennis', 'golf'], url: 'https://www.dstv.com/' },
+  { key: 'bein_sports', name: 'beIN SPORTS', network: 'Direct', affiliateStatus: 'pending', regions: ['QA', 'SA', 'AE', 'EG', 'MA', 'FR', 'ES', 'US'], sports: ['soccer', 'tennis', 'motorsport', 'combat'], url: 'https://www.beinsports.com/' },
+  { key: 'sonyliv', name: 'SonyLIV', network: 'Cuelinks', affiliateStatus: 'pending', regions: ['IN'], sports: ['soccer', 'cricket', 'combat', 'tennis'], url: 'https://www.sonyliv.com/' },
+  { key: 'fancode', name: 'FanCode', network: 'Direct', affiliateStatus: 'pending', regions: ['IN'], sports: ['cricket', 'soccer', 'basketball', 'baseball'], url: 'https://www.fancode.com/' },
+  { key: 'hotstar_jio', name: 'JioHotstar', network: 'Direct', affiliateStatus: 'pending', regions: ['IN'], sports: ['cricket', 'football', 'soccer', 'tennis', 'olympic'], url: 'https://www.hotstar.com/in' },
 ]
 
 const PROVIDER_BY_KEY = new Map(WATCH_PROVIDERS.map((p) => [p.key, p]))
@@ -93,6 +114,7 @@ export function watchLinkFor(key: string): ResolvedWatchLink | null {
   if (!provider) return null
   const id = affiliateId(key)
   if (!id) return { name: provider.name, href: provider.url, affiliate: false }
+  if (/^https?:\/\//i.test(id)) return { name: provider.name, href: id, affiliate: true }
   const sep = provider.url.includes('?') ? '&' : '?'
   // Generic sub-id param; each network has its own (Impact: irclickid/subId, CJ: sid, etc.).
   return { name: provider.name, href: `${provider.url}${sep}utm_source=silbo&subid=${encodeURIComponent(id)}`, affiliate: true }
