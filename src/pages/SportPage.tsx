@@ -8,6 +8,7 @@ import { SportChannelBanner } from '../components/SportChannelBanner'
 import { Badge, Button, EmptyState, Panel, PanelHeading } from '../components/ui'
 import { deriveTeams, filterMatchesForTeams, useMatches } from '../data/liveMatches'
 import { useSportRoster, useSportSchedule, type LiveEvent } from '../data/liveSport'
+import { flagPoleGradient } from '../data/flagColors'
 import { allMatches, featuredTeams } from '../data/worldcup'
 import { getSport, type SportInfo } from '../domain/sports'
 import { AdSlot } from '../components/AdSlot'
@@ -26,26 +27,6 @@ function DataFreshness({ lastUpdated }: { lastUpdated: Date | null }) {
       Live · via TheSportsDB{lastUpdated ? ` · synced ${relativeTimeFromNow(lastUpdated)}` : ''}
     </p>
   )
-}
-
-// Kit-wall memorabilia: each team row carries a jersey-stripe bar — deterministic two-color
-// pattern from the team name (kit culture without anyone's actual kit).
-const KIT_PAIRS: Array<[string, string]> = [
-  ['#ff5247', '#f4ead8'],
-  ['#46e8ff', '#16387c'],
-  ['#54ff9f', '#0c5c31'],
-  ['#ffd34d', '#1d1812'],
-  ['#ff4fd8', '#f4ead8'],
-  ['#7aa2ff', '#f4ead8'],
-  ['#ffa94d', '#1d1812'],
-  ['#d8ff49', '#155e38'],
-]
-
-function kitStripe(team: string) {
-  let hash = 0
-  for (const char of team) hash = (hash * 31 + char.charCodeAt(0)) >>> 0
-  const [a, b] = KIT_PAIRS[hash % KIT_PAIRS.length]
-  return `repeating-linear-gradient(180deg, ${a} 0 5px, ${b} 5px 10px)`
 }
 
 const SKYLINE_COLORS = ['var(--mp-primary)', 'var(--mp-accent)', 'var(--color-neon-magenta)', 'var(--mp-export)']
@@ -275,7 +256,7 @@ function WorldCupPlanner() {
                 >
                   <span
                     className="h-7 w-1.5 shrink-0 rounded-full"
-                    style={{ background: kitStripe(team) }}
+                    style={{ background: flagPoleGradient(team) }}
                     aria-hidden="true"
                   />
                   <span
