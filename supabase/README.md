@@ -21,6 +21,8 @@ the frontend currently runs on local data + localStorage, shaped to swap onto th
   - `provider-hydrate` - paced TheSportsDB league/team/event hydrator.
   - `provider-hydrate-apisports` - paced API-Sports/API-Football fixture hydrator for
     high-priority soccer targets, starting with the World Cup pilot target.
+  - `provider-hydrate-apisports-f1` - paced API-Sports/API-Formula-1 race hydrator for
+    the motorsport/F1 page.
   - `calendar-feed` — `GET /calendar-feed/:token.ics`, stable UID/SEQUENCE, RFC 5545
     escaping + line folding.
   - `notifications` — materialize + claim + send, dispatching by channel (email via Resend;
@@ -33,7 +35,7 @@ the frontend currently runs on local data + localStorage, shaped to swap onto th
 2. Seed `sports` (at minimum `soccer`) and the WC2026 league row.
 3. Set function secrets: `WORLDCUP_JSON_URL`, `THESPORTSDB_API_KEY`, `APISPORTS_KEY`,
    `RESEND_API_KEY`, `EMAIL_FROM`, `APP_URL`, VAPID keys when Web Push lands.
-4. `supabase functions deploy provider-sync provider-hydrate provider-hydrate-apisports calendar-feed notifications`.
+4. `supabase functions deploy provider-sync provider-hydrate provider-hydrate-apisports provider-hydrate-apisports-f1 calendar-feed notifications`.
 5. Run `cron.sql` with the project ref filled in.
 6. Point the frontend store layer (`src/lib/store.ts`) at supabase-js instead of localStorage,
    and merge anonymous local follows into `user_follows` on first sign-in (Objective 14.2).
@@ -46,10 +48,16 @@ Use the direct API-Sports key as a server-only Edge Function secret:
 supabase secrets set APISPORTS_KEY=<your-api-sports-key>
 ```
 
-The pilot hydrator reads API-Football from `https://v3.football.api-sports.io` with the
-`x-apisports-key` header. Free plan usage should stay low: run this daily or manually while
-testing, and keep `APISPORTS_CALL_BUDGET` small until the dashboard proves consumption is
-stable.
+The pilot hydrators read API-Football from `https://v3.football.api-sports.io` and
+API-Formula-1 from `https://v1.formula-1.api-sports.io` with the `x-apisports-key`
+header. Free plan usage should stay low: run these daily or manually while testing, and
+keep `APISPORTS_CALL_BUDGET` / `APISPORTS_F1_CALL_BUDGET` small until the dashboard
+proves consumption is stable.
+
+API-Formula-1 free access is historical-only for the current account: API-Sports returned
+provider guidance to use seasons `2022` through `2024`, so the checked-in pilot target uses
+`2024` for shape/testing. Current-season F1 hydration still needs TheSportsDB/OpenF1 or a
+paid API-Sports tier.
 
 ## Before any licensed provider goes live
 
