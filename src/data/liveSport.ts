@@ -48,6 +48,25 @@ type ScheduleState = {
   lastUpdated: Date | null
 }
 
+const SYSTEM_LEAGUE_NAME_PATTERNS = [
+  /^_/,
+  /\bdefunct\b/i,
+  /\bdeprecated\b/i,
+  /\bplaceholder\b/i,
+  /\bunknown\b/i,
+  /\btbd\b/i,
+]
+
+export function isPublicLeagueName(name: string | null | undefined) {
+  const trimmed = name?.trim()
+  if (!trimmed) return false
+  return !SYSTEM_LEAGUE_NAME_PATTERNS.some((pattern) => pattern.test(trimmed))
+}
+
+function publicLeagueName(name: string | null | undefined) {
+  return isPublicLeagueName(name) ? name!.trim() : ''
+}
+
 export function useSportSchedule(canonicalSportKey: string): SportSchedule {
   // Store the key the data was loaded for; derive `loading` instead of setting state
   // synchronously in the effect (which triggers cascading renders).
@@ -84,25 +103,30 @@ export function useSportSchedule(canonicalSportKey: string): SportSchedule {
 
       if (cancelled) return
 
-      const leagues: LiveLeague[] = (leaguesRes.data ?? []).map((l) => ({
-        id: l.id,
-        name: l.name,
-        logoUrl: (l as unknown as { logo_url: string | null }).logo_url,
-      }))
+      const leagues: LiveLeague[] = (leaguesRes.data ?? [])
+        .filter((l) => isPublicLeagueName(l.name))
+        .map((l) => ({
+          id: l.id,
+          name: l.name.trim(),
+          logoUrl: (l as unknown as { logo_url: string | null }).logo_url,
+        }))
       const leagueNames = new Map(leagues.map((l) => [l.id, l.name]))
+      const visibleLeagueIds = new Set(leagueNames.keys())
 
       const rows = (eventsRes.data ?? []) as unknown as EventRow[]
-      const events: LiveEvent[] = rows.map((row) => ({
-        id: row.id,
-        title: row.title,
-        startsAt: row.starts_at ? new Date(row.starts_at) : null,
-        startsAtTbd: row.starts_at_tbd,
-        status: row.status,
-        leagueId: row.league_id,
-        leagueName: (row.league_id && leagueNames.get(row.league_id)) || '',
-        sportKey: canonicalSportKey,
-        venue: row.venues?.name ?? null,
-      }))
+      const events: LiveEvent[] = rows
+        .filter((row) => !row.league_id || visibleLeagueIds.has(row.league_id))
+        .map((row) => ({
+          id: row.id,
+          title: row.title,
+          startsAt: row.starts_at ? new Date(row.starts_at) : null,
+          startsAtTbd: row.starts_at_tbd,
+          status: row.status,
+          leagueId: row.league_id,
+          leagueName: (row.league_id && leagueNames.get(row.league_id)) || '',
+          sportKey: canonicalSportKey,
+          venue: row.venues?.name ?? null,
+        }))
 
       // Freshness: the most recent change we ingested for this sport.
       let lastUpdated: Date | null = null
@@ -153,7 +177,7 @@ function mapMyEvent(row: MyEventRow): LiveEvent {
     startsAtTbd: row.starts_at_tbd,
     status: row.status,
     leagueId: row.league_id,
-    leagueName: row.leagues?.name ?? '',
+    leagueName: publicLeagueName(row.leagues?.name),
     sportKey: row.sports?.key ?? null,
     venue: row.venues?.name ?? null,
   }
@@ -399,7 +423,7 @@ export function useEvent(eventId: string | undefined): { event: EventDetail | nu
           startsAtTbd: r.starts_at_tbd,
           status: r.status,
           leagueId: r.league_id,
-          leagueName: r.leagues?.name ?? '',
+          leagueName: publicLeagueName(r.leagues?.name),
           sportKey: r.sports?.key ?? null,
           venue: r.venues?.name ?? null,
           venueCity: r.venues?.city ?? null,
@@ -462,7 +486,7 @@ export function useLeague(leagueId: string | undefined): {
       }
       const nowIso = new Date(Date.now() - 3 * 3600_000).toISOString()
       const [{ data: leagueRow }, { data: eventRows }] = await Promise.all([
-        supabase.from('leagues').select('id, name, country, logo_url, sports(key)').eq('id', leagueId).maybeSingle(),
+        supabase.from('leagues').select('id, name, country, logo_url, is_public, sports(key)').eq('id', leagueId).eq('is_public', true).maybeSingle(),
         supabase
           .from('events')
           .select(MY_EVENT_SELECT)
@@ -479,10 +503,14 @@ export function useLeague(leagueId: string | undefined): {
         return
       }
       const r = leagueRow as unknown as { id: string; name: string; country: string | null; logo_url: string | null; sports: { key: string } | null }
+      if (!isPublicLeagueName(r.name)) {
+        setState({ forKey: key, league: null, events: [], configured: true })
+        return
+      }
       setState({
         forKey: key,
         configured: true,
-        league: { id: r.id, name: r.name, sportKey: r.sports?.key ?? null, country: r.country, logoUrl: r.logo_url },
+        league: { id: r.id, name: r.name.trim(), sportKey: r.sports?.key ?? null, country: r.country, logoUrl: r.logo_url },
         events: ((eventRows ?? []) as unknown as MyEventRow[]).map(mapMyEvent),
       })
     })
