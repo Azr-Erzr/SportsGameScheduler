@@ -26,6 +26,7 @@ const footerLinks = [
   { to: '/', label: 'Home' },
   { to: '/my-schedule', label: 'My Schedule' },
   { to: '/explore', label: 'Explore sports' },
+  { to: '/exports', label: 'Exports' },
   { to: '/calendar', label: 'Silbo Sync' },
   { to: '/custom-leagues', label: 'Create League' },
   { to: '/settings/alerts', label: 'Alerts' },

@@ -1,6 +1,7 @@
 import { ArrowRight, Database, Search, Sparkles, Users } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useAppState } from '../app/state-context'
 import { SportAssetIcon } from '../components/SportAssetIcon'
 import { SportChannelBanner } from '../components/SportChannelBanner'
 import { Badge, Panel, PanelHeading } from '../components/ui'
@@ -35,19 +36,21 @@ function laneLabel(lane: CommunitySport['lane']) {
 }
 
 function OtherSportRouteCard({ sport }: { sport: SportInfo }) {
+  const { prefs } = useAppState()
   const schedule = useSportSchedule(sport.canonicalSportKey)
   const liveReady = schedule.configured && !schedule.loading && (schedule.leagues.length > 0 || schedule.events.length > 0)
   const status = schedule.loading ? 'Checking' : liveReady ? 'DB route' : 'Queued'
   const href = `/sports/${sport.key}`
+  const iconVariant = prefs.themeMode === 'program' ? 'brush' : 'neon3d'
 
   return (
     <Link
       to={href}
-      className="group grid min-h-[168px] grid-rows-[auto_1fr_auto] rounded-card border-2 border-primary/20 bg-surface/72 p-4 transition-colors hover:border-primary/50 hover:bg-primary/6"
+      className="group grid h-full min-h-[188px] grid-rows-[auto_1fr_auto] rounded-card border-2 border-primary/20 bg-surface/72 p-4 transition-colors hover:border-primary/50 hover:bg-primary/6"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
-          <SportAssetIcon sportKey={sport.key} size="sm" variant="brush" label={`${sport.label} icon`} />
+          <SportAssetIcon sportKey={sport.key} size="sm" variant={iconVariant} label={`${sport.label} icon`} />
           <div className="min-w-0">
             <h3 className="truncate text-base font-black uppercase leading-none text-primary">{sport.label}</h3>
             <p className="mt-1 truncate font-mono text-[10px] uppercase tracking-wide text-ink/45">
@@ -55,19 +58,21 @@ function OtherSportRouteCard({ sport }: { sport: SportInfo }) {
             </p>
           </div>
         </div>
-        <Badge tone={liveReady ? 'secondary' : 'muted'}>{status}</Badge>
+        <Badge tone={liveReady ? 'secondary' : 'muted'} className="shrink-0 whitespace-nowrap text-[10px]">
+          {status}
+        </Badge>
       </div>
 
       <p className="mt-3 line-clamp-3 text-sm leading-relaxed text-ink/64">{sport.tagline}</p>
 
-      <div className="mt-4 flex items-center gap-3 border-t border-primary/12 pt-3">
-        <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink/45">
+      <div className="mt-4 grid grid-cols-[auto_auto_minmax(3.5rem,1fr)] items-center gap-x-3 gap-y-1 border-t border-primary/12 pt-3">
+        <span className="whitespace-nowrap font-mono text-[9px] uppercase tracking-[0.14em] text-ink/45">
           {schedule.loading ? '...' : `${schedule.leagues.length} leagues`}
         </span>
-        <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink/45">
+        <span className="whitespace-nowrap font-mono text-[9px] uppercase tracking-[0.14em] text-ink/45">
           {schedule.loading ? '...' : `${schedule.events.length} upcoming`}
         </span>
-        <span className="ml-auto inline-flex items-center gap-1 text-sm font-bold text-primary">
+        <span className="inline-flex items-center justify-self-end whitespace-nowrap text-sm font-bold text-primary">
           Open <ArrowRight size={14} />
         </span>
       </div>
@@ -117,7 +122,7 @@ export function OtherSportsPage() {
           </span>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid auto-rows-fr gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {providerBackedSports.map((sport) => (
             <OtherSportRouteCard key={sport.key} sport={sport} />
           ))}
@@ -144,7 +149,7 @@ export function OtherSportsPage() {
                 key={item}
                 type="button"
                 onClick={() => setLane(item)}
-                className={`rounded-lg border px-3 py-2 text-left font-mono text-[10px] uppercase tracking-[0.14em] transition-colors ${
+              className={`min-h-9 whitespace-nowrap rounded-lg border px-3 py-2 text-center font-mono text-[9px] uppercase tracking-[0.12em] transition-colors ${
                   lane === item ? 'border-primary bg-primary text-void' : 'border-primary/20 text-ink/60 hover:bg-primary/8'
                 }`}
               >
@@ -160,11 +165,11 @@ export function OtherSportsPage() {
           </Link>
         </Panel>
 
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid auto-rows-fr gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {filteredCommunitySports.map((sport) => (
             <article
               key={sport.name}
-              className="relative overflow-hidden rounded-card border border-primary/18 bg-surface/64 px-4 py-3.5"
+              className="relative h-full min-h-[96px] overflow-hidden rounded-card border border-primary/18 bg-surface/64 px-4 py-3.5"
             >
               <div className="absolute inset-y-0 left-0 w-1.5 bg-primary/55" aria-hidden="true" />
               <div className="flex items-start justify-between gap-3 pl-2">

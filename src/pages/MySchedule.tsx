@@ -38,10 +38,9 @@ import { createIcsBlob, createMultiSportIcsBlob, sportEmoji } from '../lib/ics'
 import { t } from '../lib/i18n'
 import { createMultiSportNotesText, createNotesText } from '../lib/notes'
 import { MAX_EVENTS_BY_TEMPLATE, paginateEvents, type ExportTemplate } from '../lib/paginate'
-import { canvasToBlob, createScheduleCanvas } from '../lib/poster'
+import { canvasToBlob, createScheduleCanvas, type PosterVariant } from '../lib/poster'
 import { displayTimeOptions, formatLongDate, formatTime } from '../lib/time'
 import { useNow } from '../lib/useNow'
-import { posterChromeTheme } from '../theme/themes'
 import { CalendarFeedsPage } from './CalendarFeeds'
 
 type RangeKey = 'all' | 'today' | 'weekend' | 'week'
@@ -245,6 +244,9 @@ export function MySchedulePage() {
   const [hidePast, setHidePast] = useState(true)
   const [flow, setFlow] = useState<FlowState>({ flowId: null, stepIndex: 0, answers: {} })
   const [template, setTemplate] = useState<ExportTemplate>('poster')
+  const [posterVariant, setPosterVariant] = useState<PosterVariant>(
+    prefs.themeMode === 'program' ? 'light' : 'dark',
+  )
   const [message, setMessage] = useState('')
   const [reminderSummary, setReminderSummary] = useState('')
 
@@ -385,7 +387,7 @@ export function MySchedulePage() {
           page: pageNumber,
           pageCount: exportPages.length,
         },
-        posterChromeTheme,
+        posterVariant,
         prefs.locale,
         prefs.hour12,
       )
@@ -784,6 +786,26 @@ export function MySchedulePage() {
                           </span>
                         </button>
                       ))}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-semibold uppercase tracking-wide text-ink/50">Image style</span>
+                      <div className="ml-auto inline-flex overflow-hidden rounded-lg border border-primary/20">
+                        {(['light', 'dark'] as const).map((variantKey) => (
+                          <button
+                            key={variantKey}
+                            type="button"
+                            aria-pressed={posterVariant === variantKey}
+                            onClick={() => setPosterVariant(variantKey)}
+                            className={`px-3 py-1.5 text-xs font-semibold capitalize transition-colors ${
+                              posterVariant === variantKey
+                                ? 'bg-primary text-void'
+                                : 'bg-page/60 text-ink/60 hover:bg-primary/8'
+                            }`}
+                          >
+                            {variantKey}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                     <p className="text-xs text-ink/50">
                       Poster images paginate at {MAX_EVENTS_BY_TEMPLATE[template]} events per page if you choose the image path.
