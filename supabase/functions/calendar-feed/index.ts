@@ -32,6 +32,7 @@ type EventRow = {
   venues: { name: string } | null
   sports: { key: string } | null
   leagues: { name: string } | null
+  broadcasts?: Array<{ country: string | null; channel: string | null; kind: string | null; stream_url: string | null }>
 }
 
 Deno.serve(async (req) => {
@@ -60,7 +61,15 @@ Deno.serve(async (req) => {
   let query = supabase
     .from('events')
     .select(
-      'id, title, starts_at, starts_at_tbd, updated_at, version, status, metadata, venues(name), sports(key), leagues(name)',
+      [
+        'id, title, starts_at, starts_at_tbd, updated_at, version, status, metadata',
+        'venues(name)',
+        'sports(key)',
+        'leagues(name)',
+        feed.include_broadcasts ? 'broadcasts(country, channel, kind, stream_url)' : '',
+      ]
+        .filter(Boolean)
+        .join(', '),
     )
     .neq('status', 'finished')
     .gte('starts_at', new Date(Date.now() - 24 * 3600_000).toISOString())
@@ -108,6 +117,7 @@ Deno.serve(async (req) => {
     venue_name: event.venues?.name ?? null,
     sport_key: event.sports?.key ?? null,
     league_name: event.leagues?.name ?? null,
+    broadcasts: feed.include_broadcasts ? (event.broadcasts ?? []) : [],
   }))
 
   return new Response(

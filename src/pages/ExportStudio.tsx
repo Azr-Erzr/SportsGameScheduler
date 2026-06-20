@@ -1,4 +1,4 @@
-import { CalendarDays, Copy, Download, FileImage, Share2 } from 'lucide-react'
+import { CalendarDays, Copy, Download, FileImage, FileSpreadsheet, Share2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useAppState } from '../app/state-context'
 import { cityLabelFor } from '../lib/cities'
@@ -12,6 +12,7 @@ import { t } from '../lib/i18n'
 import { createMultiSportNotesText, createNotesText } from '../lib/notes'
 import { MAX_EVENTS_BY_TEMPLATE, paginateEvents, type ExportTemplate } from '../lib/paginate'
 import { canvasToBlob, createScheduleCanvas, type PosterVariant } from '../lib/poster'
+import { createScheduleCsv, exportCompletionMessage } from '../lib/scheduleExports'
 import { formatDate, formatTime } from '../lib/time'
 import { CalendarFeedsPage } from './CalendarFeeds'
 
@@ -53,7 +54,7 @@ export function ExportStudioPage() {
   async function exportImages(share: boolean) {
     let pageNumber = 1
     for (const pageEvents of pages) {
-      const canvas = createScheduleCanvas(
+      const canvas = await createScheduleCanvas(
         pageEvents,
         followedTeams,
         timeZone,
@@ -82,8 +83,8 @@ export function ExportStudioPage() {
     }
     setMessage(
       pages.length > 1
-        ? `${pages.length} readable pages downloaded - long schedules never shrink into tiny text.`
-        : 'Schedule image downloaded.',
+        ? exportCompletionMessage('images', pages.length)
+        : exportCompletionMessage('image'),
     )
   }
 
@@ -96,18 +97,24 @@ export function ExportStudioPage() {
       return
     }
     downloadBlob(blob, exportFilename('schedule', 'ics'))
-    setMessage('Calendar snapshot downloaded. For ongoing updates, create a Silbo Sync feed instead.')
+    setMessage(exportCompletionMessage('ics'))
+  }
+
+  async function exportCsv() {
+    const csv = createScheduleCsv(schedule, timeZone, prefs.locale, prefs.hour12)
+    downloadBlob(new Blob([csv], { type: 'text/csv;charset=utf-8' }), exportFilename('schedule', 'csv'))
+    setMessage(exportCompletionMessage('csv'))
   }
 
   async function copyNotes() {
     const text = createNotesText(schedule, followedTeams, timeZone, cityLabel, prefs.locale, prefs.hour12)
     if (navigator.share) {
       await navigator.share({ title: brand.scheduleTitle, text })
-      setMessage('Text schedule opened in your share sheet.')
+      setMessage(exportCompletionMessage('share'))
       return
     }
     await copyToClipboard(text)
-    setMessage('Plain-text schedule copied - paste into Notes, Keep, Notion, or a group chat.')
+    setMessage(exportCompletionMessage('notes'))
   }
 
   async function copyAllSportsNotes() {
@@ -241,6 +248,9 @@ export function ExportStudioPage() {
             </Button>
             <Button className="w-full" variant="ghost" onClick={exportIcs} disabled={schedule.length === 0}>
               <Download size={15} /> {t('export.downloadWorldCup', undefined, prefs.locale)}
+            </Button>
+            <Button className="w-full" variant="ghost" onClick={exportCsv} disabled={schedule.length === 0}>
+              <FileSpreadsheet size={15} /> Download World Cup CSV
             </Button>
             <Button
               className="w-full"

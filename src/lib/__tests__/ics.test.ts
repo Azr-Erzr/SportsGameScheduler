@@ -1,6 +1,8 @@
 import { describe, expect, test } from 'vitest'
-import { createMultiSportIcsBlob, escapeIcsText, sportEmoji } from '../ics'
+import { eventToVevent as serverEventToVevent } from '../../../supabase/functions/_shared/ics'
+import { createIcsBlob, createMultiSportIcsBlob, escapeIcsText, foldIcsLine, sportEmoji } from '../ics'
 import type { LiveEvent } from '../../data/liveSport'
+import type { Match } from '../../domain/match'
 
 function makeEvent(over: Partial<LiveEvent> = {}): LiveEvent {
   return {
@@ -32,6 +34,19 @@ describe('escapeIcsText (RFC 5545 §3.3.11)', () => {
 
   test('venue names with commas no longer break LOCATION fields', () => {
     expect(escapeIcsText('Estadio Azteca, Mexico City')).toBe('Estadio Azteca\\, Mexico City')
+  })
+})
+
+describe('foldIcsLine', () => {
+  test('keeps generated ICS content lines within 75 bytes', () => {
+    const folded = foldIcsLine(
+      'SUMMARY:Silbo Sports confirmed schedule with a very long matchup title that should fold cleanly',
+    )
+
+    expect(folded).toContain('\r\n ')
+    for (const line of folded.split('\r\n')) {
+      expect(new TextEncoder().encode(line).length).toBeLessThanOrEqual(75)
+    }
   })
 })
 
@@ -90,5 +105,69 @@ describe('createMultiSportIcsBlob', () => {
   test('skips events without a start time', async () => {
     const ics = await render([makeEvent({ startsAt: null })])
     expect(ics).not.toContain('BEGIN:VEVENT')
+  })
+})
+
+describe('createIcsBlob', () => {
+  async function render(matches: Match[]) {
+    return createIcsBlob(matches, 'America/Toronto', 'en-CA', true).text()
+  }
+
+  test('renders a valid snapshot calendar with correct UTC time, title, venue, and description', async () => {
+    const ics = await render([
+      {
+        date: '2026-06-11',
+        time: '13:00 UTC-6',
+        startsAt: new Date('2026-06-11T19:00:00Z'),
+        team1: 'Mexico',
+        team2: 'South Africa',
+        group: 'Group A',
+        round: 'Group stage',
+        ground: 'Estadio Azteca, Mexico City',
+      },
+    ])
+    const unfolded = ics.replace(/\r\n /g, '')
+
+    expect(unfolded).toContain('BEGIN:VCALENDAR')
+    expect(unfolded).toContain('VERSION:2.0')
+    expect(unfolded).toContain('CALSCALE:GREGORIAN')
+    expect(unfolded).toContain('METHOD:PUBLISH')
+    expect(unfolded).toContain('X-WR-CALNAME:Silbo Sports World Cup Schedule')
+    expect(unfolded).toContain('BEGIN:VEVENT')
+    expect(unfolded).toContain('DTSTART:20260611T190000Z')
+    expect(unfolded).toContain('DTEND:20260611T210000Z')
+    expect(unfolded).toContain('SUMMARY:Mexico vs South Africa')
+    expect(unfolded).toContain('LOCATION:Estadio Azteca\\, Mexico City')
+    expect(unfolded).toContain('DESCRIPTION:Round: Group stage\\nGroup: Group A\\nVenue: Estadio Azteca\\, Mexico City')
+  })
+})
+
+describe('server live-feed ICS renderer', () => {
+  test('uses stable UID, sequence, location, broadcast notes, and folded lines', () => {
+    const vevent = serverEventToVevent({
+      id: 'event-123',
+      title:
+        'A very long championship match title with many details that should not exceed the iCalendar line length limit',
+      starts_at: '2026-07-14T01:30:00.000Z',
+      starts_at_tbd: false,
+      updated_at: '2026-07-01T12:00:00.000Z',
+      version: 7,
+      status: 'scheduled',
+      venue_name: 'Rogers Centre, Toronto',
+      sport_key: 'baseball',
+      league_name: 'MLB',
+      broadcasts: [{ country: 'CA', channel: 'Sportsnet', kind: 'tv', stream_url: 'https://example.test/watch' }],
+    })
+    const unfolded = vevent.replace(/\r\n /g, '')
+
+    expect(unfolded).toContain('UID:event-123@silbosports.app')
+    expect(unfolded).toContain('SEQUENCE:7')
+    expect(unfolded).toContain('DTSTART:20260714T013000Z')
+    expect(unfolded).toContain('LOCATION:Rogers Centre\\, Toronto')
+    expect(unfolded).toContain('Where to watch: Sportsnet (CA): https://example.test/watch')
+
+    for (const line of vevent.split('\r\n')) {
+      expect(new TextEncoder().encode(line).length).toBeLessThanOrEqual(75)
+    }
   })
 })

@@ -56,6 +56,19 @@ The horizontal in-list banner is the highest-yield, least-annoying unit and is d
 add them in a desktop-only grid column on sport pages when you're ready; mobile should stay
 single-column (no rails) to protect the schedule UX.
 
+### Ad-blocker resilience
+Do not make the core schedule depend on third-party ad scripts. The app should stay useful when
+AdSense, GAM, or an affiliate network is blocked.
+
+- `AdSlot` reserves the layout space first, so blocked/unfilled ads do not collapse the schedule.
+- If a network unit does not fill, the slot falls back to a first-party sponsor placement label
+  ("schedule-safe partners") rather than an empty hole.
+- Do not fight user ad blockers with evasive script names or dark patterns. Treat blocked display
+  ads as a signal to lean harder on useful first-party surfaces: direct sponsorship packages,
+  team/league placements, and the where-to-watch affiliate panel.
+- Keep affiliate/watch links functional without tracking IDs. Approved affiliate URLs are an
+  upgrade over direct links, not a requirement for the user to find a way to watch.
+
 ---
 
 ## 2. Affiliate "where to watch"

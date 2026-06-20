@@ -39,6 +39,7 @@ import { t } from '../lib/i18n'
 import { createMultiSportNotesText, createNotesText } from '../lib/notes'
 import { MAX_EVENTS_BY_TEMPLATE, paginateEvents, type ExportTemplate } from '../lib/paginate'
 import { canvasToBlob, createScheduleCanvas, type PosterVariant } from '../lib/poster'
+import { createScheduleCsv, exportCompletionMessage } from '../lib/scheduleExports'
 import { displayTimeOptions, formatLongDate, formatTime } from '../lib/time'
 import { useNow } from '../lib/useNow'
 import { CalendarFeedsPage } from './CalendarFeeds'
@@ -211,29 +212,6 @@ function groupByLocalDate(matches: Match[], timeZone: string, locale?: string | 
   return Array.from(groups.values())
 }
 
-function csvCell(value: string | number | null | undefined) {
-  const text = String(value ?? '')
-  return `"${text.replace(/"/g, '""')}"`
-}
-
-function createScheduleCsv(matches: Match[], timeZone: string, locale?: string | null, hour12?: boolean | null) {
-  const timeOptions = displayTimeOptions(locale, hour12)
-  const rows = [
-    ['Date', 'Time', 'Team 1', 'Team 2', 'Round', 'Group', 'Venue', 'Timezone'],
-    ...matches.map((match) => [
-      formatLongDate(match.startsAt, timeZone, timeOptions),
-      formatTime(match.startsAt, timeZone, timeOptions),
-      match.team1,
-      match.team2,
-      match.round,
-      match.group ?? '',
-      match.ground,
-      timeZone,
-    ]),
-  ]
-  return rows.map((row) => row.map(csvCell).join(',')).join('\r\n')
-}
-
 function optionLabel(step: FlowStep | undefined, answer: string | undefined, fallback: string) {
   return step?.options?.find((option) => option.id === answer)?.label ?? fallback
 }
@@ -363,14 +341,14 @@ export function MySchedulePage() {
 
   async function exportIcs(matchesToExport = schedule) {
     downloadBlob(createIcsBlob(matchesToExport, timeZone, prefs.locale, prefs.hour12), exportFilename('schedule', 'ics'))
-    setMessage('Calendar snapshot downloaded. Use a subscribed calendar feed for automatic updates.')
+    setMessage(exportCompletionMessage('ics'))
     closeFlow()
   }
 
   async function exportCsv(matchesToExport = schedule) {
     const csv = createScheduleCsv(matchesToExport, timeZone, prefs.locale, prefs.hour12)
     downloadBlob(new Blob([csv], { type: 'text/csv;charset=utf-8' }), exportFilename('schedule', 'csv'))
-    setMessage('Spreadsheet-ready CSV downloaded.')
+    setMessage(exportCompletionMessage('csv'))
     closeFlow()
   }
 
@@ -378,7 +356,7 @@ export function MySchedulePage() {
     let pageNumber = 1
     const exportPages = paginateEvents(matchesToExport, template)
     for (const pageEvents of exportPages) {
-      const canvas = createScheduleCanvas(
+      const canvas = await createScheduleCanvas(
         pageEvents,
         followedTeams,
         timeZone,
@@ -406,18 +384,14 @@ export function MySchedulePage() {
       downloadBlob(blob, filename)
       pageNumber += 1
     }
-    setMessage(
-      exportPages.length > 1
-        ? `${exportPages.length} readable pages downloaded - long schedules stay legible.`
-        : 'Schedule image downloaded.',
-    )
+    setMessage(exportCompletionMessage(exportPages.length > 1 ? 'images' : 'image', exportPages.length))
     closeFlow()
   }
 
   async function copyNotes(matchesToExport = schedule) {
     const text = createNotesText(matchesToExport, followedTeams, timeZone, cityLabel, prefs.locale, prefs.hour12)
     await copyToClipboard(text)
-    setMessage('Plain-text schedule copied - paste it into Notes or a group chat.')
+    setMessage(exportCompletionMessage('notes'))
     closeFlow()
   }
 
@@ -432,7 +406,7 @@ export function MySchedulePage() {
     const text = createNotesText(matchesToExport, followedTeams, timeZone, cityLabel, prefs.locale, prefs.hour12)
     if (navigator.share) {
       await navigator.share({ title: brand.scheduleTitle, text })
-      setMessage('Schedule opened in your share sheet.')
+      setMessage(exportCompletionMessage('share'))
       closeFlow()
       return
     }
@@ -480,6 +454,7 @@ export function MySchedulePage() {
   }
 
   function defaultAnswer(step: FlowStep | undefined) {
+    if (step?.id === 'calendar_update_mode' && !hasLiveFollows) return 'one_time_import'
     return step?.options?.find((option) => option.recommended)?.id ?? step?.options?.[0]?.id ?? ''
   }
 
@@ -497,6 +472,8 @@ export function MySchedulePage() {
     if ((flow.answers.calendar_update_mode ?? 'live_subscription') === 'one_time_import') {
       return exportIcs(matchesToExport)
     }
+    setMessage('Use the Silbo Sync controls to create, copy, or open a live calendar feed.')
+    closeFlow()
   }
 
   function enableReminderFlow() {
@@ -519,7 +496,7 @@ export function MySchedulePage() {
     if (flow.flowId === 'calendar') {
       return (flow.answers.calendar_update_mode ?? 'live_subscription') === 'one_time_import'
         ? 'Download calendar file'
-        : 'Use live calendar setup'
+        : 'Done'
     }
     if (flow.flowId === 'download') {
       const intent = flow.answers.download_intent ?? 'print_or_save'
@@ -555,6 +532,20 @@ export function MySchedulePage() {
       return `We will mark ${scope.toLowerCase()} for reminders ${timing.toLowerCase()}, using ${timeZone}.`
     }
     return `Times are shown in ${cityLabel}. Hide finished matches is ${hidePast ? 'on' : 'off'}.`
+  }
+
+  function finalSelectionSummary() {
+    if (flow.flowId === 'download') return `${matchesForScope(flow.answers.download_scope).length} World Cup matches selected.`
+    if (flow.flowId === 'calendar') {
+      if ((flow.answers.calendar_update_mode ?? 'live_subscription') === 'live_subscription') {
+        const liveFollowCount = followedLeagueIds.length + followedCompetitorIds.length
+        return liveFollowCount
+          ? `${liveFollowCount} followed leagues/players included in the live feed.`
+          : 'No live league/player follows yet. Use a one-time ICS for World Cup team picks.'
+      }
+      return `${matchesForScope(flow.answers.calendar_scope).length} World Cup matches selected.`
+    }
+    return `${totalVisible} visible events in ${cityLabel}.`
   }
 
   function runFinalAction() {
@@ -709,6 +700,12 @@ export function MySchedulePage() {
               <div className="space-y-2">
                 {currentStep.options.map((option) => {
                   const selected = (currentAnswer || defaultAnswer(currentStep)) === option.id
+                  const liveSyncUnavailable =
+                    currentStep.id === 'calendar_update_mode' && option.id === 'live_subscription' && !hasLiveFollows
+                  const recommended = Boolean(option.recommended && !liveSyncUnavailable)
+                  const description = liveSyncUnavailable
+                    ? 'Follow a live league or player first. World Cup team picks can be added once with an ICS file.'
+                    : option.description
                   return (
                     <button
                       key={option.id}
@@ -720,15 +717,15 @@ export function MySchedulePage() {
                     >
                       <span className="flex items-center justify-between gap-2 text-sm font-bold">
                         {option.label}
-                        {option.recommended && (
+                        {recommended && (
                           <span className={`font-mono text-[10px] uppercase ${selected ? 'text-void/65' : 'text-primary'}`}>
                             Recommended
                           </span>
                         )}
                       </span>
-                      {option.description && (
+                      {description && (
                         <span className={`mt-1 block text-xs ${selected ? 'text-void/70' : 'text-ink/55'}`}>
-                          {option.description}
+                          {description}
                         </span>
                       )}
                     </button>
@@ -742,11 +739,7 @@ export function MySchedulePage() {
                 <Panel className="bg-page/55">
                   <p className="text-sm font-semibold text-ink">{finalRecommendation()}</p>
                   <p className="mt-2 text-xs text-ink/55">
-                    {flow.flowId === 'download'
-                      ? `${matchesForScope(flow.answers.download_scope).length} World Cup matches selected.`
-                      : flow.flowId === 'calendar'
-                        ? `${matchesForScope(flow.answers.calendar_scope).length} World Cup matches selected.`
-                        : `${totalVisible} visible events in ${cityLabel}.`}
+                    {finalSelectionSummary()}
                   </p>
                 </Panel>
 

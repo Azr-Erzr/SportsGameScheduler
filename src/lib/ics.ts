@@ -22,6 +22,30 @@ export function escapeIcsText(value: string) {
     .replace(/\r\n|\r|\n/g, '\\n')
 }
 
+/** Fold long content lines at 75 octets per RFC 5545 section 3.1. */
+export function foldIcsLine(line: string): string {
+  const encoder = new TextEncoder()
+  if (encoder.encode(line).length <= 75) return line
+
+  const parts: string[] = []
+  let current = ''
+  for (const char of Array.from(line)) {
+    const next = current + char
+    if (encoder.encode(next).length > 75) {
+      parts.push(current)
+      current = ` ${char}`
+    } else {
+      current = next
+    }
+  }
+  if (current) parts.push(current)
+  return parts.join('\r\n')
+}
+
+function renderIcsLines(lines: string[]): string {
+  return lines.filter(Boolean).map(foldIcsLine).join('\r\n')
+}
+
 // Per-sport emoji + label, mirrored from the server feed renderer so downloaded snapshots and
 // the live feed read identically in a calendar app.
 const SPORT_META: Record<string, { emoji: string; label: string }> = {
@@ -81,7 +105,7 @@ export function createMultiSportIcsBlob(
             ])
           : []
 
-      return [
+      return renderIcsLines([
         'BEGIN:VEVENT',
         `UID:silbo-${event.id}@silbosports.app`,
         `DTSTAMP:${formatIcsDate(new Date())}`,
@@ -94,21 +118,21 @@ export function createMultiSportIcsBlob(
         event.leagueName ? `DESCRIPTION:${escapeIcsText(`League: ${event.leagueName}`)}` : '',
         ...alarms,
         'END:VEVENT',
-      ]
-        .filter(Boolean)
-        .join('\r\n')
+      ])
     })
     .join('\r\n')
 
-  const calendar = [
+  const calendar = renderIcsLines([
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
     `PRODID:-//${brand.appName}//Sports Scheduler//EN`,
-    body,
-    'END:VCALENDAR',
-  ].join('\r\n')
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    `X-WR-CALNAME:${escapeIcsText(brand.scheduleTitle)}`,
+  ])
+  const footer = 'END:VCALENDAR'
 
-  return new Blob([calendar], { type: 'text/calendar;charset=utf-8' })
+  return new Blob([[calendar, body, footer].filter(Boolean).join('\r\n')], { type: 'text/calendar;charset=utf-8' })
 }
 
 export function createIcsBlob(filteredMatches: Match[], timeZone: string, locale?: string, hour12?: boolean | null) {
@@ -117,13 +141,20 @@ export function createIcsBlob(filteredMatches: Match[], timeZone: string, locale
     .map((match, index) => {
       const end = new Date(match.startsAt.getTime() + 2 * 60 * 60 * 1000)
       const title = `${match.team1} vs ${match.team2}`
-      const description = `${match.round}${match.group ? `, ${match.group}` : ''}. Local kickoff: ${formatLongDate(
-        match.startsAt,
-        timeZone,
-        timeOptions,
-      )} at ${formatTime(match.startsAt, timeZone, timeOptions)}.`
+      const description = [
+        `Round: ${match.round}`,
+        match.group ? `Group: ${match.group}` : '',
+        `Venue: ${match.ground}`,
+        `Local kickoff: ${formatLongDate(match.startsAt, timeZone, timeOptions)} at ${formatTime(
+          match.startsAt,
+          timeZone,
+          timeOptions,
+        )}`,
+      ]
+        .filter(Boolean)
+        .join('\n')
 
-      return [
+      return renderIcsLines([
         'BEGIN:VEVENT',
         `UID:silbo-${match.date}-${slug(match.team1)}-${slug(match.team2)}-${index}@local`,
         `DTSTAMP:${formatIcsDate(new Date())}`,
@@ -133,19 +164,21 @@ export function createIcsBlob(filteredMatches: Match[], timeZone: string, locale
         `LOCATION:${escapeIcsText(match.ground)}`,
         `DESCRIPTION:${escapeIcsText(description)}`,
         'END:VEVENT',
-      ].join('\r\n')
+      ])
     })
     .join('\r\n')
 
-  const calendar = [
+  const calendar = renderIcsLines([
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
     `PRODID:-//${brand.appName}//Sports Scheduler//EN`,
-    body,
-    'END:VCALENDAR',
-  ].join('\r\n')
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    `X-WR-CALNAME:${escapeIcsText(`${brand.appName} World Cup Schedule`)}`,
+  ])
+  const footer = 'END:VCALENDAR'
 
-  return new Blob([calendar], { type: 'text/calendar;charset=utf-8' })
+  return new Blob([[calendar, body, footer].filter(Boolean).join('\r\n')], { type: 'text/calendar;charset=utf-8' })
 }
 
 export function createCustomLeagueIcsBlob(league: CustomLeague) {
@@ -161,7 +194,7 @@ export function createCustomLeagueIcsBlob(league: CustomLeague) {
         league.includeNotesInShare ? event.notes ?? '' : '',
       ].filter(Boolean)
 
-      return [
+      return renderIcsLines([
         'BEGIN:VEVENT',
         `UID:silbo-custom-${event.id}@local`,
         `DTSTAMP:${formatIcsDate(new Date())}`,
@@ -171,19 +204,19 @@ export function createCustomLeagueIcsBlob(league: CustomLeague) {
         event.venue ? `LOCATION:${escapeIcsText(event.venue)}` : '',
         `DESCRIPTION:${escapeIcsText(detailParts.join(' | '))}`,
         'END:VEVENT',
-      ]
-        .filter(Boolean)
-        .join('\r\n')
+      ])
     })
     .join('\r\n')
 
-  const calendar = [
+  const calendar = renderIcsLines([
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
     `PRODID:-//${brand.appName}//Community League//EN`,
-    body,
-    'END:VCALENDAR',
-  ].join('\r\n')
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    `X-WR-CALNAME:${escapeIcsText(league.name)}`,
+  ])
+  const footer = 'END:VCALENDAR'
 
-  return new Blob([calendar], { type: 'text/calendar;charset=utf-8' })
+  return new Blob([[calendar, body, footer].filter(Boolean).join('\r\n')], { type: 'text/calendar;charset=utf-8' })
 }
