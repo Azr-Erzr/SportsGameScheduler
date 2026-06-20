@@ -1824,56 +1824,89 @@
 
   .feature-ribbon {
     display: grid;
-    grid-template-columns: 96px repeat(4, minmax(0, 1fr)) 128px 58px;
-    align-items: center;
+    grid-template-columns: minmax(260px, 1.3fr) repeat(4, minmax(0, 1fr));
+    gap: 1px;
     overflow: hidden;
     border: 1px solid color-mix(in srgb, var(--mp-primary) 28%, transparent);
-    border-radius: 3px;
-    background: #06291e;
+    border-radius: var(--radius-card);
+    background: color-mix(in srgb, var(--mp-primary) 20%, transparent);
     color: #f4ead8;
-    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.22);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
     content-visibility: auto;
-    contain-intrinsic-size: 110px;
+    contain-intrinsic-size: 132px;
   }
 
   [data-paper] .feature-ribbon {
-    background:
-      repeating-linear-gradient(108deg, rgba(29, 24, 18, 0.035) 0 1px, transparent 1px 16px),
-      #fbf5e9;
+    background: color-mix(in srgb, var(--mp-primary) 16%, rgba(29, 24, 18, 0.14));
     color: var(--mp-text);
     box-shadow: 0 8px 18px rgba(29, 24, 18, 0.08);
   }
 
-  .feature-ribbon-stripes {
-    align-self: stretch;
-    min-height: 104px;
+  .feature-ribbon-lead,
+  .feature-ribbon-cell {
     background:
-      linear-gradient(135deg, transparent 0 32%, #54ff9f 32% 38%, #f4ead8 38% 44%, #ff5247 44% 50%, #46e8ff 50% 56%, transparent 56%),
-      var(--mp-ticket-stub);
+      radial-gradient(circle at 16% 24%, color-mix(in srgb, var(--mp-primary) 17%, transparent), transparent 42%),
+      color-mix(in srgb, var(--mp-surface) 92%, #000);
   }
 
-  [data-paper] .feature-ribbon-stripes {
+  [data-paper] .feature-ribbon-lead,
+  [data-paper] .feature-ribbon-cell {
     background:
-      linear-gradient(135deg, transparent 0 32%, color-mix(in srgb, var(--mp-primary) 80%, #fbf5e9) 32% 38%, #fbf5e9 38% 44%, #b3541e 44% 50%, color-mix(in srgb, var(--mp-accent) 74%, #fbf5e9) 50% 56%, transparent 56%),
-      color-mix(in srgb, var(--mp-primary) 14%, #f4ead8);
+      radial-gradient(circle at 16% 24%, color-mix(in srgb, var(--mp-primary) 11%, transparent), transparent 42%),
+      var(--mp-surface);
+  }
+
+  .feature-ribbon-lead {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 14px;
+    min-height: 126px;
+    align-items: center;
+    padding: 18px;
+  }
+
+  .feature-ribbon-lead h2 {
+    font-size: clamp(18px, 1.6vw, 24px);
+    font-weight: 900;
+    line-height: 0.98;
+    color: var(--mp-primary);
+  }
+
+  .feature-ribbon-lead p {
+    margin-top: 7px;
+    max-width: 38ch;
+    font-size: 13px;
+    line-height: 1.35;
+    color: rgba(244, 234, 216, 0.72);
+  }
+
+  [data-paper] .feature-ribbon-lead p {
+    color: rgba(29, 24, 18, 0.66);
   }
 
   .feature-ribbon-cell {
     display: grid;
-    grid-template-columns: auto 1fr;
+    grid-template-columns: auto 1fr auto;
     gap: 12px;
-    min-height: 104px;
+    min-height: 126px;
     align-items: center;
-    border-left: 1px dashed rgba(244, 234, 216, 0.18);
     padding: 16px;
+    text-decoration: none;
+    transition:
+      background-color 160ms ease,
+      color 160ms ease,
+      transform 160ms ease;
   }
 
-  [data-paper] .feature-ribbon-cell {
-    border-left-color: rgba(29, 24, 18, 0.13);
+  .feature-ribbon-cell:hover {
+    background:
+      radial-gradient(circle at 16% 24%, color-mix(in srgb, var(--mp-primary) 23%, transparent), transparent 42%),
+      color-mix(in srgb, var(--mp-primary) 10%, var(--mp-surface));
+    transform: translateY(-1px);
   }
 
   .feature-ribbon-cell svg {
-    color: var(--mp-export);
+    color: var(--mp-primary);
   }
 
   .feature-ribbon-cell h3 {
@@ -1882,7 +1915,7 @@
     font-weight: 700;
     letter-spacing: 0.16em;
     text-transform: uppercase;
-    color: #ffd34d;
+    color: var(--mp-primary);
   }
 
   [data-paper] .feature-ribbon-cell h3 {
@@ -1893,23 +1926,21 @@
     margin-top: 3px;
     font-size: 12px;
     line-height: 1.3;
-    color: rgba(244, 234, 216, 0.78);
+    color: rgba(244, 234, 216, 0.72);
   }
 
   [data-paper] .feature-ribbon-cell p {
     color: rgba(29, 24, 18, 0.68);
   }
 
-  .feature-barcode {
-    height: 72px;
-    margin-inline: 14px;
-    background: repeating-linear-gradient(90deg, #f4ead8 0 2px, transparent 2px 5px, #f4ead8 5px 9px, transparent 9px 14px);
-    opacity: 0.9;
+  .feature-ribbon-arrow {
+    opacity: 0.58;
+    transition: transform 160ms ease, opacity 160ms ease;
   }
 
-  [data-paper] .feature-barcode {
-    background: repeating-linear-gradient(90deg, var(--mp-text) 0 2px, transparent 2px 5px, var(--mp-text) 5px 9px, transparent 9px 14px);
-    opacity: 0.62;
+  .feature-ribbon-cell:hover .feature-ribbon-arrow {
+    opacity: 1;
+    transform: translateX(2px);
   }
 
   .manifesto-poster {

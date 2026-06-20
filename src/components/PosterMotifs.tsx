@@ -5,7 +5,6 @@ import {
   Clock3,
   Globe2,
   ShieldCheck,
-  Ticket,
   Trophy,
   Zap,
   type LucideIcon,
@@ -43,24 +42,28 @@ const defaultStats: CapsuleStat[] = [
 
 const featureItems = [
   {
-    icon: Zap,
-    title: 'Never miss a moment',
-    body: 'Live alerts, kickoff reminders, and lineup updates.',
+    icon: Trophy,
+    title: 'Browse coverage',
+    body: 'Find every sport, league, card, race, and tournament we support.',
+    href: '/explore',
   },
   {
-    icon: Clock3,
-    title: 'Trusted times',
-    body: 'Every event lands in your selected timezone.',
+    icon: CalendarCheck,
+    title: 'Add events',
+    body: 'Save one-off games and cards straight into your calendar.',
+    href: '/my-schedule',
   },
   {
     icon: Globe2,
-    title: 'Made for fans',
-    body: 'Global coverage, local schedules, one place.',
+    title: 'Sync anywhere',
+    body: 'Keep your schedule portable with feeds, exports, and shares.',
+    href: '/calendar',
   },
   {
-    icon: Ticket,
-    title: 'Built for the world',
-    body: 'From local leagues to the biggest nights in sport.',
+    icon: Zap,
+    title: 'Get alerts',
+    body: 'Set reminders around starts, changes, and the moments you care about.',
+    href: '/settings/alerts',
   },
 ]
 
@@ -416,19 +419,24 @@ export function GlobalEventBoard({ events, variant = 'compact' }: { events: Post
 
 export function PosterFeatureStrip() {
   return (
-    <section className="feature-ribbon silbo-scrollbar">
-      <div className="feature-ribbon-stripes" aria-hidden="true" />
-      {featureItems.map(({ icon: Icon, title, body }) => (
-        <div key={title} className="feature-ribbon-cell">
-          <Icon size={25} strokeWidth={1.7} />
+    <section className="feature-ribbon" aria-label="Schedule tools">
+      <div className="feature-ribbon-lead">
+        <SilboBrandMark size={50} color="var(--mp-primary)" />
+        <div>
+          <h2>Build your sports calendar</h2>
+          <p>Add individual events, follow the things that repeat, and keep every start time local.</p>
+        </div>
+      </div>
+      {featureItems.map(({ icon: Icon, title, body, href }) => (
+        <Link key={title} to={href} className="feature-ribbon-cell">
+          <Icon size={22} strokeWidth={1.8} />
           <div>
             <h3>{title}</h3>
             <p>{body}</p>
           </div>
-        </div>
+          <ArrowRight size={15} className="feature-ribbon-arrow" />
+        </Link>
       ))}
-      <div className="feature-barcode" aria-hidden="true" />
-      <SilboBrandMark size={44} color="var(--mp-primary)" peaColor="var(--color-paper)" />
     </section>
   )
 }
