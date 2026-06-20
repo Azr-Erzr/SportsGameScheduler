@@ -93,7 +93,7 @@ const english: Messages = {
   'event.timeTbd': 'Time to be confirmed',
   'event.followingLeague': 'Following league',
   'event.followLeague': 'Follow league',
-  'event.addCalendar': 'Add to calendar (.ics)',
+  'event.addCalendar': 'Add to schedule',
   'event.competitors': 'Competitors',
   'event.competitorsSubtitle': '{count} in this event',
   'event.watchNoBroadcast': 'No confirmed broadcast yet. Common ways to watch in your region:',

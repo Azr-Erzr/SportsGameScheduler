@@ -28,7 +28,7 @@ export function EventDetailPage() {
   useDocumentMeta({
     title: event ? `${event.title} — when & where to watch | Silbo Sports` : 'Event — Silbo Sports',
     description: event
-      ? `${event.title}${event.leagueName ? ` · ${event.leagueName}` : ''} — start time in your local timezone, where to watch, follow, and add to your calendar.`
+      ? `${event.title}${event.leagueName ? ` · ${event.leagueName}` : ''} — start time in your local timezone, where to watch, and add to your schedule.`
       : undefined,
     canonicalPath: eventId ? `/events/${eventId}` : undefined,
   })

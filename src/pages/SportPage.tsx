@@ -1,20 +1,23 @@
-import { Check, Search, Sparkles, Star, Users, X } from 'lucide-react'
+import { Check, Download, Search, Sparkles, Star, Users, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { useAppState } from '../app/state-context'
 import { CityPicker } from '../components/CityPicker'
 import { MatchCard } from '../components/MatchCard'
 import { SportChannelBanner } from '../components/SportChannelBanner'
 import { Badge, Button, EmptyState, Panel, PanelHeading } from '../components/ui'
 import { deriveTeams, filterMatchesForTeams, useMatches } from '../data/liveMatches'
-import { useSportRoster, useSportSchedule, type LiveEvent } from '../data/liveSport'
+import { useEvent, useSportRoster, useSportSchedule, type LiveEvent } from '../data/liveSport'
 import { flagPoleGradient } from '../data/flagColors'
 import { allMatches, featuredTeams } from '../data/worldcup'
+import { exportFilename } from '../domain/brand'
 import { getSport, type SportInfo } from '../domain/sports'
 import { AdSlot } from '../components/AdSlot'
 import { interleaveAds } from '../lib/ads'
+import { downloadBlob } from '../lib/clipboard'
 import { useDocumentMeta } from '../lib/seo'
 import { findConflicts } from '../lib/conflicts'
+import { createMultiSportIcsBlob } from '../lib/ics'
 import { formatDate, formatLongDate, formatTime, relativeTimeFromNow } from '../lib/time'
 
 const INDIVIDUAL_SPORTS = ['tennis', 'golf', 'athletics', 'combat_sports']
@@ -61,6 +64,7 @@ function SoccerPage() {
   const { prefs, toggleFollow, followedLeagueIds } = useAppState()
   const { leagues, events, lastUpdated } = useSportSchedule('soccer')
   const [leagueId, setLeagueId] = useState<string | null>(null) // null = World Cup planner
+  const [expandedEventId, setExpandedEventId] = useState<string | null>(null)
 
   // Exclude the World Cup league rows (openfootball + TheSportsDB) — the planner IS the WC.
   const otherLeagues = useMemo(() => leagues.filter((l) => !/world cup/i.test(l.name)), [leagues])
@@ -73,7 +77,14 @@ function SoccerPage() {
   return (
     <div className="space-y-4">
       <DataFreshness lastUpdated={lastUpdated} />
-      <LeagueFilter primaryLabel="World Cup" leagues={otherLeagues} selectedId={leagueId} onSelect={setLeagueId} />
+      <LeagueFilter
+        primaryLabel="World Cup"
+        leagues={otherLeagues}
+        selectedId={leagueId}
+        onSelect={setLeagueId}
+        followedIds={followedLeagueIds}
+        onToggleFollow={(league) => toggleFollow({ targetType: 'league', targetId: league.id, intent: 'watch' })}
+      />
 
       {leagueId === null ? (
         <WorldCupPlanner />
@@ -86,20 +97,23 @@ function SoccerPage() {
                 {leagueEvents.length} upcoming - shown in {prefs.timezone}
               </p>
             </div>
-            {activeLeague && (
-              <FollowButton
-                active={followedLeagueIds.includes(activeLeague.id)}
-                onClick={() => toggleFollow({ targetType: 'league', targetId: activeLeague.id, intent: 'watch' })}
-                label={activeLeague.name}
-              />
-            )}
           </div>
           {leagueEvents.length > 0 ? (
             interleaveAds(leagueEvents, (e) => e.id, 6).map((entry) =>
               entry.kind === 'ad' ? (
                 <AdSlot key={entry.key} format="leaderboard" />
               ) : (
-                <EventTicket key={entry.key} event={entry.item} locale={prefs.locale} hour12={prefs.hour12} timeZone={prefs.timezone} />
+                <div key={entry.key} className="space-y-2">
+                  <EventTicket
+                    event={entry.item}
+                    locale={prefs.locale}
+                    hour12={prefs.hour12}
+                    timeZone={prefs.timezone}
+                    expanded={expandedEventId === entry.item.id}
+                    onToggle={() => setExpandedEventId((current) => (current === entry.item.id ? null : entry.item.id))}
+                  />
+                  {expandedEventId === entry.item.id && <EventQuickDetails eventId={entry.item.id} />}
+                </div>
               ),
             )
           ) : (
@@ -304,7 +318,7 @@ function LiveSportPage({ sport }: { sport: SportInfo }) {
   const { leagues, events, loading, configured, lastUpdated } = useSportSchedule(canonical)
   const roster = useSportRoster(canonical, isIndividual)
   const [leagueId, setLeagueId] = useState<string | null>(null)
-  const activeLeague = leagueId ? leagues.find((l) => l.id === leagueId) : null
+  const [expandedEventId, setExpandedEventId] = useState<string | null>(null)
 
   const shownEvents = useMemo(
     () => (leagueId ? events.filter((e) => e.leagueId === leagueId) : events),
@@ -339,14 +353,14 @@ function LiveSportPage({ sport }: { sport: SportInfo }) {
           <DataFreshness lastUpdated={lastUpdated} />
           {leagues.length > 1 && (
             <div className="flex flex-wrap items-center gap-2">
-              <LeagueFilter primaryLabel="All" leagues={leagues} selectedId={leagueId} onSelect={setLeagueId} />
-              {activeLeague && (
-                <FollowButton
-                  active={followedLeagueIds.includes(activeLeague.id)}
-                  onClick={() => toggleFollow({ targetType: 'league', targetId: activeLeague.id, intent: 'watch' })}
-                  label={activeLeague.name}
-                />
-              )}
+              <LeagueFilter
+                primaryLabel="All"
+                leagues={leagues}
+                selectedId={leagueId}
+                onSelect={setLeagueId}
+                followedIds={followedLeagueIds}
+                onToggleFollow={(league) => toggleFollow({ targetType: 'league', targetId: league.id, intent: 'watch' })}
+              />
             </div>
           )}
 
@@ -359,7 +373,17 @@ function LiveSportPage({ sport }: { sport: SportInfo }) {
                     entry.kind === 'ad' ? (
                       <AdSlot key={entry.key} format="leaderboard" />
                     ) : (
-                      <EventTicket key={entry.key} event={entry.item} locale={prefs.locale} hour12={prefs.hour12} timeZone={prefs.timezone} />
+                      <div key={entry.key} className="space-y-2">
+                        <EventTicket
+                          event={entry.item}
+                          locale={prefs.locale}
+                          hour12={prefs.hour12}
+                          timeZone={prefs.timezone}
+                          expanded={expandedEventId === entry.item.id}
+                          onToggle={() => setExpandedEventId((current) => (current === entry.item.id ? null : entry.item.id))}
+                        />
+                        {expandedEventId === entry.item.id && <EventQuickDetails eventId={entry.item.id} />}
+                      </div>
                     ),
                   )}
                 </>
@@ -424,16 +448,53 @@ function FollowButton({
   )
 }
 
-function LeagueChip({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+function LeagueChip({
+  label,
+  active,
+  followed = false,
+  onClick,
+}: {
+  label: string
+  active: boolean
+  followed?: boolean
+  onClick: () => void
+}) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`shrink-0 rounded-full border px-3 py-1.5 font-mono text-[11px] uppercase tracking-wide transition-colors ${
+      className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 font-mono text-[11px] uppercase tracking-wide transition-colors ${
         active ? 'border-primary bg-primary text-void' : 'border-primary/25 text-ink/70 hover:bg-primary/10'
       }`}
     >
+      {followed && <Star size={11} className={active ? 'fill-void text-void' : 'fill-primary text-primary'} />}
       {label}
+    </button>
+  )
+}
+
+function LeagueFollowToggle({
+  league,
+  active,
+  onToggle,
+}: {
+  league: { id: string; name: string }
+  active: boolean
+  onToggle: (league: { id: string; name: string }) => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onToggle(league)}
+      aria-pressed={active}
+      title={active ? `Following ${league.name}` : `Follow ${league.name}`}
+      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border transition-colors ${
+        active
+          ? 'border-primary bg-primary/15 text-primary'
+          : 'border-primary/25 text-ink/60 hover:bg-primary/10 hover:text-primary'
+      }`}
+    >
+      <Star size={14} className={active ? 'fill-primary' : ''} />
     </button>
   )
 }
@@ -445,12 +506,16 @@ function LeagueFilter({
   leagues,
   selectedId,
   onSelect,
+  followedIds = [],
+  onToggleFollow,
   inlineCount = 6,
 }: {
   primaryLabel: string
   leagues: Array<{ id: string; name: string }>
   selectedId: string | null
   onSelect: (id: string | null) => void
+  followedIds?: string[]
+  onToggleFollow?: (league: { id: string; name: string }) => void
   inlineCount?: number
 }) {
   const [open, setOpen] = useState(false)
@@ -461,6 +526,7 @@ function LeagueFilter({
   const selected = selectedId ? leagues.find((l) => l.id === selectedId) ?? null : null
   const selectedInOverflow = Boolean(selected && !inline.some((l) => l.id === selected.id))
   const overflowCount = leagues.length - inline.length
+  const followedSet = useMemo(() => new Set(followedIds), [followedIds])
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -493,11 +559,25 @@ function LeagueFilter({
     <div ref={ref} className="relative">
       <div className="silbo-scrollbar flex gap-2 overflow-x-auto pb-1">
         <LeagueChip label={primaryLabel} active={selectedId === null} onClick={() => onSelect(null)} />
-        {inline.map((l) => (
-          <LeagueChip key={l.id} label={l.name} active={selectedId === l.id} onClick={() => onSelect(l.id)} />
-        ))}
+        {inline.map((l) => {
+          const selectedLeague = selectedId === l.id
+          const followed = followedSet.has(l.id)
+          return (
+            <div key={l.id} className="flex shrink-0 items-center gap-1">
+              <LeagueChip label={l.name} active={selectedLeague} followed={followed} onClick={() => onSelect(l.id)} />
+              {selectedLeague && onToggleFollow && (
+                <LeagueFollowToggle league={l} active={followed} onToggle={onToggleFollow} />
+              )}
+            </div>
+          )
+        })}
         {selectedInOverflow && selected && (
-          <LeagueChip label={selected.name} active onClick={() => onSelect(selected.id)} />
+          <div className="flex shrink-0 items-center gap-1">
+            <LeagueChip label={selected.name} active followed={followedSet.has(selected.id)} onClick={() => onSelect(selected.id)} />
+            {onToggleFollow && (
+              <LeagueFollowToggle league={selected} active={followedSet.has(selected.id)} onToggle={onToggleFollow} />
+            )}
+          </div>
         )}
         {overflowCount > 0 && (
           <button
@@ -542,11 +622,12 @@ function LeagueFilter({
                 <button
                   type="button"
                   onClick={() => pick(l.id)}
-                  className={`w-full truncate rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+                  className={`flex w-full items-center gap-2 truncate rounded-lg px-3 py-2 text-left text-sm transition-colors ${
                     selectedId === l.id ? 'bg-primary text-void' : 'text-ink/80 hover:bg-primary/10'
                   }`}
                 >
-                  {l.name}
+                  {followedSet.has(l.id) && <Star size={12} className={selectedId === l.id ? 'fill-void text-void' : 'fill-primary text-primary'} />}
+                  <span className="truncate">{l.name}</span>
                 </button>
               </li>
             ))}
@@ -565,37 +646,52 @@ function EventTicket({
   locale,
   hour12,
   timeZone,
+  expanded,
+  onToggle,
 }: {
   event: LiveEvent
   locale?: string
   hour12?: boolean | null
   timeZone: string
+  expanded: boolean
+  onToggle: () => void
 }) {
   const opts = { locale, hour12: hour12 ?? undefined }
   const parts = event.title.includes(' vs ') ? event.title.split(' vs ') : null
+  const isFightCard = event.sportKey === 'combat_sports'
 
   return (
-    <Link
-      to={`/events/${event.id}`}
-      className="ticket-paper group flex items-stretch overflow-hidden transition-transform hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-      aria-label={`View details for ${event.title}`}
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-expanded={expanded}
+      className={`ticket-paper group flex w-full items-stretch overflow-hidden text-left transition-transform hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
+        expanded ? 'ring-2 ring-primary/25' : ''
+      } ${isFightCard ? 'min-h-[104px]' : ''}`}
+      aria-label={`${expanded ? 'Hide' : 'Show'} details for ${event.title}`}
     >
       <div
-        className="flex w-24 shrink-0 flex-col items-center justify-center bg-ticket-stub px-2 py-3 text-center text-ticket-stub-text"
+        className={`flex shrink-0 flex-col items-center justify-center bg-ticket-stub px-2 text-center text-ticket-stub-text ${
+          isFightCard ? 'w-32 py-4' : 'w-24 py-3'
+        }`}
       >
         {event.startsAt && !event.startsAtTbd ? (
           <>
             <span className="font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-ticket-stub-text/75">
               {formatDate(event.startsAt, timeZone, opts)}
             </span>
-            <strong className="font-head text-sm leading-tight">{formatTime(event.startsAt, timeZone, opts)}</strong>
+            <strong className={`font-head leading-tight ${isFightCard ? 'text-lg' : 'text-sm'}`}>
+              {formatTime(event.startsAt, timeZone, opts)}
+            </strong>
+            {isFightCard && <span className="font-mono text-[9px] uppercase tracking-wide text-ticket-stub-text/70">Card starts</span>}
           </>
         ) : (
-          <strong className="font-head text-sm">TBD</strong>
+          <strong className={`font-head ${isFightCard ? 'text-lg' : 'text-sm'}`}>TBD</strong>
         )}
       </div>
-      <div className="min-w-0 flex-1 px-4 py-3">
-        <h3 className="truncate text-base font-bold text-paper-ink">
+      <div className={`min-w-0 flex-1 px-4 ${isFightCard ? 'py-4' : 'py-3'}`}>
+        {isFightCard && <p className="mb-1 font-mono text-[10px] uppercase tracking-wide text-paper-ink/45">Fight card</p>}
+        <h3 className={`truncate font-bold text-paper-ink ${isFightCard ? 'text-lg' : 'text-base'}`}>
           {parts ? (
             <>
               {parts[0]} <span className="font-mono text-[10px] not-italic text-paper-ink/40">VS</span> {parts[1]}
@@ -609,14 +705,192 @@ function EventTicket({
           {event.venue && <span>{event.venue}</span>}
           {event.startsAt && !event.startsAtTbd && <span>{formatLongDate(event.startsAt, timeZone, opts)}</span>}
         </p>
+        {isFightCard && (
+          <p className="mt-2 text-xs font-semibold text-paper-ink/60">
+            Open for card order, estimated bout times, and individual fight picks.
+          </p>
+        )}
       </div>
       {event.status !== 'scheduled' && (
         <span className="m-3 self-start">
           <Badge tone={event.status === 'finished' ? 'muted' : 'warning'}>{event.status}</Badge>
         </span>
       )}
-    </Link>
+    </button>
   )
+}
+
+function EventQuickDetails({ eventId }: { eventId: string }) {
+  const { prefs, followedLeagueIds, toggleFollow } = useAppState()
+  const { event, loading, configured } = useEvent(eventId)
+  const [selectedBoutId, setSelectedBoutId] = useState<string | null>(null)
+
+  if (loading) {
+    return (
+      <Panel className="border-primary/20 bg-surface/85 py-3">
+        <p className="font-mono text-[10px] uppercase tracking-wide text-ink/45">Loading details...</p>
+      </Panel>
+    )
+  }
+
+  if (!configured) {
+    return (
+      <Panel className="border-primary/20 bg-surface/85 py-3">
+        <p className="text-sm text-ink/55">Live details need Supabase configuration.</p>
+      </Panel>
+    )
+  }
+
+  if (!event) return null
+
+  const detail = event
+  const opts = { locale: prefs.locale, hour12: prefs.hour12 ?? undefined }
+  const when = detail.startsAt && !detail.startsAtTbd
+    ? `${formatLongDate(detail.startsAt, prefs.timezone, opts)} - ${formatTime(detail.startsAt, prefs.timezone, opts)}`
+    : 'Time TBD'
+  const venue = [detail.venue, detail.venueCity, detail.venueCountry].filter(Boolean).join(', ')
+  const leagueFollowed = detail.leagueId ? followedLeagueIds.includes(detail.leagueId) : false
+  const selectedBout = detail.bouts.find((bout) => bout.id === selectedBoutId) ?? detail.bouts[0] ?? null
+  const selectedBoutIndex = selectedBout ? detail.bouts.findIndex((bout) => bout.id === selectedBout.id) : -1
+  const facts = [
+    ['When', when],
+    venue ? ['Venue', venue] : null,
+    detail.kind ? ['Format', readableSportFact(detail.kind)] : null,
+    metadataFact(detail.metadata, 'season', 'Season'),
+    metadataFact(detail.metadata, 'round', 'Round'),
+    metadataFact(detail.metadata, 'source', 'Source'),
+  ].filter((fact): fact is [string, string] => Boolean(fact && fact[1]))
+
+  function exportIcs() {
+    downloadBlob(createMultiSportIcsBlob([detail], { reminderMinutes: [60] }), exportFilename('event', 'ics'))
+  }
+
+  function boutTitle(bout: (typeof detail.bouts)[number], index: number) {
+    if (bout.redCorner && bout.blueCorner) return `${bout.redCorner.name} vs ${bout.blueCorner.name}`
+    return bout.redCorner?.name ?? bout.blueCorner?.name ?? `Bout ${bout.order ?? index + 1}`
+  }
+
+  return (
+    <Panel className="space-y-3 border-primary/20 bg-surface/90">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="font-mono text-[10px] uppercase tracking-wide text-ink/45">Quick details</p>
+          <h4 className="text-base font-bold text-primary">{event.title}</h4>
+        </div>
+        <Badge tone={event.status === 'scheduled' ? 'secondary' : event.status === 'finished' ? 'muted' : 'warning'}>{event.status}</Badge>
+      </div>
+
+      <dl className="grid gap-2 sm:grid-cols-3">
+        {facts.map(([label, value]) => (
+          <div key={label} className="rounded-lg border border-primary/15 bg-page/45 px-3 py-2">
+            <dt className="font-mono text-[10px] uppercase tracking-wide text-ink/45">{label}</dt>
+            <dd className="truncate text-sm font-semibold text-ink">{value}</dd>
+          </div>
+        ))}
+      </dl>
+
+      {event.competitors.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {event.competitors.map((competitor) => (
+            <span key={competitor.id} className="rounded-full border border-primary/15 px-2.5 py-1 text-xs font-semibold text-ink/75">
+              {competitor.name}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {event.bouts.length > 0 && (
+        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_260px]">
+          <div className="space-y-1.5">
+            <p className="font-mono text-[10px] uppercase tracking-wide text-ink/45">Fight card estimates</p>
+            {event.bouts.map((bout, index) => {
+              const active = selectedBout?.id === bout.id
+              const estimatedStart = bout.estimatedStartAt ?? estimateBoutStart(event.startsAt, index)
+              return (
+                <button
+                  key={bout.id}
+                  type="button"
+                  onClick={() => setSelectedBoutId(bout.id)}
+                  aria-pressed={active}
+                  className={`flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+                    active ? 'bg-primary text-void' : 'bg-page/45 text-ink hover:bg-primary/10'
+                  }`}
+                >
+                  <span className="min-w-0 truncate font-semibold">{boutTitle(bout, index)}</span>
+                  <span className={`shrink-0 font-mono text-[10px] uppercase ${active ? 'text-void/70' : 'text-ink/50'}`}>
+                    {estimatedStart ? `${formatTime(estimatedStart, prefs.timezone, opts)} est.` : 'TBD'}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+          {selectedBout && (
+            <div className="rounded-lg border border-primary/15 bg-page/45 p-3">
+              <p className="font-mono text-[10px] uppercase tracking-wide text-ink/45">
+                Bout {selectedBout.order ?? selectedBoutIndex + 1}
+              </p>
+              <h5 className="mt-1 text-sm font-extrabold text-primary">{boutTitle(selectedBout, selectedBoutIndex)}</h5>
+              <dl className="mt-3 space-y-2 text-xs">
+                {selectedBout.weightClass && (
+                  <div>
+                    <dt className="font-mono uppercase tracking-wide text-ink/40">Class</dt>
+                    <dd className="font-semibold text-ink">{selectedBout.weightClass}</dd>
+                  </div>
+                )}
+                {selectedBout.scheduledRounds && (
+                  <div>
+                    <dt className="font-mono uppercase tracking-wide text-ink/40">Rounds</dt>
+                    <dd className="font-semibold text-ink">{selectedBout.scheduledRounds}</dd>
+                  </div>
+                )}
+                <div>
+                  <dt className="font-mono uppercase tracking-wide text-ink/40">Status</dt>
+                  <dd className="font-semibold text-ink">{readableSportFact(selectedBout.status)}</dd>
+                </div>
+              </dl>
+            </div>
+          )}
+        </div>
+      )}
+
+      {event.sportKey === 'combat_sports' && event.bouts.length === 0 && (
+        <div className="rounded-lg border border-primary/15 bg-page/45 px-3 py-2 text-sm text-ink/55">
+          Bout-level card order has not hydrated for this event yet. When it does, this panel becomes a selectable fight list.
+        </div>
+      )}
+
+      <div className="flex flex-wrap gap-2">
+        {event.leagueId && (
+          <FollowButton
+            active={leagueFollowed}
+            onClick={() => toggleFollow({ targetType: 'league', targetId: event.leagueId!, intent: 'watch' })}
+            label={event.leagueName || 'league'}
+            size="sm"
+          />
+        )}
+        <Button variant="ghost" onClick={exportIcs}>
+          <Download size={14} /> Add to schedule
+        </Button>
+      </div>
+    </Panel>
+  )
+}
+
+const FIGHT_SLOT_MINUTES = 30
+
+function estimateBoutStart(cardStart: Date | null, index: number) {
+  if (!cardStart) return null
+  return new Date(cardStart.getTime() + index * FIGHT_SLOT_MINUTES * 60_000)
+}
+
+function metadataFact(metadata: Record<string, unknown>, key: string, label: string): [string, string] | null {
+  const value = metadata[key]
+  return typeof value === 'string' && value.trim() ? [label, readableSportFact(value)] : null
+}
+
+function readableSportFact(value: string) {
+  if (value.toLowerCase() === 'thesportsdb') return 'TheSportsDB'
+  return value.replace(/_/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase())
 }
 
 function RosterPanel({
