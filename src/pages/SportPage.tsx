@@ -65,6 +65,7 @@ function SoccerPage() {
   const { leagues, events, lastUpdated } = useSportSchedule('soccer')
   const [leagueId, setLeagueId] = useState<string | null>(null) // null = World Cup planner
   const [expandedEventId, setExpandedEventId] = useState<string | null>(null)
+  const [addedEventIds, setAddedEventIds] = useState<string[]>([])
 
   // Exclude the World Cup league rows (openfootball + TheSportsDB) — the planner IS the WC.
   const otherLeagues = useMemo(() => leagues.filter((l) => !/world cup/i.test(l.name)), [leagues])
@@ -73,6 +74,11 @@ function SoccerPage() {
     [events, leagueId],
   )
   const activeLeague = otherLeagues.find((l) => l.id === leagueId)
+
+  function addEventToSchedule(event: LiveEvent) {
+    downloadBlob(createMultiSportIcsBlob([event], { reminderMinutes: [60] }), exportFilename('event', 'ics'))
+    setAddedEventIds((current) => (current.includes(event.id) ? current : [...current, event.id]))
+  }
 
   return (
     <div className="space-y-4">
@@ -111,6 +117,8 @@ function SoccerPage() {
                     timeZone={prefs.timezone}
                     expanded={expandedEventId === entry.item.id}
                     onToggle={() => setExpandedEventId((current) => (current === entry.item.id ? null : entry.item.id))}
+                    added={addedEventIds.includes(entry.item.id)}
+                    onAdd={() => addEventToSchedule(entry.item)}
                   />
                   {expandedEventId === entry.item.id && <EventQuickDetails eventId={entry.item.id} />}
                 </div>
@@ -319,11 +327,17 @@ function LiveSportPage({ sport }: { sport: SportInfo }) {
   const roster = useSportRoster(canonical, isIndividual)
   const [leagueId, setLeagueId] = useState<string | null>(null)
   const [expandedEventId, setExpandedEventId] = useState<string | null>(null)
+  const [addedEventIds, setAddedEventIds] = useState<string[]>([])
 
   const shownEvents = useMemo(
     () => (leagueId ? events.filter((e) => e.leagueId === leagueId) : events),
     [events, leagueId],
   )
+
+  function addEventToSchedule(event: LiveEvent) {
+    downloadBlob(createMultiSportIcsBlob([event], { reminderMinutes: [60] }), exportFilename('event', 'ics'))
+    setAddedEventIds((current) => (current.includes(event.id) ? current : [...current, event.id]))
+  }
 
   const stats = [
     { value: String(leagues.length), label: leagues.length === 1 ? 'League' : 'Leagues' },
@@ -381,6 +395,8 @@ function LiveSportPage({ sport }: { sport: SportInfo }) {
                           timeZone={prefs.timezone}
                           expanded={expandedEventId === entry.item.id}
                           onToggle={() => setExpandedEventId((current) => (current === entry.item.id ? null : entry.item.id))}
+                          added={addedEventIds.includes(entry.item.id)}
+                          onAdd={() => addEventToSchedule(entry.item)}
                         />
                         {expandedEventId === entry.item.id && <EventQuickDetails eventId={entry.item.id} />}
                       </div>
@@ -648,6 +664,8 @@ function EventTicket({
   timeZone,
   expanded,
   onToggle,
+  added,
+  onAdd,
 }: {
   event: LiveEvent
   locale?: string
@@ -655,68 +673,89 @@ function EventTicket({
   timeZone: string
   expanded: boolean
   onToggle: () => void
+  added: boolean
+  onAdd: () => void
 }) {
   const opts = { locale, hour12: hour12 ?? undefined }
   const parts = event.title.includes(' vs ') ? event.title.split(' vs ') : null
   const isFightCard = event.sportKey === 'combat_sports'
 
   return (
-    <button
-      type="button"
-      onClick={onToggle}
-      aria-expanded={expanded}
-      className={`ticket-paper group flex w-full items-stretch overflow-hidden text-left transition-transform hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
+    <article
+      className={`ticket-paper group flex w-full items-stretch overflow-hidden transition-transform hover:-translate-y-0.5 max-sm:flex-col ${
         expanded ? 'ring-2 ring-primary/25' : ''
       } ${isFightCard ? 'min-h-[104px]' : ''}`}
-      aria-label={`${expanded ? 'Hide' : 'Show'} details for ${event.title}`}
     >
-      <div
-        className={`flex shrink-0 flex-col items-center justify-center bg-ticket-stub px-2 text-center text-ticket-stub-text ${
-          isFightCard ? 'w-32 py-4' : 'w-24 py-3'
-        }`}
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={expanded}
+        className="flex min-w-0 flex-1 items-stretch text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary max-sm:flex-col"
+        aria-label={`${expanded ? 'Hide' : 'Show'} details for ${event.title}`}
       >
-        {event.startsAt && !event.startsAtTbd ? (
-          <>
-            <span className="font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-ticket-stub-text/75">
-              {formatDate(event.startsAt, timeZone, opts)}
-            </span>
-            <strong className={`font-head leading-tight ${isFightCard ? 'text-lg' : 'text-sm'}`}>
-              {formatTime(event.startsAt, timeZone, opts)}
-            </strong>
-            {isFightCard && <span className="font-mono text-[9px] uppercase tracking-wide text-ticket-stub-text/70">Card starts</span>}
-          </>
-        ) : (
-          <strong className={`font-head ${isFightCard ? 'text-lg' : 'text-sm'}`}>TBD</strong>
-        )}
-      </div>
-      <div className={`min-w-0 flex-1 px-4 ${isFightCard ? 'py-4' : 'py-3'}`}>
-        {isFightCard && <p className="mb-1 font-mono text-[10px] uppercase tracking-wide text-paper-ink/45">Fight card</p>}
-        <h3 className={`truncate font-bold text-paper-ink ${isFightCard ? 'text-lg' : 'text-base'}`}>
-          {parts ? (
+        <div
+          className={`flex shrink-0 flex-col items-center justify-center bg-ticket-stub px-2 text-center text-ticket-stub-text ${
+            isFightCard ? 'w-32 py-4' : 'w-24 py-3'
+          } max-sm:w-full max-sm:flex-row max-sm:justify-between max-sm:px-4`}
+        >
+          {event.startsAt && !event.startsAtTbd ? (
             <>
-              {parts[0]} <span className="font-mono text-[10px] not-italic text-paper-ink/40">VS</span> {parts[1]}
+              <span className="font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-ticket-stub-text/75">
+                {formatDate(event.startsAt, timeZone, opts)}
+              </span>
+              <strong className={`font-head leading-tight ${isFightCard ? 'text-lg' : 'text-sm'}`}>
+                {formatTime(event.startsAt, timeZone, opts)}
+              </strong>
+              {isFightCard && <span className="font-mono text-[9px] uppercase tracking-wide text-ticket-stub-text/70">Card starts</span>}
             </>
           ) : (
-            event.title
+            <strong className={`font-head ${isFightCard ? 'text-lg' : 'text-sm'}`}>TBD</strong>
           )}
-        </h3>
-        <p className="mt-1 flex flex-wrap gap-x-3 font-mono text-[11px] uppercase tracking-wide text-paper-ink/55">
-          {event.leagueName && <span>{event.leagueName}</span>}
-          {event.venue && <span>{event.venue}</span>}
-          {event.startsAt && !event.startsAtTbd && <span>{formatLongDate(event.startsAt, timeZone, opts)}</span>}
-        </p>
-        {isFightCard && (
-          <p className="mt-2 text-xs font-semibold text-paper-ink/60">
-            Open for card order, estimated bout times, and individual fight picks.
+        </div>
+        <div className={`min-w-0 flex-1 px-4 ${isFightCard ? 'py-4' : 'py-3'}`}>
+          {isFightCard && <p className="mb-1 font-mono text-[10px] uppercase tracking-wide text-paper-ink/45">Fight card</p>}
+          <h3 className={`truncate font-bold text-paper-ink ${isFightCard ? 'text-lg' : 'text-base'}`}>
+            {parts ? (
+              <>
+                {parts[0]} <span className="font-mono text-[10px] not-italic text-paper-ink/40">VS</span> {parts[1]}
+              </>
+            ) : (
+              event.title
+            )}
+          </h3>
+          <p className="mt-1 flex flex-wrap gap-x-3 font-mono text-[11px] uppercase tracking-wide text-paper-ink/55">
+            {event.leagueName && <span>{event.leagueName}</span>}
+            {event.venue && <span>{event.venue}</span>}
+            {event.startsAt && !event.startsAtTbd && <span>{formatLongDate(event.startsAt, timeZone, opts)}</span>}
           </p>
-        )}
+          {isFightCard && (
+            <p className="mt-2 text-xs font-semibold text-paper-ink/60">
+              Open for card order, estimated bout times, and individual fight picks.
+            </p>
+          )}
+        </div>
+      </button>
+      <div className="flex shrink-0 items-center border-l border-paper-ink/10 px-3 max-sm:border-l-0 max-sm:border-t max-sm:px-4 max-sm:py-3">
+        <button
+          type="button"
+          onClick={onAdd}
+          aria-live="polite"
+          className={`inline-flex min-w-[116px] items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-bold transition-colors max-sm:w-full ${
+            added
+              ? 'border-primary bg-primary text-void'
+              : 'border-primary/25 text-primary hover:bg-primary/10'
+          }`}
+        >
+          <Download size={13} />
+          {added ? 'Added!' : 'Add to schedule'}
+        </button>
       </div>
       {event.status !== 'scheduled' && (
         <span className="m-3 self-start">
           <Badge tone={event.status === 'finished' ? 'muted' : 'warning'}>{event.status}</Badge>
         </span>
       )}
-    </button>
+    </article>
   )
 }
 
