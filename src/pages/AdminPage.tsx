@@ -36,7 +36,7 @@ export function AdminPage() {
     }
   }, [auth.user])
 
-  if (!auth.configured) return <EmptyState title="Live data not configured" body="Connect Supabase to view admin stats." />
+  if (!auth.configured) return <EmptyState title="Admin stats unavailable" body="Connect the live backend to view admin stats." />
   if (auth.ready && !auth.user) {
     return (
       <EmptyState title="Admins only" body="Sign in with an admin account to view the observability dashboard.">

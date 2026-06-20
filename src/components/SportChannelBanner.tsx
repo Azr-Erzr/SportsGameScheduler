@@ -80,8 +80,8 @@ const actionSizeByAsset: Record<string, string> = {
 }
 
 const defaultStats: BannerStat[] = [
-  { value: 'API', label: 'Review' },
-  { value: 'Feeds', label: 'Planned' },
+  { value: 'Live', label: 'Review' },
+  { value: 'Dates', label: 'Planned' },
   { value: 'Alerts', label: 'Ready' },
   { value: 'Sync', label: 'Ready' },
 ]
@@ -89,7 +89,7 @@ const defaultStats: BannerStat[] = [
 export function SportChannelBanner({
   sportKey,
   title,
-  kicker = 'Source testing capsule',
+  kicker = 'Coverage capsule',
   body,
   ctaLabel = 'Back to sports',
   ctaTo = '/explore',
@@ -100,11 +100,9 @@ export function SportChannelBanner({
   const assetKey = assetKeyBySport[sportKey] ?? assetKeyBySport[sport?.key ?? 'soccer'] ?? 'soccer'
   const artFocus = artFocusByAsset[assetKey] ?? artFocusByAsset.soccer
   const channelTitle = title ?? `${sport?.label ?? 'Sports'} Channel`
-  const sourceBody =
+  const coverageBody =
     body ??
-    `${sport?.flagshipLeague ?? 'Live sports'} will light up as soon as licensed schedule data is connected. ${
-      sport?.sourceNote ?? 'Provider coverage is being reviewed.'
-    }`
+    `${sport?.flagshipLeague ?? 'Live sports'} coverage will light up as soon as schedules are ready. Follow what matters and Silbo keeps it in your timezone.`
   const bannerStyle: BannerStyle =
     prefs.themeMode === 'program'
       ? {
@@ -142,7 +140,7 @@ export function SportChannelBanner({
       </div>
 
       <div className="sport-channel-copy">
-        <p>{sourceBody}</p>
+        <p>{coverageBody}</p>
         {ctaTo && (
           <Link to={ctaTo} className="sport-channel-cta">
             {ctaLabel}

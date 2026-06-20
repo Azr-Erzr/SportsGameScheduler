@@ -115,7 +115,7 @@ function OtherSportRouteCard({ sport }: { sport: SportInfo }) {
   const { prefs } = useAppState()
   const schedule = useSportSchedule(sport.canonicalSportKey)
   const liveReady = schedule.configured && !schedule.loading && (schedule.leagues.length > 0 || schedule.events.length > 0)
-  const status = schedule.loading ? 'Checking' : liveReady ? 'DB route' : 'Queued'
+  const status = schedule.loading ? 'Checking' : liveReady ? 'Live route' : 'Queued'
   const href = `/sports/${sport.key}`
   const theme = withSurfaceMode(getTheme(sport.key), prefs.themeMode)
   const Glyph = providerIcons[sport.key] ?? IconTargetArrow
@@ -178,11 +178,11 @@ export function OtherSportsPage() {
         sportKey="custom"
         kicker="Channel 12 / Long-tail sports"
         title="Other Sports"
-        body="Provider-backed routes sit up top. Community and import-first sports stay below, so this page can grow without becoming a wall of identical tiles."
+        body="Live routes sit up top. Community and import-first sports stay below, so this page can grow without becoming a wall of identical tiles."
         ctaLabel="Create your own league"
         ctaTo="/custom-leagues"
         stats={[
-          { value: String(providerBackedSports.length), label: 'DB routes' },
+          { value: String(providerBackedSports.length), label: 'Live routes' },
           { value: String(communitySports.length), label: 'Backlog' },
           { value: 'Your', label: 'League' },
         ]}
@@ -191,13 +191,13 @@ export function OtherSportsPage() {
       <section className="space-y-3">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h2 className="text-lg font-extrabold text-primary">Provider-backed routes</h2>
+            <h2 className="text-lg font-extrabold text-primary">Live routes</h2>
             <p className="text-sm text-ink/60">
               Baseball is promoted as a full channel; the rest stay here until their coverage proves it deserves the top switcher.
             </p>
           </div>
           <span className="inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.16em] text-ink/45">
-            <Database size={13} /> TheSportsDB allowlist
+            <Database size={13} /> Coverage queue
           </span>
         </div>
 

@@ -11,7 +11,7 @@ import { formatLongDate, formatTime } from '../lib/time'
 function UpcomingEvents({ events, sportKey }: { events: LiveEvent[]; sportKey: string | null }) {
   const { prefs } = useAppState()
   if (events.length === 0) {
-    return <EmptyState title="No upcoming events" body="New fixtures sync in automatically as providers publish them." />
+    return <EmptyState title="No upcoming events" body="New fixtures sync in automatically as schedules are published." />
   }
   return (
     <ul className="space-y-1.5">
@@ -50,7 +50,7 @@ export function LeaguePage() {
   })
 
   if (loading) return <p className="board-label py-10 text-center text-ink/50">Loading league…</p>
-  if (!configured) return <EmptyState title="Live data not configured" body="Connect Supabase to view leagues." />
+  if (!configured) return <EmptyState title="Schedule unavailable" body="League schedules will appear here once coverage is connected." />
   if (!league) {
     return (
       <EmptyState title="League not found" body="This league isn't in the catalog yet.">
@@ -100,7 +100,7 @@ export function TeamPage() {
   })
 
   if (loading) return <p className="board-label py-10 text-center text-ink/50">Loading…</p>
-  if (!configured) return <EmptyState title="Live data not configured" body="Connect Supabase to view this page." />
+  if (!configured) return <EmptyState title="Schedule unavailable" body="This schedule will appear here once coverage is connected." />
   if (!competitor) {
     return (
       <EmptyState title="Not found" body="This team or player isn't in the catalog yet.">

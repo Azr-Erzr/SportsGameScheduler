@@ -140,9 +140,13 @@ export function EventDetailPage() {
               {leagueFollowed ? t('event.followingLeague', undefined, prefs.locale) : t('event.followLeague', undefined, prefs.locale)}
             </Button>
           )}
-          <Button variant="ghost" onClick={exportIcs}>
+          <button
+            type="button"
+            onClick={exportIcs}
+            className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-primary/25 px-3 py-2 text-xs font-bold text-ink transition-colors hover:bg-primary/10"
+          >
             <Download size={15} /> {t('event.addCalendar', undefined, prefs.locale)}
-          </Button>
+          </button>
         </div>
       </Panel>
 
@@ -301,7 +305,7 @@ function FightCardPanel({
         })}
       </div>
       <p className="text-[11px] text-ink/45">
-        Bout times are best estimates unless the provider supplies an explicit window; live cards can slide with stoppages and decisions.
+        Bout times are best estimates unless an official window is available; live cards can slide with stoppages and decisions.
       </p>
     </Panel>
   )
@@ -317,7 +321,6 @@ function EventNotes({ event }: { event: NonNullable<ReturnType<typeof useEvent>[
     event.kind ? ['Format', readableFact(event.kind)] : null,
     factFromMetadata(event.metadata, 'season', 'Season'),
     factFromMetadata(event.metadata, 'round', 'Round'),
-    factFromMetadata(event.metadata, 'source', 'Source'),
   ].filter((fact): fact is [string, string] => Boolean(fact && fact[1]))
 
   if (!facts.length) return null

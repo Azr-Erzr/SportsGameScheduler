@@ -86,7 +86,7 @@ export function AlertSettingsPage() {
   }
 
   if (!auth.configured) {
-    return <EmptyState title="Live data not configured" body="Connect Supabase to manage alerts." />
+    return <EmptyState title="Alerts unavailable" body="Alert settings will appear here once account sync is connected." />
   }
 
   if (!auth.user) {

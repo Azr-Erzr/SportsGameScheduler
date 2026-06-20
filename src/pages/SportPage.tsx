@@ -1,4 +1,4 @@
-import { Check, Download, Search, Sparkles, Star, Users, X } from 'lucide-react'
+import { Bell, Check, Download, Search, Sparkles, Star, Tv, Users, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useAppState } from '../app/state-context'
@@ -11,23 +11,60 @@ import { useEvent, useSportRoster, useSportSchedule, type LiveEvent } from '../d
 import { flagPoleGradient } from '../data/flagColors'
 import { allMatches, featuredTeams } from '../data/worldcup'
 import { exportFilename } from '../domain/brand'
+import type { Match } from '../domain/match'
 import { getSport, type SportInfo } from '../domain/sports'
+import type { CanonicalSportKey } from '../domain/types'
 import { AdSlot } from '../components/AdSlot'
 import { interleaveAds } from '../lib/ads'
 import { downloadBlob } from '../lib/clipboard'
 import { useDocumentMeta } from '../lib/seo'
 import { findConflicts } from '../lib/conflicts'
-import { createMultiSportIcsBlob } from '../lib/ics'
+import { createIcsBlob, createMultiSportIcsBlob } from '../lib/ics'
 import { formatDate, formatLongDate, formatTime, relativeTimeFromNow } from '../lib/time'
 
 const INDIVIDUAL_SPORTS = ['tennis', 'golf', 'athletics', 'combat_sports']
 
-// Provider freshness line (MP1 Objective 4): source + when we last ingested a change.
+type SeasonReturnMarker = {
+  id: string
+  sportKey: CanonicalSportKey
+  title: string
+  leagueName: string
+  startsAt: Date
+  body: string
+}
+
+const SEASON_RETURN_MARKERS: Partial<Record<CanonicalSportKey, SeasonReturnMarker>> = {
+  hockey: {
+    id: 'season-return-nhl-2026-preseason',
+    sportKey: 'hockey',
+    title: 'NHL preseason begins',
+    leagueName: 'NHL',
+    startsAt: new Date('2026-09-19T12:00:00Z'),
+    body: 'The NHL regular-season slate is still filling in, but preseason games are already landing for September. Full fixtures will appear here as the schedule fills out.',
+  },
+  basketball: {
+    id: 'season-return-nba-2026-preseason',
+    sportKey: 'basketball',
+    title: 'NBA preseason tips off',
+    leagueName: 'NBA',
+    startsAt: new Date('2026-10-09T12:00:00Z'),
+    body: 'Preseason/global games begin on October 9 and 11. This page will switch back to live fixtures once the schedule has games to show.',
+  },
+}
+
+function seasonReturnFor(sportKey: CanonicalSportKey): SeasonReturnMarker | null {
+  const marker = SEASON_RETURN_MARKERS[sportKey]
+  if (!marker) return null
+  return marker.startsAt.getTime() > Date.now() ? marker : null
+}
+
+// Customer-facing freshness line. Provider names stay internal; users just need confidence
+// that Silbo has a live schedule and recent sync state.
 function DataFreshness({ lastUpdated }: { lastUpdated: Date | null }) {
   return (
     <p className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wide text-ink/45">
       <span className="inline-block h-1.5 w-1.5 rounded-full bg-primary" />
-      Live · via TheSportsDB{lastUpdated ? ` · synced ${relativeTimeFromNow(lastUpdated)}` : ''}
+      Live schedule{lastUpdated ? ` · synced ${relativeTimeFromNow(lastUpdated)}` : ''}
     </p>
   )
 }
@@ -139,6 +176,7 @@ function SoccerPage() {
 function WorldCupPlanner() {
   const { followedTeams, toggleFollow, prefs } = useAppState()
   const [query, setQuery] = useState('')
+  const [addedMatchKeys, setAddedMatchKeys] = useState<string[]>([])
   const timeZone = prefs.timezone
   const { matches, source } = useMatches()
 
@@ -183,11 +221,21 @@ function WorldCupPlanner() {
     }
   }
 
+  function matchKey(match: { date: string; team1: string; team2: string }) {
+    return `${match.date}-${match.team1}-${match.team2}`
+  }
+
+  function addMatchToSchedule(match: Match) {
+    const key = matchKey(match)
+    downloadBlob(createIcsBlob([match], timeZone, prefs.locale, prefs.hour12), exportFilename('match', 'ics'))
+    setAddedMatchKeys((current) => (current.includes(key) ? current : [...current, key]))
+  }
+
   return (
     <div className="space-y-4">
       <SportChannelBanner
         title="World Cup '26"
-        kicker={source === 'live' ? 'Channel 01 / Live tournament capsule' : 'Channel 01 / Bundled tournament capsule'}
+        kicker={source === 'live' ? 'Channel 01 / Live tournament capsule' : 'Channel 01 / Tournament capsule'}
         sportKey="soccer"
         body={`Follow your nations and every kickoff lands in ${timeZone}. Group stage to final, whistle to whistle.`}
         ctaLabel="Sync schedule"
@@ -309,6 +357,10 @@ function WorldCupPlanner() {
                 timeZone={timeZone}
                 conflicted={conflicts.has(index)}
                 highlightTeams={followedTeams}
+                locale={prefs.locale}
+                hour12={prefs.hour12}
+                addedToSchedule={addedMatchKeys.includes(matchKey(match))}
+                onAddToSchedule={() => addMatchToSchedule(match)}
               />
             ))}
         </section>
@@ -333,10 +385,16 @@ function LiveSportPage({ sport }: { sport: SportInfo }) {
     () => (leagueId ? events.filter((e) => e.leagueId === leagueId) : events),
     [events, leagueId],
   )
+  const seasonReturn = leagueId ? null : seasonReturnFor(canonical)
 
   function addEventToSchedule(event: LiveEvent) {
     downloadBlob(createMultiSportIcsBlob([event], { reminderMinutes: [60] }), exportFilename('event', 'ics'))
     setAddedEventIds((current) => (current.includes(event.id) ? current : [...current, event.id]))
+  }
+
+  function addSeasonReturnToSchedule(marker: SeasonReturnMarker) {
+    downloadBlob(createMultiSportIcsBlob([seasonMarkerToEvent(marker)], { reminderMinutes: [] }), exportFilename('season-return', 'ics'))
+    setAddedEventIds((current) => (current.includes(marker.id) ? current : [...current, marker.id]))
   }
 
   const stats = [
@@ -359,7 +417,7 @@ function LiveSportPage({ sport }: { sport: SportInfo }) {
       />
 
       {!configured ? (
-        <EmptyState title="Live data not configured" body="Connect Supabase to view this sport's schedule." />
+        <EmptyState title="Schedule unavailable" body="This sport's live schedule will appear here once coverage is connected." />
       ) : loading ? (
         <p className="board-label py-10 text-center text-ink/50">Tuning channel…</p>
       ) : (
@@ -403,13 +461,22 @@ function LiveSportPage({ sport }: { sport: SportInfo }) {
                     ),
                   )}
                 </>
+              ) : seasonReturn ? (
+                <SeasonReturnNotice
+                  marker={seasonReturn}
+                  locale={prefs.locale}
+                  hour12={prefs.hour12}
+                  timeZone={prefs.timezone}
+                  added={addedEventIds.includes(seasonReturn.id)}
+                  onAdd={() => addSeasonReturnToSchedule(seasonReturn)}
+                />
               ) : (
                 <EmptyState
                   title={`No upcoming ${sport.label.toLowerCase()} events`}
                   body={
                     isIndividual
-                      ? 'Between seasons — the next fixtures sync in automatically. Browse the players meanwhile.'
-                      : "We're tracking this sport. Upcoming events appear here as providers publish the next season."
+                      ? 'Between seasons - the next fixtures sync in automatically. Browse the players meanwhile.'
+                      : "We're tracking this sport. Upcoming events appear here as the next season is published."
                   }
                 />
               )}
@@ -427,6 +494,76 @@ function LiveSportPage({ sport }: { sport: SportInfo }) {
           </div>
         </>
       )}
+    </div>
+  )
+}
+
+function seasonMarkerToEvent(marker: SeasonReturnMarker): LiveEvent {
+  return {
+    id: marker.id,
+    title: marker.title,
+    startsAt: marker.startsAt,
+    startsAtTbd: true,
+    status: 'scheduled',
+    leagueId: null,
+    leagueName: marker.leagueName,
+    sportKey: marker.sportKey,
+    venue: null,
+  }
+}
+
+function SeasonReturnNotice({
+  marker,
+  locale,
+  hour12,
+  timeZone,
+  added,
+  onAdd,
+}: {
+  marker: SeasonReturnMarker
+  locale?: string
+  hour12?: boolean | null
+  timeZone: string
+  added: boolean
+  onAdd: () => void
+}) {
+  const opts = { locale, hour12: hour12 ?? undefined }
+
+  return (
+    <div className="space-y-3">
+      <p className="text-sm font-semibold text-ink/60">Season break - next marker</p>
+      <article className="ticket-paper flex w-full items-stretch overflow-hidden max-sm:flex-col">
+        <div className="flex w-32 shrink-0 flex-col items-center justify-center bg-ticket-stub px-2 py-4 text-center text-ticket-stub-text max-sm:w-full max-sm:flex-row max-sm:justify-between max-sm:px-4">
+          <span className="font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-ticket-stub-text/75">
+            {formatDate(marker.startsAt, timeZone, opts)}
+          </span>
+          <strong className="font-head text-base leading-tight">Preseason</strong>
+          <span className="font-mono text-[9px] uppercase tracking-wide text-ticket-stub-text/70">Return</span>
+        </div>
+        <div className="min-w-0 flex-1 px-4 py-4">
+          <p className="mb-1 font-mono text-[10px] uppercase tracking-wide text-paper-ink/45">{marker.leagueName}</p>
+          <h3 className="truncate text-lg font-bold text-paper-ink">{marker.title}</h3>
+          <p className="mt-1 font-mono text-[11px] uppercase tracking-wide text-paper-ink/55">
+            {formatLongDate(marker.startsAt, timeZone, opts)} · season marker
+          </p>
+          <p className="mt-2 max-w-3xl text-sm text-paper-ink/65">{marker.body}</p>
+        </div>
+        <div className="flex shrink-0 items-center border-l border-paper-ink/10 px-3 max-sm:border-l-0 max-sm:border-t max-sm:px-4 max-sm:py-3">
+          <button
+            type="button"
+            onClick={onAdd}
+            aria-live="polite"
+            className={`inline-flex min-w-[116px] items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-bold transition-colors max-sm:w-full ${
+              added
+                ? 'border-ticket-stub bg-ticket-stub text-ticket-stub-text'
+                : 'border-ticket-stub/30 text-paper-ink hover:bg-ticket-stub/10'
+            }`}
+          >
+            <Download size={13} />
+            {added ? 'Added!' : 'Add to schedule'}
+          </button>
+        </div>
+      </article>
     </div>
   )
 }
@@ -742,8 +879,8 @@ function EventTicket({
           aria-live="polite"
           className={`inline-flex min-w-[116px] items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-bold transition-colors max-sm:w-full ${
             added
-              ? 'border-primary bg-primary text-void'
-              : 'border-primary/25 text-primary hover:bg-primary/10'
+              ? 'border-ticket-stub bg-ticket-stub text-ticket-stub-text'
+              : 'border-ticket-stub/30 text-paper-ink hover:bg-ticket-stub/10'
           }`}
         >
           <Download size={13} />
@@ -775,7 +912,7 @@ function EventQuickDetails({ eventId }: { eventId: string }) {
   if (!configured) {
     return (
       <Panel className="border-primary/20 bg-surface/85 py-3">
-        <p className="text-sm text-ink/55">Live details need Supabase configuration.</p>
+        <p className="text-sm text-ink/55">Live details will appear here once coverage is connected.</p>
       </Panel>
     )
   }
@@ -797,7 +934,6 @@ function EventQuickDetails({ eventId }: { eventId: string }) {
     detail.kind ? ['Format', readableSportFact(detail.kind)] : null,
     metadataFact(detail.metadata, 'season', 'Season'),
     metadataFact(detail.metadata, 'round', 'Round'),
-    metadataFact(detail.metadata, 'source', 'Source'),
   ].filter((fact): fact is [string, string] => Boolean(fact && fact[1]))
 
   function exportIcs() {
@@ -827,6 +963,26 @@ function EventQuickDetails({ eventId }: { eventId: string }) {
           </div>
         ))}
       </dl>
+
+      <div className="rounded-lg border border-dashed border-primary/25 bg-page/45 p-3">
+        <p className="mb-1 flex items-center gap-2 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-ink/55">
+          <Tv size={13} /> Where to watch
+        </p>
+        <p className="text-sm font-semibold text-ink">Watch options reserved</p>
+        <p className="mt-1 max-w-3xl text-xs text-ink/55">
+          Local TV, streaming, radio, venue links, and affiliate offers attach here as coverage details are connected.
+        </p>
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {['TV', 'Streaming', 'Radio', 'Tickets'].map((label) => (
+            <span key={label} className="rounded-full border border-primary/15 px-2 py-0.5 font-mono text-[10px] uppercase text-ink/55">
+              {label}
+            </span>
+          ))}
+        </div>
+        <p className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-ink/70">
+          <Bell size={12} /> Alerts can watch for time moves and new broadcast links.
+        </p>
+      </div>
 
       {event.competitors.length > 0 && (
         <div className="flex flex-wrap gap-2">
@@ -907,9 +1063,13 @@ function EventQuickDetails({ eventId }: { eventId: string }) {
             size="sm"
           />
         )}
-        <Button variant="ghost" onClick={exportIcs}>
+        <button
+          type="button"
+          onClick={exportIcs}
+          className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-primary/25 px-3 py-2 text-xs font-bold text-ink transition-colors hover:bg-primary/10"
+        >
           <Download size={14} /> Add to schedule
-        </Button>
+        </button>
       </div>
     </Panel>
   )
