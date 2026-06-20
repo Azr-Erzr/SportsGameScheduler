@@ -149,7 +149,7 @@ export function MatchCard({
               ))}
             </div>
             <p className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-paper-ink">
-              <Bell size={12} /> Alerts plug in here when times or watch details change.
+              <Bell size={12} /> Alert settings can watch time, team, venue, and watch-info changes.
             </p>
           </div>
         </div>

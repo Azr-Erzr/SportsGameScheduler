@@ -82,7 +82,7 @@ const english: Messages = {
   'schedule.noRangeTitle': 'No events in this range',
   'schedule.noRangeBody': 'Try a wider range, or follow more teams.',
   'schedule.tbdDates': 'TBD dates',
-  'schedule.tbdBody': "Tracking {count} knockout slots without confirmed teams. We'll whistle when they're set.",
+  'schedule.tbdBody': 'Tracking {count} knockout slots without confirmed teams. Alerts can notify you when teams are set.',
   'event.loading': 'Tuning channel...',
   'event.liveNotConfiguredTitle': 'Live details unavailable',
   'event.liveNotConfiguredBody': 'Event details will appear here when the live schedule is connected.',

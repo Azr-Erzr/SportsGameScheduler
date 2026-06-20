@@ -980,7 +980,7 @@ function EventQuickDetails({ eventId }: { eventId: string }) {
           ))}
         </div>
         <p className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-ink/70">
-          <Bell size={12} /> Alerts can watch for time moves and new broadcast links.
+          <Bell size={12} /> Alert settings can watch time, participant, venue, and broadcast updates.
         </p>
       </div>
 

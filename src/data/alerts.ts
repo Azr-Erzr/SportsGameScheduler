@@ -11,6 +11,10 @@ export type AlertChannelPref = {
   remindMinutesBefore: number
   notifyTimeChanges: boolean
   notifyCancellations: boolean
+  notifyNewEvents: boolean
+  notifyParticipantUpdates: boolean
+  notifyVenueChanges: boolean
+  notifyBroadcastUpdates: boolean
 }
 
 export type FollowLabel = { id: string; name: string; type: 'league' | 'competitor' }
@@ -24,13 +28,19 @@ export function defaultAlertPref(targetType: 'league' | 'competitor', targetId: 
     remindMinutesBefore: lead,
     notifyTimeChanges: true,
     notifyCancellations: true,
+    notifyNewEvents: true,
+    notifyParticipantUpdates: true,
+    notifyVenueChanges: true,
+    notifyBroadcastUpdates: true,
   }
 }
 
 export async function loadAlertPreferences(supabase: SupabaseClient, userId: string): Promise<AlertChannelPref[]> {
   const { data } = await supabase
     .from('alert_preferences')
-    .select('target_type, target_id, email_enabled, push_enabled, remind_minutes_before, notify_time_changes, notify_cancellations')
+    .select(
+      'target_type, target_id, email_enabled, push_enabled, remind_minutes_before, notify_time_changes, notify_cancellations, notify_new_events, notify_participant_updates, notify_venue_changes, notify_broadcast_updates',
+    )
     .eq('user_id', userId)
   return (data ?? []).map((r) => ({
     targetType: r.target_type as 'league' | 'competitor',
@@ -40,6 +50,10 @@ export async function loadAlertPreferences(supabase: SupabaseClient, userId: str
     remindMinutesBefore: r.remind_minutes_before as number,
     notifyTimeChanges: r.notify_time_changes as boolean,
     notifyCancellations: r.notify_cancellations as boolean,
+    notifyNewEvents: (r.notify_new_events ?? true) as boolean,
+    notifyParticipantUpdates: (r.notify_participant_updates ?? true) as boolean,
+    notifyVenueChanges: (r.notify_venue_changes ?? true) as boolean,
+    notifyBroadcastUpdates: (r.notify_broadcast_updates ?? true) as boolean,
   }))
 }
 
@@ -54,6 +68,10 @@ export async function saveAlertPreference(supabase: SupabaseClient, userId: stri
       remind_minutes_before: pref.remindMinutesBefore,
       notify_time_changes: pref.notifyTimeChanges,
       notify_cancellations: pref.notifyCancellations,
+      notify_new_events: pref.notifyNewEvents,
+      notify_participant_updates: pref.notifyParticipantUpdates,
+      notify_venue_changes: pref.notifyVenueChanges,
+      notify_broadcast_updates: pref.notifyBroadcastUpdates,
       updated_at: new Date().toISOString(),
     },
     { onConflict: 'user_id,target_type,target_id' },
