@@ -243,11 +243,26 @@ export function useMyEvents(
 
 export type EventCompetitor = { id: string; name: string; country: string | null; role: string; logoUrl: string | null }
 export type EventBroadcast = { country: string; channel: string; streamUrl: string | null; kind: string }
+export type EventBout = {
+  id: string
+  order: number | null
+  weightClass: string | null
+  scheduledRounds: number | null
+  estimatedStartAt: Date | null
+  estimatedEndAt: Date | null
+  status: string
+  metadata: Record<string, unknown>
+  redCorner: EventCompetitor | null
+  blueCorner: EventCompetitor | null
+}
 export type EventDetail = LiveEvent & {
   leagueId: string | null
   venueCity: string | null
   venueCountry: string | null
+  kind: string | null
+  metadata: Record<string, unknown>
   competitors: EventCompetitor[]
+  bouts: EventBout[]
   broadcasts: EventBroadcast[]
 }
 
@@ -273,11 +288,11 @@ export function useEvent(eventId: string | undefined): { event: EventDetail | nu
         setState({ forKey: key, event: null, configured: false })
         return
       }
-      const [{ data: row }, { data: comps }, { data: casts }] = await Promise.all([
+      const [{ data: row }, { data: comps }, { data: casts }, boutsRes] = await Promise.all([
         supabase
           .from('events')
           .select(
-            'id, title, starts_at, starts_at_tbd, status, league_id, venues(name, city, country), sports(key), leagues(name)',
+            'id, title, starts_at, starts_at_tbd, status, league_id, kind, metadata, venues(name, city, country), sports(key), leagues(name)',
           )
           .eq('id', eventId)
           .maybeSingle(),
@@ -287,6 +302,13 @@ export function useEvent(eventId: string | undefined): { event: EventDetail | nu
           .eq('event_id', eventId)
           .order('position', { ascending: true }),
         supabase.from('broadcasts').select('country, channel, stream_url, kind').eq('event_id', eventId),
+        supabase
+          .from('event_bouts')
+          .select(
+            'id, bout_order, weight_class, red_corner_competitor_id, blue_corner_competitor_id, scheduled_rounds, est_start_window, status, metadata',
+          )
+          .eq('event_id', eventId)
+          .order('bout_order', { ascending: true, nullsFirst: false }),
       ])
       if (cancelled) return
       if (!row) {
@@ -300,6 +322,8 @@ export function useEvent(eventId: string | undefined): { event: EventDetail | nu
         starts_at_tbd: boolean
         status: string
         league_id: string | null
+        kind: string | null
+        metadata: Record<string, unknown> | null
         venues: { name: string; city: string | null; country: string | null } | null
         sports: { key: string } | null
         leagues: { name: string } | null
@@ -312,6 +336,51 @@ export function useEvent(eventId: string | undefined): { event: EventDetail | nu
           country: person.country,
           logoUrl: person.logo_url,
           role: (c as unknown as { role: string }).role,
+        }
+      })
+      const rawBouts = (boutsRes.error ? [] : boutsRes.data ?? []) as unknown as Array<{
+        id: string
+        bout_order: number | null
+        weight_class: string | null
+        red_corner_competitor_id: string | null
+        blue_corner_competitor_id: string | null
+        scheduled_rounds: number | null
+        est_start_window: string | null
+        status: string
+        metadata: Record<string, unknown> | null
+      }>
+      const boutCompetitorIds = [
+        ...new Set(
+          rawBouts.flatMap((b) => [b.red_corner_competitor_id, b.blue_corner_competitor_id]).filter((id): id is string => Boolean(id)),
+        ),
+      ]
+      let boutCompetitors = new Map<string, EventCompetitor>()
+      if (boutCompetitorIds.length) {
+        const { data: people } = await supabase
+          .from('competitors')
+          .select('id, name, country, logo_url')
+          .in('id', boutCompetitorIds)
+        if (cancelled) return
+        boutCompetitors = new Map(
+          ((people ?? []) as unknown as Array<{ id: string; name: string; country: string | null; logo_url: string | null }>).map((person) => [
+            person.id,
+            { id: person.id, name: person.name, country: person.country, logoUrl: person.logo_url, role: 'fighter' },
+          ]),
+        )
+      }
+      const bouts: EventBout[] = rawBouts.map((bout) => {
+        const [rangeStart, rangeEnd] = parsePostgresRange(bout.est_start_window)
+        return {
+          id: bout.id,
+          order: bout.bout_order,
+          weightClass: bout.weight_class,
+          scheduledRounds: bout.scheduled_rounds,
+          estimatedStartAt: rangeStart,
+          estimatedEndAt: rangeEnd,
+          status: bout.status,
+          metadata: bout.metadata ?? {},
+          redCorner: bout.red_corner_competitor_id ? boutCompetitors.get(bout.red_corner_competitor_id) ?? null : null,
+          blueCorner: bout.blue_corner_competitor_id ? boutCompetitors.get(bout.blue_corner_competitor_id) ?? null : null,
         }
       })
       const broadcasts: EventBroadcast[] = (casts ?? []).map((b) => ({
@@ -335,7 +404,10 @@ export function useEvent(eventId: string | undefined): { event: EventDetail | nu
           venue: r.venues?.name ?? null,
           venueCity: r.venues?.city ?? null,
           venueCountry: r.venues?.country ?? null,
+          kind: r.kind,
+          metadata: r.metadata ?? {},
           competitors,
+          bouts,
           broadcasts,
         },
       })
@@ -348,6 +420,15 @@ export function useEvent(eventId: string | undefined): { event: EventDetail | nu
 
   const loading = state.forKey !== (eventId ?? '')
   return { event: loading ? null : state.event, loading, configured: state.configured }
+}
+
+function parsePostgresRange(range: string | null): [Date | null, Date | null] {
+  if (!range) return [null, null]
+  const match = range.match(/^[[(]"?([^",)]*)"?,"?([^",)]*)"?[\])]$/)
+  if (!match) return [null, null]
+  const start = match[1] ? new Date(match[1]) : null
+  const end = match[2] ? new Date(match[2]) : null
+  return [start && Number.isFinite(start.getTime()) ? start : null, end && Number.isFinite(end.getTime()) ? end : null]
 }
 
 export type LeagueInfo = { id: string; name: string; sportKey: string | null; country: string | null; logoUrl: string | null }

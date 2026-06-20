@@ -1,6 +1,6 @@
 import { Check, Search, Sparkles, Star, Users, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { useAppState } from '../app/state-context'
 import { CityPicker } from '../components/CityPicker'
 import { MatchCard } from '../components/MatchCard'
@@ -575,7 +575,11 @@ function EventTicket({
   const parts = event.title.includes(' vs ') ? event.title.split(' vs ') : null
 
   return (
-    <article className="ticket-paper flex items-stretch overflow-hidden">
+    <Link
+      to={`/events/${event.id}`}
+      className="ticket-paper group flex items-stretch overflow-hidden transition-transform hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+      aria-label={`View details for ${event.title}`}
+    >
       <div
         className="flex w-24 shrink-0 flex-col items-center justify-center bg-ticket-stub px-2 py-3 text-center text-ticket-stub-text"
       >
@@ -611,7 +615,7 @@ function EventTicket({
           <Badge tone={event.status === 'finished' ? 'muted' : 'warning'}>{event.status}</Badge>
         </span>
       )}
-    </article>
+    </Link>
   )
 }
 
