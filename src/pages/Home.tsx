@@ -145,7 +145,13 @@ export function HomePage() {
                         key={team}
                         onClick={() => toggleTeam(team)}
                         className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors ${
-                          selected ? 'bg-primary text-void' : 'bg-surface text-primary hover:bg-primary/10'
+                          prefs.themeMode === 'program'
+                            ? selected
+                              ? 'bg-primary text-ticket-stub-text shadow-[0_8px_18px_color-mix(in_srgb,var(--mp-primary)_18%,transparent)]'
+                              : 'bg-paper text-primary hover:bg-primary hover:text-ticket-stub-text'
+                            : selected
+                              ? 'bg-primary text-void'
+                              : 'bg-surface text-primary hover:bg-primary/10'
                         }`}
                       >
                         {selected ? 'Following ' : ''}

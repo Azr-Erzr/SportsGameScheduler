@@ -51,7 +51,7 @@ export function AuthButton() {
       <Button
         variant="ghost"
         disabled
-        title="Supabase is not configured for this environment"
+        title="Account sync is not available in this environment"
         aria-label="Local-only mode"
         className="max-sm:h-10 max-sm:w-10 max-sm:px-0"
       >

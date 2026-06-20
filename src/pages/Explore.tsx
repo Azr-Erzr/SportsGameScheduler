@@ -57,7 +57,7 @@ function LiveRouteCard({ sport, dense = false }: { sport: SportInfo; dense?: boo
           </div>
         </div>
         <Badge tone={liveReady ? 'secondary' : 'muted'}>
-          {schedule.loading ? 'Checking' : liveReady ? 'Live data' : 'Queued'}
+          {schedule.loading ? 'Checking' : liveReady ? 'Live route' : 'Queued'}
         </Badge>
       </div>
 
@@ -107,7 +107,7 @@ export function ExplorePage() {
                 Pick the channel. Keep the schedule.
               </h1>
               <p className="mt-4 max-w-2xl text-sm leading-relaxed text-ink/64 sm:text-base">
-                Core sports get full channel pages. New provider-backed sports sit in their own expansion lane, with live
+                Core sports get full channel pages. New live-route sports sit in their own expansion lane, with live
                 counts visible before we promote them into the main dropdown.
               </p>
             </div>
@@ -120,7 +120,7 @@ export function ExplorePage() {
               </Link>
               <Link to="/other-sports">
                 <Button variant="ghost">
-                  <Database size={16} /> Provider-backed routes
+                  <Database size={16} /> Live routes
                 </Button>
               </Link>
               <Link to="/custom-leagues">
@@ -173,7 +173,7 @@ export function ExplorePage() {
 
       <section className="grid gap-4 lg:grid-cols-[320px_1fr]">
         <Panel className="h-fit lg:sticky lg:top-20">
-          <PanelHeading title="Expansion lane" subtitle="Provider-backed sports without the wall of tiles.">
+          <PanelHeading title="Expansion lane" subtitle="Live-route sports without the wall of tiles.">
             <Database size={18} className="text-primary" />
           </PanelHeading>
           <label className="mb-3 flex items-center gap-2 rounded-lg border border-primary/20 bg-page/60 px-3 py-2">

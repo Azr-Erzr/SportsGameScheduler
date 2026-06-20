@@ -1,4 +1,4 @@
-import { ArrowLeft, CalendarDays, Download, MapPin, Star, Tv } from 'lucide-react'
+import { ArrowLeft, CalendarDays, Clock, Download, MapPin, Star, Tv } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
 import { useAppState } from '../app/state-context'
 import { Badge, Button, EmptyState, Panel, PanelHeading } from '../components/ui'
@@ -28,7 +28,7 @@ export function EventDetailPage() {
   useDocumentMeta({
     title: event ? `${event.title} — when & where to watch | Silbo Sports` : 'Event — Silbo Sports',
     description: event
-      ? `${event.title}${event.leagueName ? ` · ${event.leagueName}` : ''} — start time in your local timezone, where to watch, follow, and add to your calendar.`
+      ? `${event.title}${event.leagueName ? ` · ${event.leagueName}` : ''} — start time in your local timezone, where to watch, and add to your schedule.`
       : undefined,
     canonicalPath: eventId ? `/events/${eventId}` : undefined,
   })
@@ -140,11 +140,19 @@ export function EventDetailPage() {
               {leagueFollowed ? t('event.followingLeague', undefined, prefs.locale) : t('event.followLeague', undefined, prefs.locale)}
             </Button>
           )}
-          <Button variant="ghost" onClick={exportIcs}>
+          <button
+            type="button"
+            onClick={exportIcs}
+            className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-primary/25 px-3 py-2 text-xs font-bold text-ink transition-colors hover:bg-primary/10"
+          >
             <Download size={15} /> {t('event.addCalendar', undefined, prefs.locale)}
-          </Button>
+          </button>
         </div>
       </Panel>
+
+      {event.bouts.length > 0 && <FightCardPanel event={event} locale={prefs.locale} hour12={prefs.hour12} timeZone={prefs.timezone} />}
+
+      <EventNotes event={event} />
 
       {event.competitors.length > 0 && (
         <Panel>
@@ -224,6 +232,122 @@ export function EventDetailPage() {
       </Panel>
     </div>
   )
+}
+
+const FIGHT_SLOT_MINUTES = 30
+
+function FightCardPanel({
+  event,
+  locale,
+  hour12,
+  timeZone,
+}: {
+  event: NonNullable<ReturnType<typeof useEvent>['event']>
+  locale?: string
+  hour12?: boolean | null
+  timeZone: string
+}) {
+  const opts = { locale, hour12: hour12 ?? undefined }
+  const hasExplicitMain = event.bouts.some((bout) => bout.metadata.main_event === true || bout.metadata.is_main_event === true)
+
+  return (
+    <Panel className="space-y-3">
+      <PanelHeading
+        title={event.leagueName ? `${event.leagueName} fight card` : 'Fight card'}
+        subtitle={`${event.bouts.length} bouts - estimated local windows`}
+      >
+        <Clock size={18} className="text-primary" />
+      </PanelHeading>
+      <div className="space-y-2">
+        {event.bouts.map((bout, index) => {
+          const isMainEvent = hasExplicitMain
+            ? bout.metadata.main_event === true || bout.metadata.is_main_event === true
+            : index === event.bouts.length - 1
+          const estimatedStart = bout.estimatedStartAt ?? estimateBoutStart(event.startsAt, index)
+          const title =
+            bout.redCorner && bout.blueCorner
+              ? `${bout.redCorner.name} vs ${bout.blueCorner.name}`
+              : bout.redCorner?.name ?? bout.blueCorner?.name ?? `Bout ${bout.order ?? index + 1}`
+          return (
+            <article
+              key={bout.id}
+              className={`flex items-stretch overflow-hidden rounded-xl border bg-paper text-paper-ink ${
+                isMainEvent ? 'border-ticket-stub shadow-[0_0_0_2px_var(--color-ticket-stub)]' : 'border-primary/15'
+              }`}
+            >
+              <div
+                className={`flex w-24 shrink-0 flex-col items-center justify-center px-2 py-3 text-center ${
+                  isMainEvent ? 'bg-ticket-stub text-ticket-stub-text' : 'bg-primary/10 text-primary'
+                }`}
+              >
+                <span className="font-mono text-[10px] font-bold uppercase tracking-[0.12em] opacity-75">
+                  {bout.order ? `Bout ${bout.order}` : 'Bout'}
+                </span>
+                <strong className="font-head text-sm leading-tight">
+                  {estimatedStart ? formatTime(estimatedStart, timeZone, opts) : 'TBD'}
+                </strong>
+                {estimatedStart && !bout.estimatedStartAt && <span className="font-mono text-[9px] uppercase opacity-70">est.</span>}
+              </div>
+              <div className="min-w-0 flex-1 px-4 py-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="truncate text-base font-bold">{title}</h3>
+                  {isMainEvent && <Badge tone="secondary">Main event</Badge>}
+                  {bout.status !== 'scheduled' && <Badge tone={bout.status === 'finished' ? 'muted' : 'warning'}>{bout.status}</Badge>}
+                </div>
+                <p className="mt-1 flex flex-wrap gap-x-3 font-mono text-[11px] uppercase tracking-wide text-paper-ink/55">
+                  {bout.weightClass && <span>{bout.weightClass}</span>}
+                  {bout.scheduledRounds && <span>{bout.scheduledRounds} rounds</span>}
+                  {estimatedStart && <span>{formatLongDate(estimatedStart, timeZone, opts)}</span>}
+                </p>
+              </div>
+            </article>
+          )
+        })}
+      </div>
+      <p className="text-[11px] text-ink/45">
+        Bout times are best estimates unless an official window is available; live cards can slide with stoppages and decisions.
+      </p>
+    </Panel>
+  )
+}
+
+function estimateBoutStart(cardStart: Date | null, index: number) {
+  if (!cardStart) return null
+  return new Date(cardStart.getTime() + index * FIGHT_SLOT_MINUTES * 60_000)
+}
+
+function EventNotes({ event }: { event: NonNullable<ReturnType<typeof useEvent>['event']> }) {
+  const facts = [
+    event.kind ? ['Format', readableFact(event.kind)] : null,
+    factFromMetadata(event.metadata, 'season', 'Season'),
+    factFromMetadata(event.metadata, 'round', 'Round'),
+  ].filter((fact): fact is [string, string] => Boolean(fact && fact[1]))
+
+  if (!facts.length) return null
+
+  return (
+    <Panel>
+      <PanelHeading title="Event details" />
+      <dl className="grid gap-2 sm:grid-cols-4">
+        {facts.map(([label, value]) => (
+          <div key={label} className="rounded-lg border border-primary/15 bg-page/45 px-3 py-2">
+            <dt className="font-mono text-[10px] uppercase tracking-wide text-ink/45">{label}</dt>
+            <dd className="text-sm font-semibold text-ink">{value}</dd>
+          </div>
+        ))}
+      </dl>
+    </Panel>
+  )
+}
+
+function factFromMetadata(metadata: Record<string, unknown>, key: string, label: string): [string, string] | null {
+  const value = metadata[key]
+  return typeof value === 'string' && value.trim() ? [label, readableFact(value)] : null
+}
+
+function readableFact(value: string) {
+  if (value.toLowerCase() === 'thesportsdb') return 'TheSportsDB'
+  return value.replace(/_/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase())
 }
 
 // No specific broadcast yet: surface region-relevant streaming destinations. These are
