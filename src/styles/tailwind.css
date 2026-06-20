@@ -2372,7 +2372,9 @@
   }
 
   [data-paper] .sport-channel-action-panel::before {
-    inset: -2%;
+    /* Bleed the art box (and its colour wash/bloom) to the right banner edge so it clips flush
+       there — mirroring the icon's left bleed — instead of leaving a gap before the border. */
+    inset: -2% calc(-1 * var(--sport-channel-pad) - 4px) -2% -2%;
     background-image:
       radial-gradient(
         ellipse at var(--sport-channel-action-wash-x, 56%) var(--sport-channel-action-wash-y, 54%),
