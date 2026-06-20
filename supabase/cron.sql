@@ -63,3 +63,20 @@ select cron.schedule(
   );
   $$
 );
+
+-- Calendar-feed ingestion every 6 hours. Only allowlisted rows in source_targets are fetched,
+-- and rows default to dry_run=true until a source has been reviewed for rights/quality.
+select cron.schedule(
+  'ics-feed-ingest',
+  '17 */6 * * *',
+  $$
+  select net.http_post(
+    url := 'https://<project-ref>.supabase.co/functions/v1/ics-feed-ingest',
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'Authorization', 'Bearer ' || current_setting('app.settings.service_role_key')
+    ),
+    body := jsonb_build_object('limit', 5)
+  );
+  $$
+);

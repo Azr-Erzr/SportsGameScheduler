@@ -34,10 +34,19 @@ const SPORT_FROM_TSDB: Record<string, string> = {
   Tennis: 'tennis',
   Golf: 'golf',
   Athletics: 'athletics',
+  Baseball: 'baseball',
+  Cricket: 'cricket',
+  Rugby: 'rugby',
+  Volleyball: 'volleyball',
+  Handball: 'handball',
+  Cycling: 'cycling',
+  Snooker: 'snooker',
+  Darts: 'darts',
 }
 
 function kindForSport(sportKey: string): string {
   if (sportKey === 'motorsport') return 'race'
+  if (sportKey === 'cycling') return 'race'
   if (sportKey === 'combat_sports') return 'fight_card'
   return 'match'
 }
@@ -72,7 +81,7 @@ function normalizeStatus(raw: string | null | undefined): string {
   if (/finish|full time|\bft\b|\baet\b|ended|final/.test(s)) return 'finished'
   if (/postpon/.test(s)) return 'postponed'
   if (/cancel|abandon/.test(s)) return 'cancelled'
-  if (/live|in play|1st|2nd|half|quarter|\bq[1-4]\b|\bht\b/.test(s)) return 'live'
+  if (/live|in play|1st|2nd|half|quarter|\bq[1-4]\b|\bht\b|\bin[1-9]\b|\bs[1-5]\b/.test(s)) return 'live'
   return 'scheduled'
 }
 

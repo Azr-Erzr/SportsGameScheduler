@@ -9,7 +9,7 @@ import { brand, exportFilename } from '../domain/brand'
 import { copyToClipboard, downloadBlob } from '../lib/clipboard'
 import { createIcsBlob, createMultiSportIcsBlob } from '../lib/ics'
 import { t } from '../lib/i18n'
-import { createNotesText } from '../lib/notes'
+import { createMultiSportNotesText, createNotesText } from '../lib/notes'
 import { MAX_EVENTS_BY_TEMPLATE, paginateEvents, type ExportTemplate } from '../lib/paginate'
 import { canvasToBlob, createScheduleCanvas } from '../lib/poster'
 import { formatDate, formatTime } from '../lib/time'
@@ -106,6 +106,17 @@ export function ExportStudioPage() {
     }
     await copyToClipboard(text)
     setMessage('Plain-text schedule copied - paste into Notes, Keep, Notion, or a group chat.')
+  }
+
+  async function copyAllSportsNotes() {
+    const text = createMultiSportNotesText(myEvents.events, timeZone, cityLabel, prefs.locale, prefs.hour12)
+    if (navigator.share) {
+      await navigator.share({ title: brand.scheduleTitle, text })
+      setMessage('All-sports text schedule opened in your share sheet.')
+      return
+    }
+    await copyToClipboard(text)
+    setMessage(`All-sports text schedule copied - ${myEvents.events.length} events.`)
   }
 
   return (
@@ -221,6 +232,16 @@ export function ExportStudioPage() {
             </Button>
             <Button className="w-full" variant="subtle" onClick={copyNotes} disabled={schedule.length === 0}>
               <Copy size={15} /> {t('export.copyNotes', undefined, prefs.locale)}
+            </Button>
+            <Button
+              className="w-full"
+              variant="subtle"
+              onClick={copyAllSportsNotes}
+              disabled={myEvents.events.length === 0}
+              title="Copy followed live sports as plain text"
+            >
+              <Copy size={15} /> Copy all-sports notes
+              {myEvents.events.length ? ` (${myEvents.events.length})` : ''}
             </Button>
             {message && <p className="text-sm font-medium text-primary">{message}</p>}
           </Panel>

@@ -23,6 +23,9 @@ the frontend currently runs on local data + localStorage, shaped to swap onto th
     high-priority soccer targets, starting with the World Cup pilot target.
   - `provider-hydrate-apisports-f1` - paced API-Sports/API-Formula-1 race hydrator for
     the motorsport/F1 page.
+  - `ics-feed-ingest` - allowlisted public `.ics` / `webcal://` source ingestion. Targets live
+    in `source_targets`, default to dry-run, and normalize feed events into canonical `events`
+    only after review.
   - `calendar-feed` — `GET /calendar-feed/:token.ics`, stable UID/SEQUENCE, RFC 5545
     escaping + line folding.
   - `notifications` — materialize + claim + send, dispatching by channel (email via Resend;
@@ -35,7 +38,7 @@ the frontend currently runs on local data + localStorage, shaped to swap onto th
 2. Seed `sports` (at minimum `soccer`) and the WC2026 league row.
 3. Set function secrets: `WORLDCUP_JSON_URL`, `THESPORTSDB_API_KEY`, `APISPORTS_KEY`,
    `RESEND_API_KEY`, `EMAIL_FROM`, `APP_URL`, VAPID keys when Web Push lands.
-4. `supabase functions deploy provider-sync provider-hydrate provider-hydrate-apisports provider-hydrate-apisports-f1 calendar-feed notifications`.
+4. `supabase functions deploy provider-sync provider-hydrate provider-hydrate-apisports provider-hydrate-apisports-f1 ics-feed-ingest calendar-feed notifications`.
 5. Run `cron.sql` with the project ref filled in.
 6. Point the frontend store layer (`src/lib/store.ts`) at supabase-js instead of localStorage,
    and merge anonymous local follows into `user_follows` on first sign-in (Objective 14.2).
@@ -63,3 +66,17 @@ paid API-Sports tier.
 
 Confirm redistribution rights — see `../docs/master-plan-2.md`. Public `.ics` feeds and
 share links are redistribution under most providers' terms.
+
+## Public calendar feed ingestion
+
+The MP4 calendar-feed ingestion lane uses:
+
+- `source_providers` - internal provider registry. The seeded `ics_feed` provider is the generic
+  public-calendar adapter.
+- `source_targets` - reviewed feed URLs, sport/league mapping, cadence, dry-run status, payload
+  hashes, and last error/status fields.
+- `event_external_ids` - maps feed UID values to canonical event IDs so later API providers can
+  dedupe rather than create duplicates.
+
+Keep `source_targets.dry_run = true` for any new feed until the source is confirmed public,
+redistribution-safe, and the parsed events look sane.

@@ -4,15 +4,18 @@ type Messages = Record<string, string>
 
 const english: Messages = {
   'nav.home': 'Home',
+  'nav.sports': 'Sports',
   'nav.mySchedule': 'My Schedule',
   'nav.explore': 'Sports',
   'nav.calendar': 'Sync',
   'nav.exports': 'Exports',
-  'nav.customLeagues': 'Community',
+  'nav.customLeagues': 'Create League',
   'nav.mobile.home': 'Home',
+  'nav.mobile.sports': 'Sports',
   'nav.mobile.schedule': 'Schedule',
   'nav.mobile.exports': 'Exports',
-  'nav.mobile.local': 'Local',
+  'nav.mobile.create': 'Create',
+  'nav.mobile.local': 'Create',
   'home.headline': 'One schedule for every sport you follow.',
   'home.body':
     'Choose your teams, countries, players, drivers, fighters, leagues, and tournaments. Silbo Sports combines their upcoming events in your local time, then makes the schedule easy to save, share, or sync.',
@@ -209,11 +212,12 @@ const messages: Record<LocaleCode, Messages> = {
   fr: {
     ...english,
     'nav.home': 'Accueil',
+    'nav.sports': 'Sports',
     'nav.mySchedule': 'Mon programme',
     'nav.explore': 'Sports',
     'nav.calendar': 'Sync',
     'nav.exports': 'Exports',
-    'nav.customLeagues': 'Communauté',
+    'nav.customLeagues': 'Creer ligue',
     'home.headline': 'Un seul calendrier pour tous les sports que vous suivez.',
     'home.body':
       'Choisissez vos équipes, pays, joueurs, pilotes, combattants, ligues et tournois. Silbo Sports réunit leurs prochains événements à votre heure locale, prêts à enregistrer, partager ou synchroniser.',
@@ -229,11 +233,12 @@ const messages: Record<LocaleCode, Messages> = {
   es: {
     ...english,
     'nav.home': 'Inicio',
+    'nav.sports': 'Deportes',
     'nav.mySchedule': 'Mi agenda',
     'nav.explore': 'Deportes',
     'nav.calendar': 'Sync',
     'nav.exports': 'Exportar',
-    'nav.customLeagues': 'Comunidad',
+    'nav.customLeagues': 'Crear liga',
     'home.headline': 'Un calendario para todos los deportes que sigues.',
     'home.body':
       'Elige tus equipos, países, jugadores, pilotos, luchadores, ligas y torneos. Silbo Sports reúne sus próximos eventos en tu hora local y los deja listos para guardar, compartir o sincronizar.',
@@ -249,11 +254,12 @@ const messages: Record<LocaleCode, Messages> = {
   pt: {
     ...english,
     'nav.home': 'Início',
+    'nav.sports': 'Esportes',
     'nav.mySchedule': 'Minha agenda',
     'nav.explore': 'Esportes',
     'nav.calendar': 'Sync',
     'nav.exports': 'Exportar',
-    'nav.customLeagues': 'Comunidade',
+    'nav.customLeagues': 'Criar liga',
     'home.headline': 'Uma agenda para todos os esportes que você acompanha.',
     'home.body':
       'Escolha seus times, países, jogadores, pilotos, lutadores, ligas e torneios. O Silbo Sports reúne os próximos eventos no seu horário local, prontos para salvar, compartilhar ou sincronizar.',

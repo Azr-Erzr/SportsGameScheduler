@@ -36,7 +36,7 @@ import { copyToClipboard, downloadBlob } from '../lib/clipboard'
 import { findConflicts } from '../lib/conflicts'
 import { createIcsBlob, createMultiSportIcsBlob, sportEmoji } from '../lib/ics'
 import { t } from '../lib/i18n'
-import { createNotesText } from '../lib/notes'
+import { createMultiSportNotesText, createNotesText } from '../lib/notes'
 import { MAX_EVENTS_BY_TEMPLATE, paginateEvents, type ExportTemplate } from '../lib/paginate'
 import { canvasToBlob, createScheduleCanvas } from '../lib/poster'
 import { displayTimeOptions, formatLongDate, formatTime } from '../lib/time'
@@ -419,6 +419,13 @@ export function MySchedulePage() {
     closeFlow()
   }
 
+  async function copyLiveNotes() {
+    const text = createMultiSportNotesText(liveSchedule, timeZone, cityLabel, prefs.locale, prefs.hour12)
+    await copyToClipboard(text)
+    setMessage(`All-sports text schedule copied - ${liveSchedule.length} events.`)
+    closeFlow()
+  }
+
   async function shareSchedule(matchesToExport = schedule) {
     const text = createNotesText(matchesToExport, followedTeams, timeZone, cityLabel, prefs.locale, prefs.hour12)
     if (navigator.share) {
@@ -749,6 +756,11 @@ export function MySchedulePage() {
                     <Button className="w-full" variant="subtle" onClick={() => copyNotes(matchesForScope(flow.answers.download_scope))}>
                       <Copy size={15} /> Copy text instead
                     </Button>
+                    {liveSchedule.length > 0 && (
+                      <Button className="w-full" variant="ghost" onClick={copyLiveNotes}>
+                        <Copy size={15} /> Copy all-sports text
+                      </Button>
+                    )}
                   </div>
                 )}
 

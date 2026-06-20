@@ -183,6 +183,97 @@ export const sports: SportInfo[] = [
   },
 ]
 
+export const secondarySports: SportInfo[] = [
+  {
+    key: 'cricket',
+    canonicalSportKey: 'cricket',
+    label: 'Cricket',
+    flagshipLeague: 'IPL / Big Bash / World Cups',
+    leagueKey: 'cricket',
+    icon: CircleDot,
+    badgeKey: 'custom',
+    enabled: true,
+    eventNoun: 'match',
+    tagline: 'Tests, ODIs, T20 leagues, and tournament windows',
+    sourceNote: 'TheSportsDB has cricket league coverage; Sportmonks and SportsAPI360 remain provider candidates',
+  },
+  {
+    key: 'rugby',
+    canonicalSportKey: 'rugby',
+    label: 'Rugby',
+    flagshipLeague: 'Six Nations / Rugby World Cup / Super Rugby',
+    leagueKey: 'rugby',
+    icon: Shield,
+    badgeKey: 'football',
+    enabled: true,
+    eventNoun: 'match',
+    tagline: 'Union, league, Sevens, tours, and World Cup paths',
+    sourceNote: 'TheSportsDB has rugby league/tournament coverage; rights vary by competition',
+  },
+  {
+    key: 'volleyball',
+    canonicalSportKey: 'volleyball',
+    label: 'Volleyball',
+    flagshipLeague: 'FIVB / CEV / domestic leagues',
+    leagueKey: 'volleyball',
+    icon: Volleyball,
+    badgeKey: 'basketball',
+    enabled: true,
+    eventNoun: 'match',
+    tagline: 'Indoor, beach, Nations League, championships, and club cups',
+  },
+  {
+    key: 'handball',
+    canonicalSportKey: 'handball',
+    label: 'Handball',
+    flagshipLeague: 'Bundesliga / EHF / Worlds',
+    leagueKey: 'handball',
+    icon: Disc,
+    badgeKey: 'basketball',
+    enabled: true,
+    eventNoun: 'match',
+    tagline: 'European leagues, EHF nights, and international championships',
+  },
+  {
+    key: 'cycling',
+    canonicalSportKey: 'cycling',
+    label: 'Cycling',
+    flagshipLeague: 'UCI World Tour / ProSeries',
+    leagueKey: 'cycling',
+    icon: Timer,
+    badgeKey: 'motorsport',
+    enabled: true,
+    eventNoun: 'race',
+    tagline: 'Tours, classics, stages, and championship calendars',
+  },
+  {
+    key: 'snooker',
+    canonicalSportKey: 'snooker',
+    label: 'Snooker',
+    flagshipLeague: 'World Snooker Tour',
+    leagueKey: 'snooker',
+    icon: CircleDot,
+    badgeKey: 'custom',
+    enabled: true,
+    eventNoun: 'match',
+    tagline: 'Ranking events, finals sessions, and long-format matches',
+  },
+  {
+    key: 'darts',
+    canonicalSportKey: 'darts',
+    label: 'Darts',
+    flagshipLeague: 'PDC / World Championship',
+    leagueKey: 'darts',
+    icon: Timer,
+    badgeKey: 'custom',
+    enabled: true,
+    eventNoun: 'match',
+    tagline: 'PDC nights, majors, and world championship sessions',
+  },
+]
+
+export const sportRoutes = [...sports, ...secondarySports]
+
 const routeAliases: Record<string, SportInfo> = {
   nba: sports[1],
   wnba: sports[1],
@@ -200,7 +291,7 @@ const routeAliases: Record<string, SportInfo> = {
 }
 
 export const customLeagueSportOptions = Array.from(
-  sports
+  sportRoutes
     .reduce<Map<CanonicalSportKey, { key: CanonicalSportKey; label: string }>>((options, sport) => {
       if (!options.has(sport.canonicalSportKey)) {
         options.set(sport.canonicalSportKey, {
@@ -215,7 +306,7 @@ export const customLeagueSportOptions = Array.from(
 )
 
 export function getSport(key: string): SportInfo | undefined {
-  return sports.find((sport) => sport.key === key) ?? routeAliases[key]
+  return sportRoutes.find((sport) => sport.key === key) ?? routeAliases[key]
 }
 
 export function canonicalSportKeyForRoute(key: string): CanonicalSportKey | undefined {
