@@ -110,6 +110,11 @@ export const olympicTheme = broadcast('olympic', 'Olympic Sports', '#7aa2ff', '#
   cardShape: 'poster',
 }, '#284f8f')
 
+export const baseballTheme = broadcast('baseball', 'Baseball', '#ff5630', '#ffd34d', {
+  background: 'pitch',
+  cardShape: 'scoreboard',
+}, '#8a2c14')
+
 export const customTheme = broadcast('custom', 'Community', '#b18aff', '#54ff9f', {
   background: 'neutral',
   cardShape: 'slab',
@@ -172,6 +177,7 @@ export const themesByKey: Record<string, SportTheme> = {
   combat: combatTheme,
   track: trackTheme,
   olympic: olympicTheme,
+  baseball: baseballTheme,
   custom: customTheme,
   // Route/league aliases.
   f1: motorsportTheme,
@@ -180,6 +186,7 @@ export const themesByKey: Record<string, SportTheme> = {
   wnba: wnbaTheme,
   ufc: combatTheme,
   cfl: footballTheme,
+  mlb: baseballTheme,
 }
 
 export function getTheme(key: string): SportTheme {
@@ -198,6 +205,7 @@ const programPrimary: Record<string, string> = {
   combat: '#7d1737',
   track: '#8a5a12',
   olympic: '#284f8f',
+  baseball: '#9a3a1a',
   custom: '#5b3b8c',
   wnba: '#8a315d',
 }

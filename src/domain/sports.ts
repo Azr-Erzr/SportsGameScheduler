@@ -158,6 +158,19 @@ export const sports: SportInfo[] = [
     sourceNote: 'Official federation feeds and Olympic results/schedule licensing need sport-by-sport review',
   },
   {
+    key: 'baseball',
+    canonicalSportKey: 'baseball',
+    label: 'Baseball',
+    flagshipLeague: 'MLB / NPB / KBO / NCAA',
+    leagueKey: 'mlb',
+    icon: CircleDot,
+    badgeKey: 'baseball',
+    enabled: true,
+    eventNoun: 'game',
+    tagline: 'First pitches, doubleheaders, and postseason — every start time in your zone',
+    sourceNote: 'TheSportsDB, API-SPORTS, SportsDataIO, Sportradar, and official league feeds to compare',
+  },
+  {
     key: 'custom',
     canonicalSportKey: 'custom',
     label: 'Other Sports',
@@ -183,6 +196,7 @@ const routeAliases: Record<string, SportInfo> = {
   ufc: sports[7],
   pfl: sports[7],
   mma: sports[7],
+  mlb: sports[10],
 }
 
 export const customLeagueSportOptions = Array.from(

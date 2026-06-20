@@ -39,6 +39,7 @@ const assetKeyBySport: Record<string, string> = {
   track: 'track',
   combat: 'combat',
   olympic: 'olympic',
+  baseball: 'baseball',
   custom: 'custom',
   nba: 'basketball',
   wnba: 'basketball',
@@ -46,6 +47,7 @@ const assetKeyBySport: Record<string, string> = {
   cfl: 'football',
   f1: 'motorsport',
   ufc: 'combat',
+  mlb: 'baseball',
 }
 
 const artFocusByAsset: Record<string, ArtFocus> = {
@@ -59,6 +61,7 @@ const artFocusByAsset: Record<string, ArtFocus> = {
   track: { iconX: '48%', iconY: '46%', actionX: '47%', actionY: '48%' },
   combat: { iconX: '47%', iconY: '50%', actionX: '43%', actionY: '45%' },
   olympic: { iconX: '48%', iconY: '42%', actionX: '50%', actionY: '54%' },
+  baseball: { iconX: '50%', iconY: '48%', actionX: '50%', actionY: '48%' },
   custom: { iconX: '50%', iconY: '45%', actionX: '55%', actionY: '45%' },
 }
 

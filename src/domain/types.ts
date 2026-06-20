@@ -15,6 +15,7 @@ export type CanonicalSportKey =
   | 'american_football'
   | 'athletics'
   | 'olympic_sports'
+  | 'baseball'
   | 'custom'
 
 export type SportKey =
@@ -34,6 +35,8 @@ export type SportKey =
   | 'golf'
   | 'ufc'
   | 'cfl'
+  | 'baseball'
+  | 'mlb'
   | 'custom'
 
 export type EventStatus =
