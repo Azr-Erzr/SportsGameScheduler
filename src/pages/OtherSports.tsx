@@ -1,38 +1,114 @@
+import {
+  IconBallBasketball,
+  IconBallTennis,
+  IconBallVolleyball,
+  IconBike,
+  IconCricket,
+  IconDeviceGamepad2,
+  IconPingPong,
+  IconPlayHandball,
+  IconPool,
+  IconRugby,
+  IconSwimming,
+  IconTargetArrow,
+  type Icon,
+} from '@tabler/icons-react'
 import { ArrowRight, Database, Search, Sparkles, Users } from 'lucide-react'
+import type { CSSProperties } from 'react'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAppState } from '../app/state-context'
-import { SportAssetIcon } from '../components/SportAssetIcon'
 import { SportChannelBanner } from '../components/SportChannelBanner'
 import { Badge, Panel, PanelHeading } from '../components/ui'
 import { useSportSchedule } from '../data/liveSport'
 import { secondarySports, type SportInfo } from '../domain/sports'
+import { getTheme, withSurfaceMode } from '../theme/themes'
 
 type CommunitySport = {
   name: string
   note: string
   lane: 'import' | 'provider-review' | 'community'
+  icon: Icon
 }
 
 const providerBackedSports = secondarySports
 
 const communitySports: CommunitySport[] = [
-  { name: 'Badminton', note: 'BWF calendars and federation feeds', lane: 'provider-review' },
-  { name: 'Table Tennis', note: 'ITTF tour, national leagues, and Olympics', lane: 'provider-review' },
-  { name: 'Squash', note: 'PSA World Tour and club calendars', lane: 'provider-review' },
-  { name: 'Lacrosse', note: 'PLL, World Lacrosse, school and club seasons', lane: 'community' },
-  { name: 'Pickleball', note: 'PPA Tour, MLP, and local ladders', lane: 'provider-review' },
-  { name: 'Netball', note: 'Domestic leagues and Commonwealth windows', lane: 'provider-review' },
-  { name: 'Field Hockey', note: 'FIH, NCAA, club, and school fixtures', lane: 'provider-review' },
-  { name: 'Water Polo', note: 'World Aquatics and college seasons', lane: 'provider-review' },
-  { name: 'Esports', note: 'Majors across the big titles', lane: 'provider-review' },
-  { name: 'Softball', note: 'College, pro, and tournament imports', lane: 'import' },
+  { name: 'Badminton', note: 'BWF calendars and federation feeds', lane: 'provider-review', icon: IconBallTennis },
+  { name: 'Table Tennis', note: 'ITTF tour, national leagues, and Olympics', lane: 'provider-review', icon: IconPingPong },
+  { name: 'Squash', note: 'PSA World Tour and club calendars', lane: 'provider-review', icon: IconBallTennis },
+  { name: 'Lacrosse', note: 'PLL, World Lacrosse, school and club seasons', lane: 'community', icon: IconTargetArrow },
+  { name: 'Pickleball', note: 'PPA Tour, MLP, and local ladders', lane: 'provider-review', icon: IconPingPong },
+  { name: 'Netball', note: 'Domestic leagues and Commonwealth windows', lane: 'provider-review', icon: IconBallBasketball },
+  { name: 'Field Hockey', note: 'FIH, NCAA, club, and school fixtures', lane: 'provider-review', icon: IconBallTennis },
+  { name: 'Water Polo', note: 'World Aquatics and college seasons', lane: 'provider-review', icon: IconSwimming },
+  { name: 'Esports', note: 'Majors across the big titles', lane: 'provider-review', icon: IconDeviceGamepad2 },
+  { name: 'Softball', note: 'College, pro, and tournament imports', lane: 'import', icon: IconBallTennis },
 ]
+
+const providerIcons: Record<string, Icon> = {
+  cricket: IconCricket,
+  rugby: IconRugby,
+  volleyball: IconBallVolleyball,
+  handball: IconPlayHandball,
+  cycling: IconBike,
+  snooker: IconPool,
+  darts: IconTargetArrow,
+}
 
 function laneLabel(lane: CommunitySport['lane']) {
   if (lane === 'import') return 'Import'
   if (lane === 'provider-review') return 'Review'
   return 'Community'
+}
+
+function SportGlyph({
+  icon: Glyph,
+  label,
+  color,
+  accent,
+  size = 'md',
+}: {
+  icon: Icon
+  label: string
+  color: string
+  accent: string
+  size?: 'sm' | 'md'
+}) {
+  return (
+    <span
+      className={`relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-xl border border-primary/20 ${
+        size === 'sm' ? 'h-11 w-11' : 'h-12 w-12'
+      }`}
+      style={
+        {
+          '--glyph-color': color,
+          '--glyph-accent': accent,
+          background:
+            'radial-gradient(circle at 35% 25%, color-mix(in srgb, var(--glyph-accent) 30%, transparent), transparent 46%), color-mix(in srgb, var(--glyph-color) 11%, var(--mp-surface))',
+          boxShadow: 'inset 0 0 0 1px color-mix(in srgb, var(--glyph-color) 18%, transparent)',
+        } as CSSProperties
+      }
+      role="img"
+      aria-label={label}
+    >
+      <span
+        className="absolute -bottom-5 -right-5 h-14 w-14 rounded-full opacity-35"
+        style={{ background: 'color-mix(in srgb, var(--glyph-color) 34%, transparent)' }}
+        aria-hidden="true"
+      />
+      <Glyph
+        size={size === 'sm' ? 25 : 28}
+        stroke={2}
+        className="relative z-10"
+        style={{
+          color: 'var(--glyph-color)',
+          filter: 'drop-shadow(0 0 10px color-mix(in srgb, var(--glyph-color) 52%, transparent))',
+        }}
+        aria-hidden="true"
+      />
+    </span>
+  )
 }
 
 function OtherSportRouteCard({ sport }: { sport: SportInfo }) {
@@ -41,7 +117,8 @@ function OtherSportRouteCard({ sport }: { sport: SportInfo }) {
   const liveReady = schedule.configured && !schedule.loading && (schedule.leagues.length > 0 || schedule.events.length > 0)
   const status = schedule.loading ? 'Checking' : liveReady ? 'DB route' : 'Queued'
   const href = `/sports/${sport.key}`
-  const iconVariant = prefs.themeMode === 'program' ? 'brush' : 'neon3d'
+  const theme = withSurfaceMode(getTheme(sport.key), prefs.themeMode)
+  const Glyph = providerIcons[sport.key] ?? IconTargetArrow
 
   return (
     <Link
@@ -50,7 +127,7 @@ function OtherSportRouteCard({ sport }: { sport: SportInfo }) {
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
-          <SportAssetIcon sportKey={sport.key} size="sm" variant={iconVariant} label={`${sport.label} icon`} />
+          <SportGlyph icon={Glyph} label={`${sport.label} icon`} color={theme.colors.primary} accent={theme.colors.accent} />
           <div className="min-w-0">
             <h3 className="truncate text-base font-black uppercase leading-none text-primary">{sport.label}</h3>
             <p className="mt-1 truncate font-mono text-[10px] uppercase tracking-wide text-ink/45">
@@ -81,8 +158,10 @@ function OtherSportRouteCard({ sport }: { sport: SportInfo }) {
 }
 
 export function OtherSportsPage() {
+  const { prefs } = useAppState()
   const [query, setQuery] = useState('')
   const [lane, setLane] = useState<'all' | CommunitySport['lane']>('all')
+  const theme = withSurfaceMode(getTheme('custom'), prefs.themeMode)
 
   const filteredCommunitySports = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -173,6 +252,13 @@ export function OtherSportsPage() {
             >
               <div className="absolute inset-y-0 left-0 w-1.5 bg-primary/55" aria-hidden="true" />
               <div className="flex items-start justify-between gap-3 pl-2">
+                <SportGlyph
+                  icon={sport.icon}
+                  label={`${sport.name} icon`}
+                  color={theme.colors.primary}
+                  accent={theme.colors.accent}
+                  size="sm"
+                />
                 <div className="min-w-0">
                   <h3 className="truncate text-base font-black uppercase leading-tight text-primary">{sport.name}</h3>
                   <p className="mt-1 text-[13px] leading-relaxed text-ink/62">{sport.note}</p>
