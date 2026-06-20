@@ -2404,6 +2404,10 @@
   }
 
   [data-paper] .sport-channel-action-panel {
+    /* Bleed the whole panel (its colour wash + halftone ::after, not just the art ::before) to the
+       right banner edge, mirroring the icon's left bleed — otherwise the paint layer stopped short
+       and left a pale bar at the right edge. */
+    margin-right: calc(-1 * var(--sport-channel-pad));
     background:
       radial-gradient(
         ellipse at var(--sport-channel-action-wash-x, 56%) var(--sport-channel-action-wash-y, 54%),
