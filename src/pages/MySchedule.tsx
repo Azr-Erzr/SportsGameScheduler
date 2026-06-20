@@ -38,6 +38,7 @@ import { createIcsBlob, createMultiSportIcsBlob, sportEmoji } from '../lib/ics'
 import { t } from '../lib/i18n'
 import { createMultiSportNotesText, createNotesText } from '../lib/notes'
 import { MAX_EVENTS_BY_TEMPLATE, paginateEvents, type ExportTemplate } from '../lib/paginate'
+import { canvasToJpegPage, createPdfBlobFromImages } from '../lib/pdf'
 import { canvasToBlob, createScheduleCanvas, type PosterVariant } from '../lib/poster'
 import { createScheduleCsv, exportCompletionMessage } from '../lib/scheduleExports'
 import { displayTimeOptions, formatLongDate, formatTime } from '../lib/time'
@@ -122,7 +123,7 @@ const guidedFlows: Record<GuidedFlowId, FlowConfig> = {
             recommended: true,
           },
           { id: 'edit_spreadsheet', label: 'Edit in a spreadsheet', description: 'Recommended format: CSV.' },
-          { id: 'print_or_save', label: 'Print or save a clean copy', description: 'Use your print dialog, then save as PDF.' },
+          { id: 'print_or_save', label: 'Download a polished PDF', description: 'Branded pages ready to save, print, or send.' },
           { id: 'share_copy', label: 'Send to someone', description: 'Use text first; image export is available as a backup.' },
         ],
       },
@@ -388,6 +389,33 @@ export function MySchedulePage() {
     closeFlow()
   }
 
+  async function exportPdf(matchesToExport = schedule) {
+    let pageNumber = 1
+    const exportPages = paginateEvents(matchesToExport, template)
+    const pdfPages = []
+    for (const pageEvents of exportPages) {
+      const canvas = await createScheduleCanvas(
+        pageEvents,
+        followedTeams,
+        timeZone,
+        cityLabel,
+        {
+          page: pageNumber,
+          pageCount: exportPages.length,
+        },
+        posterVariant,
+        prefs.locale,
+        prefs.hour12,
+      )
+      if (canvas) pdfPages.push(await canvasToJpegPage(canvas))
+      pageNumber += 1
+    }
+    const blob = createPdfBlobFromImages(pdfPages, posterVariant)
+    downloadBlob(blob, exportFilename('schedule', 'pdf'))
+    setMessage(exportCompletionMessage('pdf', pdfPages.length))
+    closeFlow()
+  }
+
   async function copyNotes(matchesToExport = schedule) {
     const text = createNotesText(matchesToExport, followedTeams, timeZone, cityLabel, prefs.locale, prefs.hour12)
     await copyToClipboard(text)
@@ -412,12 +440,6 @@ export function MySchedulePage() {
     }
     await copyToClipboard(text)
     setMessage('Schedule copied for sharing.')
-    closeFlow()
-  }
-
-  function printSchedule() {
-    window.print()
-    setMessage('Print dialog opened. Choose "Save as PDF" if you want a PDF copy.')
     closeFlow()
   }
 
@@ -464,7 +486,7 @@ export function MySchedulePage() {
     if (intent === 'edit_spreadsheet') return exportCsv(matchesToExport)
     if (intent === 'calendar_import') return exportIcs(matchesToExport)
     if (intent === 'share_copy') return shareSchedule(matchesToExport)
-    return printSchedule()
+    return exportPdf(matchesToExport)
   }
 
   async function runCalendarAction() {
@@ -503,7 +525,7 @@ export function MySchedulePage() {
       if (intent === 'edit_spreadsheet') return 'Download CSV'
       if (intent === 'calendar_import') return 'Download ICS'
       if (intent === 'share_copy') return 'Share schedule'
-      return 'Print or save PDF'
+      return 'Download PDF'
     }
     if (flow.flowId === 'reminders') return 'Enable reminders'
     return 'Save settings'
@@ -524,7 +546,7 @@ export function MySchedulePage() {
       if (intent === 'edit_spreadsheet') return `Recommended: CSV for ${scope.toLowerCase()}, ready for spreadsheet editing.`
       if (intent === 'calendar_import') return `Recommended: ICS for ${scope.toLowerCase()}, the best static export for tracking in a calendar.`
       if (intent === 'share_copy') return `Recommended: share text for ${scope.toLowerCase()}, easy to send from this device.`
-      return `Recommended: print this page and choose Save as PDF for a clean copy of the visible schedule.`
+      return `Recommended: PDF for ${scope.toLowerCase()}, using the same branded schedule design as image exports.`
     }
     if (flow.flowId === 'reminders') {
       const scope = optionLabel(guidedFlows.reminders.steps[0], flow.answers.reminder_scope, 'All saved matches')
@@ -650,7 +672,7 @@ export function MySchedulePage() {
           >
             <Download size={18} />
             <span className="mt-2 block text-sm font-bold">Download</span>
-            <span className="mt-1 block text-xs text-ink/55">Print, CSV, ICS, or share.</span>
+            <span className="mt-1 block text-xs text-ink/55">PDF, CSV, ICS, or share.</span>
           </button>
           <button
             type="button"
@@ -759,7 +781,8 @@ export function MySchedulePage() {
                   </div>
                 )}
 
-                {flow.flowId === 'download' && (flow.answers.download_intent ?? 'calendar_import') === 'share_copy' && (
+                {flow.flowId === 'download' &&
+                  ['print_or_save', 'share_copy'].includes(flow.answers.download_intent ?? 'calendar_import') && (
                   <div className="space-y-3">
                     <div className="grid grid-cols-2 gap-2">
                       {templates.map((item) => (
@@ -801,7 +824,9 @@ export function MySchedulePage() {
                       </div>
                     </div>
                     <p className="text-xs text-ink/50">
-                      Poster images paginate at {MAX_EVENTS_BY_TEMPLATE[template]} events per page if you choose the image path.
+                      {flow.answers.download_intent === 'print_or_save'
+                        ? `PDF pages paginate at ${MAX_EVENTS_BY_TEMPLATE[template]} events per page.`
+                        : `Poster images paginate at ${MAX_EVENTS_BY_TEMPLATE[template]} events per page if you choose the image path.`}
                     </p>
                   </div>
                 )}

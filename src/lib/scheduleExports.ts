@@ -29,9 +29,10 @@ export function createScheduleCsv(
   return rows.map((row) => row.map(csvCell).join(',')).join('\r\n')
 }
 
-export function exportCompletionMessage(kind: 'image' | 'images' | 'ics' | 'csv' | 'notes' | 'share', count = 0) {
+export function exportCompletionMessage(kind: 'image' | 'images' | 'pdf' | 'ics' | 'csv' | 'notes' | 'share', count = 0) {
   if (kind === 'images') return `${count} readable pages downloaded - long schedules stay legible.`
   if (kind === 'image') return 'Schedule image downloaded.'
+  if (kind === 'pdf') return count > 1 ? `${count} page PDF downloaded.` : 'Schedule PDF downloaded.'
   if (kind === 'ics') return 'Calendar snapshot downloaded. Use Silbo Sync for automatic updates.'
   if (kind === 'csv') return 'Spreadsheet-ready CSV downloaded.'
   if (kind === 'share') return 'Schedule opened in your share sheet.'
