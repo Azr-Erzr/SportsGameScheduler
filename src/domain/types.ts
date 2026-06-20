@@ -16,6 +16,13 @@ export type CanonicalSportKey =
   | 'athletics'
   | 'olympic_sports'
   | 'baseball'
+  | 'cricket'
+  | 'rugby'
+  | 'volleyball'
+  | 'handball'
+  | 'cycling'
+  | 'snooker'
+  | 'darts'
   | 'custom'
 
 export type SportKey =
@@ -37,6 +44,13 @@ export type SportKey =
   | 'cfl'
   | 'baseball'
   | 'mlb'
+  | 'cricket'
+  | 'rugby'
+  | 'volleyball'
+  | 'handball'
+  | 'cycling'
+  | 'snooker'
+  | 'darts'
   | 'custom'
 
 export type EventStatus =

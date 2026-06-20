@@ -2395,11 +2395,11 @@
       drop-shadow(0 0 42px color-mix(in srgb, var(--mp-accent) 20%, transparent));
     -webkit-mask-image: var(--sport-channel-action);
     mask-image: var(--sport-channel-action);
-    /* Contain so the WHOLE figure shows at its natural size, fit to the banner height — not
-       zoomed/cropped. */
-    -webkit-mask-size: contain;
+    /* Contain by default (whole figure, fit to height — not zoomed/cropped). Per-sport override
+       via --sport-channel-action-size lets portrait scenes scale up to fill the panel. */
+    -webkit-mask-size: var(--sport-channel-action-size, contain);
     -webkit-mask-position: center;
-    mask-size: contain;
+    mask-size: var(--sport-channel-action-size, contain);
     mask-position: center;
   }
 

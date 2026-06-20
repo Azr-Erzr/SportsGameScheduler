@@ -9,11 +9,10 @@ import { brand, exportFilename } from '../domain/brand'
 import { copyToClipboard, downloadBlob } from '../lib/clipboard'
 import { createIcsBlob, createMultiSportIcsBlob } from '../lib/ics'
 import { t } from '../lib/i18n'
-import { createNotesText } from '../lib/notes'
+import { createMultiSportNotesText, createNotesText } from '../lib/notes'
 import { MAX_EVENTS_BY_TEMPLATE, paginateEvents, type ExportTemplate } from '../lib/paginate'
-import { canvasToBlob, createScheduleCanvas } from '../lib/poster'
+import { canvasToBlob, createScheduleCanvas, type PosterVariant } from '../lib/poster'
 import { formatDate, formatTime } from '../lib/time'
-import { posterChromeTheme } from '../theme/themes'
 import { CalendarFeedsPage } from './CalendarFeeds'
 
 const templates: Array<{ key: ExportTemplate; labelKey: string; hint: string }> = [
@@ -29,6 +28,9 @@ export function ExportStudioPage() {
   const { followedTeams, followedLeagueIds, followedCompetitorIds, prefs } = useAppState()
   const [mode, setMode] = useState<ExportMode>('static')
   const [template, setTemplate] = useState<ExportTemplate>('poster')
+  const [posterVariant, setPosterVariant] = useState<PosterVariant>(
+    prefs.themeMode === 'program' ? 'light' : 'dark',
+  )
   const [message, setMessage] = useState('')
 
   const timeZone = prefs.timezone
@@ -60,7 +62,7 @@ export function ExportStudioPage() {
           page: pageNumber,
           pageCount: pages.length,
         },
-        posterChromeTheme,
+        posterVariant,
         prefs.locale,
         prefs.hour12,
       )
@@ -106,6 +108,17 @@ export function ExportStudioPage() {
     }
     await copyToClipboard(text)
     setMessage('Plain-text schedule copied - paste into Notes, Keep, Notion, or a group chat.')
+  }
+
+  async function copyAllSportsNotes() {
+    const text = createMultiSportNotesText(myEvents.events, timeZone, cityLabel, prefs.locale, prefs.hour12)
+    if (navigator.share) {
+      await navigator.share({ title: brand.scheduleTitle, text })
+      setMessage('All-sports text schedule opened in your share sheet.')
+      return
+    }
+    await copyToClipboard(text)
+    setMessage(`All-sports text schedule copied - ${myEvents.events.length} events.`)
   }
 
   return (
@@ -200,6 +213,26 @@ export function ExportStudioPage() {
 
           <Panel className="space-y-2">
             <PanelHeading title={t('export.actions', undefined, prefs.locale)} />
+            <div className="flex items-center gap-2 pb-1">
+              <span className="text-xs font-semibold uppercase tracking-wide text-ink/50">Image style</span>
+              <div className="ml-auto inline-flex overflow-hidden rounded-lg border border-primary/20">
+                {(['light', 'dark'] as const).map((variantKey) => (
+                  <button
+                    key={variantKey}
+                    type="button"
+                    aria-pressed={posterVariant === variantKey}
+                    onClick={() => setPosterVariant(variantKey)}
+                    className={`px-3 py-1.5 text-xs font-semibold capitalize transition-colors ${
+                      posterVariant === variantKey
+                        ? 'bg-primary text-void'
+                        : 'bg-surface text-ink/60 hover:bg-primary/5'
+                    }`}
+                  >
+                    {variantKey}
+                  </button>
+                ))}
+              </div>
+            </div>
             <Button className="w-full" variant="export" onClick={() => exportImages(true)} disabled={schedule.length === 0}>
               <FileImage size={15} />{' '}
               {pages.length > 1
@@ -221,6 +254,16 @@ export function ExportStudioPage() {
             </Button>
             <Button className="w-full" variant="subtle" onClick={copyNotes} disabled={schedule.length === 0}>
               <Copy size={15} /> {t('export.copyNotes', undefined, prefs.locale)}
+            </Button>
+            <Button
+              className="w-full"
+              variant="subtle"
+              onClick={copyAllSportsNotes}
+              disabled={myEvents.events.length === 0}
+              title="Copy followed live sports as plain text"
+            >
+              <Copy size={15} /> Copy all-sports notes
+              {myEvents.events.length ? ` (${myEvents.events.length})` : ''}
             </Button>
             {message && <p className="text-sm font-medium text-primary">{message}</p>}
           </Panel>

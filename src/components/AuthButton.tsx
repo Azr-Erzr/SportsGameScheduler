@@ -50,7 +50,9 @@ export function AuthButton() {
     return (
       <Button
         variant="ghost"
+        disabled
         title="Supabase is not configured for this environment"
+        aria-label="Local-only mode"
         className="max-sm:h-10 max-sm:w-10 max-sm:px-0"
       >
         <UserCircle size={16} />
@@ -87,8 +89,8 @@ export function AuthButton() {
             <p className="mt-1 text-sm text-ink/60">
               Sign in when you want cross-device follows, live feed management, alerts, or custom-league publishing.
               {follows.length === 1
-                ? ' Your local follow stays on this device until migration.'
-                : ` Your ${follows.length} local follows stay on this device until migration.`}
+                ? ' Your local follow will merge into your account automatically.'
+                : ` Your ${follows.length} local follows will merge into your account automatically.`}
             </p>
 
             <form onSubmit={submitMagicLink} className="mt-4 space-y-2">

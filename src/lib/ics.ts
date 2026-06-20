@@ -38,6 +38,17 @@ const SPORT_META: Record<string, { emoji: string; label: string }> = {
   custom: { emoji: '📅', label: 'Community' },
 }
 
+Object.assign(SPORT_META, {
+  baseball: { emoji: 'BSB', label: 'Baseball' },
+  cricket: { emoji: 'CRI', label: 'Cricket' },
+  rugby: { emoji: 'RUG', label: 'Rugby' },
+  volleyball: { emoji: 'VOL', label: 'Volleyball' },
+  handball: { emoji: 'HBL', label: 'Handball' },
+  cycling: { emoji: 'CYC', label: 'Cycling' },
+  snooker: { emoji: 'SNO', label: 'Snooker' },
+  darts: { emoji: 'DRT', label: 'Darts' },
+})
+
 export function sportEmoji(sportKey: string | null | undefined): string {
   return (sportKey && SPORT_META[sportKey]?.emoji) || '📅'
 }

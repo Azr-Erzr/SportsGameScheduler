@@ -41,6 +41,13 @@ const assetKeyBySport: Record<string, string> = {
   olympic: 'olympic',
   baseball: 'baseball',
   custom: 'custom',
+  cricket: 'custom',
+  rugby: 'football',
+  volleyball: 'basketball',
+  handball: 'basketball',
+  cycling: 'motorsport',
+  snooker: 'custom',
+  darts: 'custom',
   nba: 'basketball',
   wnba: 'basketball',
   nfl: 'football',
@@ -63,6 +70,13 @@ const artFocusByAsset: Record<string, ArtFocus> = {
   olympic: { iconX: '48%', iconY: '42%', actionX: '50%', actionY: '54%' },
   baseball: { iconX: '50%', iconY: '48%', actionX: '50%', actionY: '48%' },
   custom: { iconX: '50%', iconY: '45%', actionX: '55%', actionY: '45%' },
+}
+
+// Program/light action-art mask-size override. Default is `contain` (whole figure, fit to height).
+// Portrait scenes (e.g. baseball's batter) end up narrow under `contain`, so they get a height
+// scale-up to fill the panel like the near-square scenes do — a slight zoom, scene still reads.
+const actionSizeByAsset: Record<string, string> = {
+  baseball: 'auto 138%',
 }
 
 const defaultStats: BannerStat[] = [
@@ -100,6 +114,7 @@ export function SportChannelBanner({
           '--sport-channel-icon-wash-y': artFocus.iconY,
           '--sport-channel-action-wash-x': artFocus.actionX,
           '--sport-channel-action-wash-y': artFocus.actionY,
+          '--sport-channel-action-size': actionSizeByAsset[assetKey] ?? 'contain',
         }
       : {
           '--sport-channel-icon-image': `url("/assets/sport-banners/broadcast/${assetKey}-icon.webp")`,

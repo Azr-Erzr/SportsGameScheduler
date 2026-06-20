@@ -36,6 +36,11 @@ describe('escapeIcsText (RFC 5545 §3.3.11)', () => {
 })
 
 describe('sportEmoji', () => {
+  test('maps provider-backed secondary sports', () => {
+    expect(sportEmoji('baseball')).toBe('BSB')
+    expect(sportEmoji('cricket')).toBe('CRI')
+  })
+
   test('maps known sports', () => {
     expect(sportEmoji('soccer')).toBe('⚽')
     expect(sportEmoji('combat_sports')).toBe('🥊')
@@ -50,6 +55,12 @@ describe('createMultiSportIcsBlob', () => {
   async function render(events: LiveEvent[], options?: { reminderMinutes?: number[] }) {
     return (await createMultiSportIcsBlob(events, options).text())
   }
+
+  test('renders secondary provider sports with categories', async () => {
+    const ics = await render([makeEvent({ sportKey: 'baseball', leagueName: 'MLB', title: 'Blue Jays vs Yankees' })])
+    expect(ics).toContain('SUMMARY:BSB Blue Jays vs Yankees')
+    expect(ics).toContain('CATEGORIES:Baseball,MLB')
+  })
 
   test('prefixes the summary with the sport emoji and tags categories', async () => {
     const ics = await render([makeEvent()])

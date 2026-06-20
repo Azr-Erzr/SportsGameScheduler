@@ -1,23 +1,42 @@
-import { Home, ListChecks, Moon, Sun, Users } from 'lucide-react'
-import { NavLink, Outlet, useLocation, useParams } from 'react-router-dom'
+import { Home, ListChecks, Moon, PlusCircle, Sun, Trophy } from 'lucide-react'
+import { Link, NavLink, Outlet, useLocation, useParams } from 'react-router-dom'
 import { AuthButton } from '../components/AuthButton'
+import { SilboBrandMark } from '../components/SilboMark'
 import { SportSwitcher } from '../components/SportSwitcher'
 import { useAppState } from './state-context'
+import { brand } from '../domain/brand'
 import { getSport } from '../domain/sports'
 import { t } from '../lib/i18n'
 import { getTheme, withSurfaceMode } from '../theme/themes'
 import { SportThemeProvider } from '../theme/SportThemeProvider'
 
-const navItems = [
-  { to: '/', labelKey: 'nav.home', mobileLabelKey: 'nav.mobile.home', icon: Home },
+const desktopNavItems = [
   { to: '/my-schedule', labelKey: 'nav.mySchedule', mobileLabelKey: 'nav.mobile.schedule', icon: ListChecks },
-  { to: '/custom-leagues', labelKey: 'nav.customLeagues', mobileLabelKey: 'nav.mobile.local', icon: Users },
+  { to: '/custom-leagues', labelKey: 'nav.customLeagues', mobileLabelKey: 'nav.mobile.create', icon: PlusCircle },
+]
+
+const mobileNavItems = [
+  { to: '/', labelKey: 'nav.home', mobileLabelKey: 'nav.mobile.home', icon: Home },
+  { to: '/explore', labelKey: 'nav.sports', mobileLabelKey: 'nav.mobile.sports', icon: Trophy },
+  { to: '/my-schedule', labelKey: 'nav.mySchedule', mobileLabelKey: 'nav.mobile.schedule', icon: ListChecks },
+  { to: '/custom-leagues', labelKey: 'nav.customLeagues', mobileLabelKey: 'nav.mobile.create', icon: PlusCircle },
+]
+
+const footerLinks = [
+  { to: '/', label: 'Home' },
+  { to: '/my-schedule', label: 'My Schedule' },
+  { to: '/explore', label: 'Explore sports' },
+  { to: '/exports', label: 'Exports' },
+  { to: '/calendar', label: 'Silbo Sync' },
+  { to: '/custom-leagues', label: 'Create League' },
+  { to: '/settings/alerts', label: 'Alerts' },
 ]
 
 function DesktopNav({ locale }: { locale?: string | null }) {
   return (
-    <nav className="hidden items-center gap-1 md:flex">
-      {navItems.map(({ to, labelKey, icon: Icon }) => (
+    <nav className="hidden items-center gap-1 justify-self-center md:flex">
+      <SportSwitcher />
+      {desktopNavItems.map(({ to, labelKey, icon: Icon }) => (
         <NavLink
           key={to}
           to={to}
@@ -50,7 +69,7 @@ function MobileNav({ locale }: { locale?: string | null }) {
       className="fixed inset-x-0 bottom-0 z-40 border-t border-primary/15 bg-surface px-2 pb-[calc(env(safe-area-inset-bottom)+0.55rem)] pt-2 shadow-[0_-8px_22px_rgba(0,0,0,0.24)] md:hidden"
     >
       <div className="mx-auto flex max-w-md items-center justify-between gap-1">
-        {navItems.map(({ to, labelKey, mobileLabelKey, icon: Icon }) => (
+        {mobileNavItems.map(({ to, labelKey, mobileLabelKey, icon: Icon }) => (
           <NavLink
             key={to}
             to={to}
@@ -79,6 +98,28 @@ function MobileNav({ locale }: { locale?: string | null }) {
   )
 }
 
+function BrandBlock() {
+  return (
+    <Link
+      to="/"
+      aria-label={brand.appName}
+      className="group flex min-w-0 justify-self-start items-center gap-3 rounded-xl px-1 py-1 transition-colors hover:bg-primary/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+    >
+      <span className="flex h-12 w-16 shrink-0 items-center justify-center sm:h-14 sm:w-[4.75rem]">
+        <SilboBrandMark size={70} color="var(--mp-primary)" />
+      </span>
+      <span className="min-w-0">
+        <span className="neon-text block whitespace-nowrap font-display text-xl leading-none tracking-wide sm:text-2xl">
+          Silbo Sports
+        </span>
+        <span className="hidden max-w-[18rem] truncate font-mono text-[10px] uppercase tracking-[0.18em] text-ink/45 lg:block">
+          {brand.tagline}
+        </span>
+      </span>
+    </Link>
+  )
+}
+
 export function AppShell() {
   // Theme follows the sport in the URL where there is one; the root uses a neutral all-sports mood.
   const { sportKey } = useParams()
@@ -103,12 +144,12 @@ export function AppShell() {
         {/* PERF: no backdrop-blur on the sticky header — blur over a fixed gradient forces a
             full-viewport recomposite on every scroll frame. Near-opaque surface instead. */}
         <header className="sticky top-0 z-40 border-b border-primary/15 bg-surface/95">
-          <div className="mx-auto flex w-full max-w-[1460px] items-center justify-between gap-2 px-3 py-2.5 sm:gap-4 sm:px-4">
-            <SportSwitcher />
+          <div className="mx-auto grid w-full max-w-[1460px] grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-3 py-2.5 sm:gap-4 sm:px-4 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
+            <BrandBlock />
 
             <DesktopNav locale={prefs.locale} />
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center justify-self-end gap-2">
               <button
                 type="button"
                 onClick={() => setPrefs({ ...prefs, themeMode: programMode ? 'broadcast' : 'program' })}
@@ -128,10 +169,21 @@ export function AppShell() {
         </main>
 
         <footer className="relative z-[1] mx-auto w-full max-w-[1460px] px-4 pb-40 pt-4 md:pb-8">
-          <div className="color-bars mb-3 h-1.5 w-28 opacity-70" aria-hidden="true" />
-          <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink/45">
-            {t('app.footerDisclaimer', undefined, prefs.locale)}
-          </p>
+          <div className="border-t border-primary/15 pt-5">
+            <div className="color-bars mb-4 h-1.5 w-28 opacity-70" aria-hidden="true" />
+            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+              <p className="max-w-2xl font-mono text-[10px] uppercase tracking-[0.18em] text-ink/45">
+                {t('app.footerDisclaimer', undefined, prefs.locale)}
+              </p>
+              <nav aria-label="Footer navigation" className="flex flex-wrap gap-x-4 gap-y-2 text-sm font-semibold">
+                {footerLinks.map((item) => (
+                  <Link key={item.to} to={item.to} className="text-ink/58 transition-colors hover:text-primary">
+                    {item.label}
+                  </Link>
+                ))}
+              </nav>
+            </div>
+          </div>
         </footer>
 
         <MobileNav locale={prefs.locale} />

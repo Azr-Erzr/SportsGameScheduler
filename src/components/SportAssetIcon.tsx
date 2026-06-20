@@ -28,6 +28,13 @@ const aliases: Record<string, string> = {
   trackfield: 'track',
   olympics: 'olympic',
   community: 'custom',
+  cricket: 'custom',
+  rugby: 'football',
+  volleyball: 'basketball',
+  handball: 'basketball',
+  cycling: 'motorsport',
+  snooker: 'custom',
+  darts: 'custom',
 }
 
 function sportAssetKey(key: string) {

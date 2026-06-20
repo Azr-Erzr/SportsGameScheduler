@@ -13,6 +13,7 @@ const MySchedulePage = lazy(() => import('./pages/MySchedule').then((m) => ({ de
 const SportPage = lazy(() => import('./pages/SportPage').then((m) => ({ default: m.SportPage })))
 const OtherSportsPage = lazy(() => import('./pages/OtherSports').then((m) => ({ default: m.OtherSportsPage })))
 const ExplorePage = lazy(() => import('./pages/Explore').then((m) => ({ default: m.ExplorePage })))
+const ExportStudioPage = lazy(() => import('./pages/ExportStudio').then((m) => ({ default: m.ExportStudioPage })))
 const CalendarFeedsPage = lazy(() => import('./pages/CalendarFeeds').then((m) => ({ default: m.CalendarFeedsPage })))
 const CustomLeaguesPage = lazy(() => import('./pages/CustomLeagues').then((m) => ({ default: m.CustomLeaguesPage })))
 const CustomLeagueAdminPage = lazy(() =>
@@ -53,7 +54,7 @@ const router = createBrowserRouter([
       { path: '/teams/:teamId', element: lazyRoute(<TeamPage />) },
       { path: '/events/:eventId', element: lazyRoute(<EventDetailPage />) },
       { path: '/calendar', element: lazyRoute(<CalendarFeedsPage />) },
-      { path: '/exports', element: <Navigate to="/my-schedule" replace /> },
+      { path: '/exports', element: lazyRoute(<ExportStudioPage />) },
       { path: '/settings/alerts', element: lazyRoute(<AlertSettingsPage />) },
       { path: '/admin', element: lazyRoute(<AdminPage />) },
       { path: '/custom-leagues', element: lazyRoute(<CustomLeaguesPage />) },
