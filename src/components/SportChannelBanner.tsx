@@ -72,6 +72,13 @@ const artFocusByAsset: Record<string, ArtFocus> = {
   custom: { iconX: '50%', iconY: '45%', actionX: '55%', actionY: '45%' },
 }
 
+// Program/light action-art mask-size override. Default is `contain` (whole figure, fit to height).
+// Portrait scenes (e.g. baseball's batter) end up narrow under `contain`, so they get a height
+// scale-up to fill the panel like the near-square scenes do — a slight zoom, scene still reads.
+const actionSizeByAsset: Record<string, string> = {
+  baseball: 'auto 138%',
+}
+
 const defaultStats: BannerStat[] = [
   { value: 'API', label: 'Review' },
   { value: 'Feeds', label: 'Planned' },
@@ -107,6 +114,7 @@ export function SportChannelBanner({
           '--sport-channel-icon-wash-y': artFocus.iconY,
           '--sport-channel-action-wash-x': artFocus.actionX,
           '--sport-channel-action-wash-y': artFocus.actionY,
+          '--sport-channel-action-size': actionSizeByAsset[assetKey] ?? 'contain',
         }
       : {
           '--sport-channel-icon-image': `url("/assets/sport-banners/broadcast/${assetKey}-icon.webp")`,
