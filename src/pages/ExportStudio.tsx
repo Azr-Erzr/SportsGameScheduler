@@ -54,7 +54,7 @@ export function ExportStudioPage() {
   async function exportImages(share: boolean) {
     let pageNumber = 1
     for (const pageEvents of pages) {
-      const canvas = createScheduleCanvas(
+      const canvas = await createScheduleCanvas(
         pageEvents,
         followedTeams,
         timeZone,

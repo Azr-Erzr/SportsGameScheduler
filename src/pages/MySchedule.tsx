@@ -356,7 +356,7 @@ export function MySchedulePage() {
     let pageNumber = 1
     const exportPages = paginateEvents(matchesToExport, template)
     for (const pageEvents of exportPages) {
-      const canvas = createScheduleCanvas(
+      const canvas = await createScheduleCanvas(
         pageEvents,
         followedTeams,
         timeZone,

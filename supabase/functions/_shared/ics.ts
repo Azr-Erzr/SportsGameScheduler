@@ -17,6 +17,12 @@ export type FeedEvent = {
   sport_key?: string | null
   league_name?: string | null
   description?: string | null
+  broadcasts?: Array<{
+    country?: string | null
+    channel?: string | null
+    kind?: string | null
+    stream_url?: string | null
+  }>
 }
 
 export type RenderOptions = {
@@ -71,14 +77,20 @@ export function formatIcsDateOnly(date: Date): string {
 
 /** Fold long content lines at 75 octets per RFC 5545 §3.1. */
 export function foldLine(line: string): string {
-  if (line.length <= 75) return line
+  const encoder = new TextEncoder()
+  if (encoder.encode(line).length <= 75) return line
   const parts: string[] = []
-  let rest = line
-  while (rest.length > 75) {
-    parts.push(rest.slice(0, 75))
-    rest = ' ' + rest.slice(75)
+  let current = ''
+  for (const char of Array.from(line)) {
+    const next = current + char
+    if (encoder.encode(next).length > 75) {
+      parts.push(current)
+      current = ` ${char}`
+    } else {
+      current = next
+    }
   }
-  parts.push(rest)
+  if (current) parts.push(current)
   return parts.join('\r\n')
 }
 
@@ -108,10 +120,17 @@ export function eventToVevent(event: FeedEvent, options: RenderOptions = {}): st
   const summary = meta ? `${meta.emoji} ${event.title}` : event.title
 
   const categories = [meta?.label, event.league_name].filter(Boolean) as string[]
+  const broadcastNotes = (event.broadcasts ?? [])
+    .map((broadcast) => {
+      const label = [broadcast.channel, broadcast.country ? `(${broadcast.country})` : ''].filter(Boolean).join(' ')
+      return broadcast.stream_url ? `${label}: ${broadcast.stream_url}` : label
+    })
+    .filter(Boolean)
   const descParts = [
     event.description,
     event.league_name ? `League: ${event.league_name}` : '',
     event.venue_name ? `Venue: ${event.venue_name}` : '',
+    broadcastNotes.length ? `Where to watch: ${broadcastNotes.join(', ')}` : '',
     'Times shown in your calendar’s timezone.',
     options.appUrl ? `View: ${options.appUrl}/events/${event.id}` : '',
   ].filter(Boolean)
