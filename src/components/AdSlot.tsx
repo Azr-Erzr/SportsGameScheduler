@@ -1,21 +1,31 @@
-import { useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { AD_FORMATS, ADSENSE_CLIENT, adsConfigured, type AdFormat } from '../lib/ads'
 
-// A single ad placement. Renders a Google AdSense unit when VITE_ADSENSE_CLIENT is set,
-// otherwise a clearly labeled, correctly-sized placeholder so the layout slot is reserved and
-// designed around now. Always labeled "Advertisement" per ad-network/FTC policy.
+// A single paid placement. If a third-party network is blocked, unavailable, or unfilled,
+// the reserved layout becomes a first-party sponsor slot instead of collapsing the schedule.
 export function AdSlot({ format = 'leaderboard', className = '' }: { format?: AdFormat; className?: string }) {
   const dims = AD_FORMATS[format]
+  const unitRef = useRef<HTMLModElement | null>(null)
+  const [showSponsorFallback, setShowSponsorFallback] = useState(!adsConfigured)
 
   useEffect(() => {
     if (!adsConfigured) return
+
     try {
       const w = window as unknown as { adsbygoogle?: unknown[] }
       w.adsbygoogle = w.adsbygoogle || []
       w.adsbygoogle.push({})
     } catch {
-      /* AdSense script not loaded yet — no-op */
+      window.setTimeout(() => setShowSponsorFallback(true), 0)
     }
+
+    const timer = window.setTimeout(() => {
+      const unit = unitRef.current
+      const filled = Boolean(unit?.querySelector('iframe')) || unit?.getAttribute('data-ad-status') === 'filled'
+      setShowSponsorFallback(!filled)
+    }, 1800)
+
+    return () => window.clearTimeout(timer)
   }, [])
 
   return (
@@ -28,15 +38,20 @@ export function AdSlot({ format = 'leaderboard', className = '' }: { format?: Ad
       <span className="font-mono text-[9px] uppercase tracking-[0.22em] text-ink/35">Advertisement</span>
       {adsConfigured ? (
         <ins
+          ref={unitRef}
           className="adsbygoogle"
           style={{ display: 'block', width: '100%' }}
           data-ad-client={ADSENSE_CLIENT}
           data-ad-format="auto"
           data-full-width-responsive="true"
         />
-      ) : (
-        <span className="font-mono text-[10px] text-ink/25">
-          {dims.label} · {dims.w}×{dims.h}
+      ) : null}
+      {showSponsorFallback && (
+        <span className="px-3 text-center text-xs font-medium text-ink/45">
+          Sponsor slot reserved for schedule-safe partners
+          <span className="ml-1 font-mono text-[10px] text-ink/25">
+            {dims.label} - {dims.w}x{dims.h}
+          </span>
         </span>
       )}
     </div>
