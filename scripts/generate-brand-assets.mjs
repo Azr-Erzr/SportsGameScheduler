@@ -46,23 +46,18 @@ function textPath(font, text, { x, y, size, fill, opacity = 1, anchor = 'top' })
 export function createFaviconSvg(logoPath) {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 72">
   <defs>
-    <linearGradient id="mark" x1="8" y1="14" x2="64" y2="58" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#40f0ff"/>
-      <stop offset="0.52" stop-color="${brandGreen}"/>
-      <stop offset="1" stop-color="#ffc24b"/>
-    </linearGradient>
-    <radialGradient id="halo" cx="50%" cy="54%" r="54%">
-      <stop offset="0" stop-color="${brandGreen}" stop-opacity="0.34"/>
+    <radialGradient id="halo" cx="50%" cy="54%" r="55%">
+      <stop offset="0" stop-color="${brandGreen}" stop-opacity="0.16"/>
       <stop offset="1" stop-color="${brandGreen}" stop-opacity="0"/>
     </radialGradient>
-    <filter id="glow" x="-35%" y="-45%" width="170%" height="190%">
-      <feGaussianBlur stdDeviation="1.7" result="blur"/>
+    <filter id="glow" x="-25%" y="-25%" width="150%" height="150%">
+      <feGaussianBlur stdDeviation="0.8" result="blur"/>
       <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
   </defs>
   <rect width="72" height="72" rx="16" fill="${voidBlack}"/>
   <rect width="72" height="72" rx="16" fill="url(#halo)"/>
-  <path transform="translate(5.2 10.8) scale(0.096)" d="${logoPath}" fill="url(#mark)" fill-rule="evenodd" filter="url(#glow)"/>
+  <path transform="translate(5.2 10.8) scale(0.096)" d="${logoPath}" fill="${brandGreen}" fill-rule="evenodd" filter="url(#glow)"/>
 </svg>
 `
 }
