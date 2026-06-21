@@ -819,7 +819,7 @@ function EventTicket({
 
   return (
     <article
-      className={`ticket-paper group flex w-full items-stretch overflow-hidden transition-transform hover:-translate-y-0.5 max-sm:flex-col ${
+      className={`ticket-paper group flex w-full items-stretch overflow-hidden max-sm:flex-col ${
         expanded ? 'ring-2 ring-primary/25' : ''
       } ${isFightCard ? 'min-h-[104px]' : ''}`}
     >

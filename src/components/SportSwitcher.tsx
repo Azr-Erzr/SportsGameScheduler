@@ -88,11 +88,11 @@ export function SportSwitcher() {
                     type="button"
                     role="menuitem"
                     onClick={() => pick(sport.key)}
-                    className="channel-tile relative flex min-h-[68px] items-center gap-3 rounded-xl border-2 px-3 py-2 text-left transition-[box-shadow,transform,background-color] hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
+                    className="channel-tile relative flex min-h-[68px] items-center gap-3 rounded-xl border-2 px-3 py-2 text-left transition-colors hover:bg-primary/6"
                     style={{
                       borderColor: isActive ? theme.colors.primary : `${theme.colors.primary}33`,
                       background: isActive ? `${theme.colors.primary}14` : 'transparent',
-                      boxShadow: isActive ? `0 0 18px ${theme.colors.primary}30` : undefined,
+                      boxShadow: isActive ? `0 0 0 1px ${theme.colors.primary}44` : undefined,
                     }}
                   >
                     <SportAssetIcon sportKey={sport.key} size="channel" variant={sportIconVariant} className="channel-tile-icon" label={`${sport.label} icon`} />

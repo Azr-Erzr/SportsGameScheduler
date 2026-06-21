@@ -206,9 +206,7 @@
 
   .silbo-mark {
     color: var(--silbo-color, var(--mp-primary));
-    filter:
-      drop-shadow(0 0 4px color-mix(in srgb, var(--silbo-color, var(--mp-primary)) 58%, transparent))
-      drop-shadow(0 0 15px color-mix(in srgb, var(--silbo-color, var(--mp-primary)) 30%, transparent));
+    filter: none;
   }
 
   .silbo-trace-mark {
@@ -320,7 +318,7 @@
   }
 
   .sport-switcher-menu .channel-tile {
-    animation: silbo-tile-rise 180ms ease-out both;
+    animation: none;
   }
 
   @keyframes silbo-pop-in {
@@ -354,20 +352,12 @@
   }
 
   .channel-tile::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(115deg, transparent 0 42%, rgba(244, 234, 216, 0.11) 48%, transparent 56%);
-    opacity: 0;
-    transform: translateX(-38%);
-    transition: opacity 180ms ease, transform 240ms ease;
-    pointer-events: none;
+    display: none;
   }
 
   .channel-tile:hover::after,
   .channel-tile:focus-visible::after {
-    opacity: 1;
-    transform: translateX(24%);
+    display: none;
   }
 
   .channel-tile-icon {
@@ -463,13 +453,11 @@
     object-fit: contain;
     user-select: none;
     pointer-events: none;
-    /* PERF: a single cheap drop-shadow. Stacked drop-shadows on every icon (dozens on a
-       page) are a major paint cost. */
-    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.22));
+    filter: none;
   }
 
   [data-paper] .sport-asset-image {
-    filter: drop-shadow(0 4px 7px rgba(29, 24, 18, 0.16));
+    filter: none;
   }
 
   .sport-asset-xs {
@@ -557,17 +545,8 @@
     opacity: 0.72;
   }
 
-  button:hover .sport-asset-sheen,
-  a:hover .sport-asset-sheen,
-  .event-poster-card:hover .sport-asset-sheen,
-  .event-poster-card.is-active .sport-asset-sheen {
-    opacity: 0.62;
-    transform: translateX(13%);
-  }
-
   [data-paper] .sport-asset-glow {
-    opacity: 0.14;
-    filter: blur(4px);
+    display: none;
   }
 
   [data-paper] .sport-asset-core {
@@ -3027,5 +3006,25 @@
   }
   .silbo-channel-badge .silbo-sheen {
     animation: none !important;
+  }
+}
+
+@-moz-document url-prefix() {
+  /* Firefox is more sensitive to repeated filter rasterization during scroll and hover.
+     Keep the brand colours, but drop decorative filter passes in the main app chrome. */
+  .chrome-text,
+  .sport-switcher-mark,
+  .poster-glyph svg,
+  .poster-glyph-asset,
+  .route-host,
+  .sport-channel-panel::before,
+  .sport-channel-action-panel::before,
+  [data-paper] .sport-channel-panel::before,
+  [data-paper] .sport-channel-action-panel::before {
+    filter: none !important;
+  }
+
+  .ticket-paper {
+    box-shadow: 0 1px 0 rgba(29, 24, 18, 0.12), 0 4px 9px rgba(0, 0, 0, 0.12);
   }
 }

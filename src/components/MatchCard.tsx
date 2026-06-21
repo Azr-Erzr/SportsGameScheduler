@@ -34,7 +34,7 @@ export function MatchCard({
     // PERF: plain article + CSS transitions. Framer `layout` springs on 70+ list items
     // measured the whole list every frame and was the main scroll-jank source.
     <article
-      className={`ticket-paper relative overflow-hidden p-0 transition-transform duration-150 hover:-translate-y-0.5 ${
+      className={`ticket-paper relative overflow-hidden p-0 ${
         conflicted ? 'outline outline-2 outline-offset-2 outline-neon-magenta' : ''
       }`}
     >
