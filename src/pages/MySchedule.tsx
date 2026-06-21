@@ -8,6 +8,7 @@ import {
   FileImage,
   FileSpreadsheet,
   Globe2,
+  Info,
   ListFilter,
   Plus,
   Printer,
@@ -34,6 +35,7 @@ import { interleaveAds } from '../lib/ads'
 import { cityLabelFor } from '../lib/cities'
 import { copyToClipboard, downloadBlob } from '../lib/clipboard'
 import { findConflicts } from '../lib/conflicts'
+import { buildExportAdvice, type ExportAdvice, type ExportAdviceMethod } from '../lib/exportAdvice'
 import { createIcsBlob, createMultiSportIcsBlob, sportEmoji } from '../lib/ics'
 import { t } from '../lib/i18n'
 import { createMultiSportNotesText, createNotesText } from '../lib/notes'
@@ -217,6 +219,12 @@ function optionLabel(step: FlowStep | undefined, answer: string | undefined, fal
   return step?.options?.find((option) => option.id === answer)?.label ?? fallback
 }
 
+function adviceToneClasses(tone: ExportAdvice['tone']) {
+  if (tone === 'warn') return 'border-yellow-500/60 bg-yellow-400/12 text-ink'
+  if (tone === 'good') return 'border-primary/35 bg-primary/10 text-ink'
+  return 'border-sky-300/45 bg-sky-300/10 text-ink'
+}
+
 export function MySchedulePage() {
   const { followedTeams, followedLeagueIds, followedCompetitorIds, toggleFollow, prefs } = useAppState()
   const [range, setRange] = useState<RangeKey>('all')
@@ -338,6 +346,11 @@ export function MySchedulePage() {
     if (scope === 'visible_matches') return schedule
     if (scope === 'full_tournament') return fullWorldCupSchedule
     return savedWorldCupSchedule
+  }
+
+  function pageCountForScope(scope = 'all_saved') {
+    const pages = paginateEvents(matchesForScope(scope), template)
+    return pages.length
   }
 
   async function exportIcs(matchesToExport = schedule) {
@@ -570,6 +583,42 @@ export function MySchedulePage() {
     return `${totalVisible} visible events in ${cityLabel}.`
   }
 
+  function downloadMethod(): ExportAdviceMethod {
+    const intent = flow.answers.download_intent ?? 'calendar_import'
+    if (intent === 'edit_spreadsheet') return 'csv'
+    if (intent === 'calendar_import') return 'ics'
+    if (intent === 'share_copy') return 'share'
+    return 'pdf'
+  }
+
+  function bestFitAdvice() {
+    if (flow.flowId === 'download') {
+      const method = downloadMethod()
+      const scope = flow.answers.download_scope ?? 'all_saved'
+      const eventCount = matchesForScope(scope).length
+      return buildExportAdvice({
+        method,
+        eventCount,
+        pageCount: method === 'pdf' || method === 'share' ? pageCountForScope(scope) : 0,
+        hasLiveFollows,
+        liveEventCount: liveSchedule.length,
+        includesChangingDetails: scope === 'full_tournament' || tbdSlotCount > 0 || hasLiveFollows,
+      })
+    }
+    if (flow.flowId === 'calendar') {
+      const live = (flow.answers.calendar_update_mode ?? 'live_subscription') === 'live_subscription'
+      const eventCount = live ? liveSchedule.length : matchesForScope(flow.answers.calendar_scope).length
+      return buildExportAdvice({
+        method: live ? 'live' : 'one_time_calendar',
+        eventCount,
+        hasLiveFollows,
+        liveEventCount: liveSchedule.length,
+        includesChangingDetails: tbdSlotCount > 0 || hasLiveFollows || flow.answers.calendar_scope === 'full_tournament',
+      })
+    }
+    return null
+  }
+
   function runFinalAction() {
     if (flow.flowId === 'download') void runDownloadAction()
     if (flow.flowId === 'calendar') void runCalendarAction()
@@ -579,6 +628,8 @@ export function MySchedulePage() {
       closeFlow()
     }
   }
+
+  const currentBestFitAdvice = currentStep?.final ? bestFitAdvice() : null
 
   if (followedTeams.length === 0 && !hasLiveFollows) {
     return (
@@ -764,6 +815,19 @@ export function MySchedulePage() {
                     {finalSelectionSummary()}
                   </p>
                 </Panel>
+
+                {currentBestFitAdvice && (
+                  <div className={`rounded-lg border p-3 ${adviceToneClasses(currentBestFitAdvice.tone)}`}>
+                    <div className="flex items-start gap-2">
+                      <Info size={16} className="mt-0.5 shrink-0 text-primary" />
+                      <div>
+                        <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink/55">Best fit check</p>
+                        <p className="mt-1 text-sm font-bold text-ink">{currentBestFitAdvice.title}</p>
+                        <p className="mt-1 text-xs leading-relaxed text-ink/65">{currentBestFitAdvice.body}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {flow.flowId === 'download' && (flow.answers.download_intent ?? 'calendar_import') === 'share_copy' && (
                   <div className="grid gap-2 sm:grid-cols-2">
