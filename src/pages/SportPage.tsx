@@ -23,6 +23,7 @@ import { createIcsBlob, createMultiSportIcsBlob } from '../lib/ics'
 import { formatDate, formatLongDate, formatTime, relativeTimeFromNow } from '../lib/time'
 
 const INDIVIDUAL_SPORTS = ['tennis', 'golf', 'athletics', 'combat_sports']
+const SCHEDULE_PAGE_SIZE = 24
 
 type SeasonReturnMarker = {
   id: string
@@ -58,6 +59,22 @@ function seasonReturnFor(sportKey: CanonicalSportKey): SeasonReturnMarker | null
   return marker.startsAt.getTime() > Date.now() ? marker : null
 }
 
+function pageCountFor(total: number, pageSize = SCHEDULE_PAGE_SIZE) {
+  return Math.max(1, Math.ceil(total / pageSize))
+}
+
+function pageRange(currentPage: number, pageCount: number) {
+  const pages = new Set<number>([1, pageCount])
+  for (let page = currentPage - 1; page <= currentPage + 1; page += 1) {
+    if (page >= 1 && page <= pageCount) pages.add(page)
+  }
+  return [...pages].sort((a, b) => a - b)
+}
+
+function activePageFor(state: { key: string; page: number }, key: string, pageCount: number) {
+  return state.key === key ? Math.min(Math.max(state.page, 1), pageCount) : 1
+}
+
 // Customer-facing freshness line. Provider names stay internal; users just need confidence
 // that Silbo has a live schedule and recent sync state.
 function DataFreshness({ lastUpdated }: { lastUpdated: Date | null }) {
@@ -66,6 +83,78 @@ function DataFreshness({ lastUpdated }: { lastUpdated: Date | null }) {
       <span className="inline-block h-1.5 w-1.5 rounded-full bg-primary" />
       Live schedule{lastUpdated ? ` · synced ${relativeTimeFromNow(lastUpdated)}` : ''}
     </p>
+  )
+}
+
+function SchedulePagination({
+  page,
+  pageCount,
+  total,
+  pageSize = SCHEDULE_PAGE_SIZE,
+  onPageChange,
+  label = 'events',
+}: {
+  page: number
+  pageCount: number
+  total: number
+  pageSize?: number
+  onPageChange: (page: number) => void
+  label?: string
+}) {
+  if (pageCount <= 1) return null
+  const start = (page - 1) * pageSize + 1
+  const end = Math.min(total, page * pageSize)
+  const pages = pageRange(page, pageCount)
+
+  function go(nextPage: number) {
+    onPageChange(Math.min(Math.max(nextPage, 1), pageCount))
+  }
+
+  return (
+    <nav className="flex flex-col gap-2 rounded-xl border border-primary/15 bg-surface/70 px-3 py-2 sm:flex-row sm:items-center sm:justify-between" aria-label="Schedule pages">
+      <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink/50">
+        Showing {start}-{end} of {total} {label}
+      </p>
+      <div className="flex flex-wrap items-center gap-1.5">
+        <button
+          type="button"
+          onClick={() => go(page - 1)}
+          disabled={page === 1}
+          className="rounded-full border border-primary/25 px-3 py-1.5 font-mono text-[10px] uppercase tracking-wide text-ink/70 transition-colors hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-35"
+        >
+          Prev
+        </button>
+        {pages.map((pageNumber, index) => {
+          const previous = pages[index - 1]
+          const showGap = previous && pageNumber - previous > 1
+          return (
+            <span key={pageNumber} className="flex items-center gap-1.5">
+              {showGap && <span className="px-1 font-mono text-[10px] text-ink/35">...</span>}
+              <button
+                type="button"
+                onClick={() => go(pageNumber)}
+                aria-current={pageNumber === page ? 'page' : undefined}
+                className={`h-8 min-w-8 rounded-full border px-2 font-mono text-[10px] font-bold transition-colors ${
+                  pageNumber === page
+                    ? 'border-primary bg-primary text-void'
+                    : 'border-primary/25 text-ink/70 hover:bg-primary/10 hover:text-primary'
+                }`}
+              >
+                {pageNumber}
+              </button>
+            </span>
+          )
+        })}
+        <button
+          type="button"
+          onClick={() => go(page + 1)}
+          disabled={page === pageCount}
+          className="rounded-full border border-primary/25 px-3 py-1.5 font-mono text-[10px] uppercase tracking-wide text-ink/70 transition-colors hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-35"
+        >
+          Next
+        </button>
+      </div>
+    </nav>
   )
 }
 
@@ -103,6 +192,7 @@ function SoccerPage() {
   const [leagueId, setLeagueId] = useState<string | null>(null) // null = World Cup planner
   const [expandedEventId, setExpandedEventId] = useState<string | null>(null)
   const [addedEventIds, setAddedEventIds] = useState<string[]>([])
+  const [eventPager, setEventPager] = useState({ key: 'none', page: 1 })
 
   // Exclude the World Cup league rows (openfootball + TheSportsDB) — the planner IS the WC.
   const otherLeagues = useMemo(() => leagues.filter((l) => !/world cup/i.test(l.name)), [leagues])
@@ -111,6 +201,18 @@ function SoccerPage() {
     [events, leagueId],
   )
   const activeLeague = otherLeagues.find((l) => l.id === leagueId)
+  const eventPageCount = pageCountFor(leagueEvents.length)
+  const eventPageKey = leagueId ?? 'world-cup'
+  const eventPage = activePageFor(eventPager, eventPageKey, eventPageCount)
+  const pagedLeagueEvents = useMemo(
+    () => leagueEvents.slice((eventPage - 1) * SCHEDULE_PAGE_SIZE, eventPage * SCHEDULE_PAGE_SIZE),
+    [leagueEvents, eventPage],
+  )
+
+  function changeEventPage(page: number) {
+    setEventPager({ key: eventPageKey, page })
+    setExpandedEventId(null)
+  }
 
   function addEventToSchedule(event: LiveEvent) {
     downloadBlob(createMultiSportIcsBlob([event], { reminderMinutes: [60] }), exportFilename('event', 'ics'))
@@ -142,25 +244,29 @@ function SoccerPage() {
             </div>
           </div>
           {leagueEvents.length > 0 ? (
-            interleaveAds(leagueEvents, (e) => e.id, 6).map((entry) =>
-              entry.kind === 'ad' ? (
-                <AdSlot key={entry.key} format="leaderboard" />
-              ) : (
-                <div key={entry.key} className="space-y-2">
-                  <EventTicket
-                    event={entry.item}
-                    locale={prefs.locale}
-                    hour12={prefs.hour12}
-                    timeZone={prefs.timezone}
-                    expanded={expandedEventId === entry.item.id}
-                    onToggle={() => setExpandedEventId((current) => (current === entry.item.id ? null : entry.item.id))}
-                    added={addedEventIds.includes(entry.item.id)}
-                    onAdd={() => addEventToSchedule(entry.item)}
-                  />
-                  {expandedEventId === entry.item.id && <EventQuickDetails eventId={entry.item.id} />}
-                </div>
-              ),
-            )
+            <>
+              <SchedulePagination page={eventPage} pageCount={eventPageCount} total={leagueEvents.length} onPageChange={changeEventPage} label="fixtures" />
+              {interleaveAds(pagedLeagueEvents, (e) => e.id, 6).map((entry) =>
+                entry.kind === 'ad' ? (
+                  <AdSlot key={entry.key} format="leaderboard" />
+                ) : (
+                  <div key={entry.key} className="space-y-2">
+                    <EventTicket
+                      event={entry.item}
+                      locale={prefs.locale}
+                      hour12={prefs.hour12}
+                      timeZone={prefs.timezone}
+                      expanded={expandedEventId === entry.item.id}
+                      onToggle={() => setExpandedEventId((current) => (current === entry.item.id ? null : entry.item.id))}
+                      added={addedEventIds.includes(entry.item.id)}
+                      onAdd={() => addEventToSchedule(entry.item)}
+                    />
+                    {expandedEventId === entry.item.id && <EventQuickDetails eventId={entry.item.id} />}
+                  </div>
+                ),
+              )}
+              <SchedulePagination page={eventPage} pageCount={eventPageCount} total={leagueEvents.length} onPageChange={changeEventPage} label="fixtures" />
+            </>
           ) : (
             <EmptyState
               title="No upcoming fixtures"
@@ -177,6 +283,7 @@ function WorldCupPlanner() {
   const { followedTeams, toggleFollow, prefs } = useAppState()
   const [query, setQuery] = useState('')
   const [addedMatchKeys, setAddedMatchKeys] = useState<string[]>([])
+  const [matchPager, setMatchPager] = useState({ key: 'all', page: 1 })
   const timeZone = prefs.timezone
   const { matches, source } = useMatches()
 
@@ -191,7 +298,22 @@ function WorldCupPlanner() {
 
   const filteredMatches = useMemo(() => filterMatchesForTeams(matches, followedTeams), [matches, followedTeams])
   const conflicts = useMemo(() => findConflicts(filteredMatches), [filteredMatches])
+  const matchPageCount = pageCountFor(filteredMatches.length)
+  const followedTeamSignature = followedTeams.join('|')
+  const matchPageKey = followedTeamSignature || 'all'
+  const matchPage = activePageFor(matchPager, matchPageKey, matchPageCount)
+  const pagedMatches = useMemo(
+    () =>
+      filteredMatches
+        .map((match, index) => ({ match, index }))
+        .slice((matchPage - 1) * SCHEDULE_PAGE_SIZE, matchPage * SCHEDULE_PAGE_SIZE),
+    [filteredMatches, matchPage],
+  )
   const popularPicksActive = featuredTeams.every((team) => followedTeams.includes(team))
+
+  function changeMatchPage(page: number) {
+    setMatchPager({ key: matchPageKey, page })
+  }
 
   // Host-city capsules: real venue counts from the full fixture list (incl. knockout slots).
   const hostCities = useMemo(() => {
@@ -350,7 +472,8 @@ function WorldCupPlanner() {
               ? `${filteredMatches.length} matches for ${followedTeams.length} teams`
               : `All ${filteredMatches.length} confirmed group-stage matches — follow teams to narrow this down`}
           </p>
-            {filteredMatches.map((match, index) => (
+          <SchedulePagination page={matchPage} pageCount={matchPageCount} total={filteredMatches.length} onPageChange={changeMatchPage} label="matches" />
+            {pagedMatches.map(({ match, index }) => (
               <MatchCard
                 key={`${match.date}-${match.team1}-${match.team2}`}
                 match={match}
@@ -363,6 +486,7 @@ function WorldCupPlanner() {
                 onAddToSchedule={() => addMatchToSchedule(match)}
               />
             ))}
+          <SchedulePagination page={matchPage} pageCount={matchPageCount} total={filteredMatches.length} onPageChange={changeMatchPage} label="matches" />
         </section>
       </div>
     </div>
@@ -380,12 +504,25 @@ function LiveSportPage({ sport }: { sport: SportInfo }) {
   const [leagueId, setLeagueId] = useState<string | null>(null)
   const [expandedEventId, setExpandedEventId] = useState<string | null>(null)
   const [addedEventIds, setAddedEventIds] = useState<string[]>([])
+  const [eventPager, setEventPager] = useState({ key: `${canonical}:all`, page: 1 })
 
   const shownEvents = useMemo(
     () => (leagueId ? events.filter((e) => e.leagueId === leagueId) : events),
     [events, leagueId],
   )
+  const eventPageCount = pageCountFor(shownEvents.length)
+  const eventPageKey = `${canonical}:${leagueId ?? 'all'}`
+  const eventPage = activePageFor(eventPager, eventPageKey, eventPageCount)
+  const pagedShownEvents = useMemo(
+    () => shownEvents.slice((eventPage - 1) * SCHEDULE_PAGE_SIZE, eventPage * SCHEDULE_PAGE_SIZE),
+    [shownEvents, eventPage],
+  )
   const seasonReturn = leagueId ? null : seasonReturnFor(canonical)
+
+  function changeEventPage(page: number) {
+    setEventPager({ key: eventPageKey, page })
+    setExpandedEventId(null)
+  }
 
   function addEventToSchedule(event: LiveEvent) {
     downloadBlob(createMultiSportIcsBlob([event], { reminderMinutes: [60] }), exportFilename('event', 'ics'))
@@ -441,7 +578,8 @@ function LiveSportPage({ sport }: { sport: SportInfo }) {
               {shownEvents.length > 0 ? (
                 <>
                   <p className="text-sm font-semibold text-ink/60">{shownEvents.length} upcoming</p>
-                  {interleaveAds(shownEvents, (e) => e.id, 6).map((entry) =>
+                  <SchedulePagination page={eventPage} pageCount={eventPageCount} total={shownEvents.length} onPageChange={changeEventPage} label="events" />
+                  {interleaveAds(pagedShownEvents, (e) => e.id, 6).map((entry) =>
                     entry.kind === 'ad' ? (
                       <AdSlot key={entry.key} format="leaderboard" />
                     ) : (
@@ -460,6 +598,7 @@ function LiveSportPage({ sport }: { sport: SportInfo }) {
                       </div>
                     ),
                   )}
+                  <SchedulePagination page={eventPage} pageCount={eventPageCount} total={shownEvents.length} onPageChange={changeEventPage} label="events" />
                 </>
               ) : seasonReturn ? (
                 <SeasonReturnNotice
