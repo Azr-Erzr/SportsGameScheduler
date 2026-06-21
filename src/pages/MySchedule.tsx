@@ -23,6 +23,7 @@ import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { useAppState } from '../app/state-context'
 import { AdSlot } from '../components/AdSlot'
+import { AlertOptInNudge } from '../components/AlertOptInNudge'
 import { CityPicker } from '../components/CityPicker'
 import { MatchCard } from '../components/MatchCard'
 import { Button, EmptyState, Panel, PanelHeading } from '../components/ui'
@@ -667,6 +668,8 @@ export function MySchedulePage() {
           <CityPicker />
         </div>
       </div>
+
+      <AlertOptInNudge />
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Panel className="min-w-0">

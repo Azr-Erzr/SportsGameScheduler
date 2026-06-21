@@ -50,6 +50,9 @@ export function AlertSettingsPage() {
   const [prefs, setPrefs] = useState<Record<string, AlertChannelPref>>({})
   const [loadedKey, setLoadedKey] = useState('')
   const [message, setMessage] = useState('')
+  // Permission priming: explain push before triggering the browser's permission prompt, so a
+  // user who isn't ready taps "Not now" instead of "Block" (which is sticky and hard to undo).
+  const [pushPriming, setPushPriming] = useState<string | null>(null)
 
   const userId = auth.user?.id
   const followKey = useMemo(
@@ -149,6 +152,24 @@ export function AlertSettingsPage() {
         </div>
       </div>
 
+      <Panel className="space-y-2 border-primary/15 bg-primary/5 text-sm text-ink/70">
+        <p className="font-semibold text-ink/85">How Silbo alerts work</p>
+        <ul className="space-y-1.5">
+          <li className="flex gap-2">
+            <Mail size={14} className="mt-0.5 shrink-0 text-primary" />
+            <span><strong className="font-semibold text-ink/85">Email</strong> goes to your account address ({auth.user.email ?? 'your account email'}). Every email has a one-tap link back here to change or stop it.</span>
+          </li>
+          <li className="flex gap-2">
+            <Smartphone size={14} className="mt-0.5 shrink-0 text-primary" />
+            <span><strong className="font-semibold text-ink/85">Browser push</strong> is opt-in per device and asks your browser's permission first. Turn it off here or in your browser any time.</span>
+          </li>
+          <li className="flex gap-2">
+            <BellRing size={14} className="mt-0.5 shrink-0 text-primary" />
+            <span>We only message you about <strong className="font-semibold text-ink/85">leagues and players you follow</strong> — never marketing. Nothing sends until you switch a follow on below.</span>
+          </li>
+        </ul>
+      </Panel>
+
       {loading ? (
         <p className="board-label py-10 text-center text-ink/50">Loading alerts…</p>
       ) : labels.length === 0 ? (
@@ -208,10 +229,42 @@ export function AlertSettingsPage() {
                           type="checkbox"
                           checked={pref.pushEnabled}
                           disabled={!pushSupported()}
-                          onChange={(e) => togglePush(pref, e.target.checked)}
+                          onChange={(e) => {
+                            const wantsOn = e.target.checked
+                            const needsPermission =
+                              typeof Notification !== 'undefined' && Notification.permission !== 'granted'
+                            if (wantsOn && needsPermission) setPushPriming(label.id)
+                            else void togglePush(pref, wantsOn)
+                          }}
                         />
                       </label>
                     </div>
+
+                    {pushPriming === label.id && (
+                      <div className="rounded-lg border border-primary/25 bg-primary/8 px-3 py-2.5">
+                        <p className="text-sm font-semibold text-ink/85">Enable browser push on this device?</p>
+                        <p className="mt-1 text-xs text-ink/55">
+                          Your browser will ask for notification permission. You'll get a popup when{' '}
+                          <strong className="font-semibold text-ink/75">{label.name}</strong> has a kickoff reminder or
+                          schedule change — even when Silbo isn't open. Turn it off here or in your browser any time.
+                        </p>
+                        <div className="mt-2 flex gap-2">
+                          <Button
+                            variant="solid"
+                            className="px-3 py-1 text-xs"
+                            onClick={() => {
+                              setPushPriming(null)
+                              void togglePush(pref, true)
+                            }}
+                          >
+                            Allow push
+                          </Button>
+                          <Button variant="ghost" className="px-3 py-1 text-xs" onClick={() => setPushPriming(null)}>
+                            Not now
+                          </Button>
+                        </div>
+                      </div>
+                    )}
 
                     <label className="flex items-center justify-between gap-2 rounded-lg border border-primary/15 bg-page/45 px-3 py-2 text-sm text-ink/75">
                       <span>
@@ -260,7 +313,9 @@ export function AlertSettingsPage() {
           })}
           {message && <p className="text-sm font-medium text-primary">{message}</p>}
           <p className="text-xs text-ink/45">
-            Email alerts send once Resend secrets are set. Browser push sends once VAPID public/private keys are configured.
+            Changes save instantly to your account and apply across your devices. Alerts fire from the moment a
+            followed event's time, venue, lineup, or status changes — Silbo never messages you about anything you
+            don't follow.
           </p>
         </>
       )}
