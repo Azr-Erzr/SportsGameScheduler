@@ -8,6 +8,7 @@ import {
   FileImage,
   FileSpreadsheet,
   Globe2,
+  Info,
   ListFilter,
   Plus,
   Printer,
@@ -34,10 +35,12 @@ import { interleaveAds } from '../lib/ads'
 import { cityLabelFor } from '../lib/cities'
 import { copyToClipboard, downloadBlob } from '../lib/clipboard'
 import { findConflicts } from '../lib/conflicts'
+import { buildExportAdvice, type ExportAdvice, type ExportAdviceMethod } from '../lib/exportAdvice'
 import { createIcsBlob, createMultiSportIcsBlob, sportEmoji } from '../lib/ics'
 import { t } from '../lib/i18n'
 import { createMultiSportNotesText, createNotesText } from '../lib/notes'
 import { MAX_EVENTS_BY_TEMPLATE, paginateEvents, type ExportTemplate } from '../lib/paginate'
+import { canvasToJpegPage, createPdfBlobFromImages } from '../lib/pdf'
 import { canvasToBlob, createScheduleCanvas, type PosterVariant } from '../lib/poster'
 import { createScheduleCsv, exportCompletionMessage } from '../lib/scheduleExports'
 import { displayTimeOptions, formatLongDate, formatTime } from '../lib/time'
@@ -116,14 +119,14 @@ const guidedFlows: Record<GuidedFlowId, FlowConfig> = {
         question: 'What do you need this for?',
         options: [
           {
-            id: 'print_or_save',
-            label: 'Print or save a clean copy',
-            description: 'Recommended path: print dialog, then save as PDF.',
+            id: 'calendar_import',
+            label: 'Track it in a calendar',
+            description: 'Best format: ICS. Adds the schedule to your calendar app.',
             recommended: true,
           },
           { id: 'edit_spreadsheet', label: 'Edit in a spreadsheet', description: 'Recommended format: CSV.' },
-          { id: 'calendar_import', label: 'Import into a calendar', description: 'Recommended format: ICS.' },
-          { id: 'share_copy', label: 'Send to someone', description: 'Recommended path: image or share sheet.' },
+          { id: 'print_or_save', label: 'Download a polished PDF', description: 'Branded pages ready to save, print, or send.' },
+          { id: 'share_copy', label: 'Send to someone', description: 'Use text first; image export is available as a backup.' },
         ],
       },
       {
@@ -214,6 +217,12 @@ function groupByLocalDate(matches: Match[], timeZone: string, locale?: string | 
 
 function optionLabel(step: FlowStep | undefined, answer: string | undefined, fallback: string) {
   return step?.options?.find((option) => option.id === answer)?.label ?? fallback
+}
+
+function adviceToneClasses(tone: ExportAdvice['tone']) {
+  if (tone === 'warn') return 'border-yellow-500/60 bg-yellow-400/12 text-ink'
+  if (tone === 'good') return 'border-primary/35 bg-primary/10 text-ink'
+  return 'border-sky-300/45 bg-sky-300/10 text-ink'
 }
 
 export function MySchedulePage() {
@@ -339,6 +348,11 @@ export function MySchedulePage() {
     return savedWorldCupSchedule
   }
 
+  function pageCountForScope(scope = 'all_saved') {
+    const pages = paginateEvents(matchesForScope(scope), template)
+    return pages.length
+  }
+
   async function exportIcs(matchesToExport = schedule) {
     downloadBlob(createIcsBlob(matchesToExport, timeZone, prefs.locale, prefs.hour12), exportFilename('schedule', 'ics'))
     setMessage(exportCompletionMessage('ics'))
@@ -388,6 +402,33 @@ export function MySchedulePage() {
     closeFlow()
   }
 
+  async function exportPdf(matchesToExport = schedule) {
+    let pageNumber = 1
+    const exportPages = paginateEvents(matchesToExport, template)
+    const pdfPages = []
+    for (const pageEvents of exportPages) {
+      const canvas = await createScheduleCanvas(
+        pageEvents,
+        followedTeams,
+        timeZone,
+        cityLabel,
+        {
+          page: pageNumber,
+          pageCount: exportPages.length,
+        },
+        posterVariant,
+        prefs.locale,
+        prefs.hour12,
+      )
+      if (canvas) pdfPages.push(await canvasToJpegPage(canvas))
+      pageNumber += 1
+    }
+    const blob = createPdfBlobFromImages(pdfPages, posterVariant)
+    downloadBlob(blob, exportFilename('schedule', 'pdf'))
+    setMessage(exportCompletionMessage('pdf', pdfPages.length))
+    closeFlow()
+  }
+
   async function copyNotes(matchesToExport = schedule) {
     const text = createNotesText(matchesToExport, followedTeams, timeZone, cityLabel, prefs.locale, prefs.hour12)
     await copyToClipboard(text)
@@ -412,12 +453,6 @@ export function MySchedulePage() {
     }
     await copyToClipboard(text)
     setMessage('Schedule copied for sharing.')
-    closeFlow()
-  }
-
-  function printSchedule() {
-    window.print()
-    setMessage('Print dialog opened. Choose "Save as PDF" if you want a PDF copy.')
     closeFlow()
   }
 
@@ -460,11 +495,11 @@ export function MySchedulePage() {
 
   async function runDownloadAction() {
     const matchesToExport = matchesForScope(flow.answers.download_scope)
-    const intent = flow.answers.download_intent ?? 'print_or_save'
+    const intent = flow.answers.download_intent ?? 'calendar_import'
     if (intent === 'edit_spreadsheet') return exportCsv(matchesToExport)
     if (intent === 'calendar_import') return exportIcs(matchesToExport)
     if (intent === 'share_copy') return shareSchedule(matchesToExport)
-    return printSchedule()
+    return exportPdf(matchesToExport)
   }
 
   async function runCalendarAction() {
@@ -499,11 +534,11 @@ export function MySchedulePage() {
         : 'Done'
     }
     if (flow.flowId === 'download') {
-      const intent = flow.answers.download_intent ?? 'print_or_save'
+      const intent = flow.answers.download_intent ?? 'calendar_import'
       if (intent === 'edit_spreadsheet') return 'Download CSV'
       if (intent === 'calendar_import') return 'Download ICS'
       if (intent === 'share_copy') return 'Share schedule'
-      return 'Print or save PDF'
+      return 'Download PDF'
     }
     if (flow.flowId === 'reminders') return 'Enable reminders'
     return 'Save settings'
@@ -519,12 +554,12 @@ export function MySchedulePage() {
         : `Recommended: one-time ICS file for ${scope.toLowerCase()} in ${provider}. Future changes will not auto-update.`
     }
     if (flow.flowId === 'download') {
-      const intent = flow.answers.download_intent ?? 'print_or_save'
+      const intent = flow.answers.download_intent ?? 'calendar_import'
       const scope = optionLabel(guidedFlows.download.steps[1], flow.answers.download_scope, 'All saved matches')
       if (intent === 'edit_spreadsheet') return `Recommended: CSV for ${scope.toLowerCase()}, ready for spreadsheet editing.`
-      if (intent === 'calendar_import') return `Recommended: ICS for ${scope.toLowerCase()}, imported once into a calendar.`
+      if (intent === 'calendar_import') return `Recommended: ICS for ${scope.toLowerCase()}, the best static export for tracking in a calendar.`
       if (intent === 'share_copy') return `Recommended: share text for ${scope.toLowerCase()}, easy to send from this device.`
-      return `Recommended: print this page and choose Save as PDF for a clean copy of the visible schedule.`
+      return `Recommended: PDF for ${scope.toLowerCase()}, using the same branded schedule design as image exports.`
     }
     if (flow.flowId === 'reminders') {
       const scope = optionLabel(guidedFlows.reminders.steps[0], flow.answers.reminder_scope, 'All saved matches')
@@ -548,6 +583,42 @@ export function MySchedulePage() {
     return `${totalVisible} visible events in ${cityLabel}.`
   }
 
+  function downloadMethod(): ExportAdviceMethod {
+    const intent = flow.answers.download_intent ?? 'calendar_import'
+    if (intent === 'edit_spreadsheet') return 'csv'
+    if (intent === 'calendar_import') return 'ics'
+    if (intent === 'share_copy') return 'share'
+    return 'pdf'
+  }
+
+  function bestFitAdvice() {
+    if (flow.flowId === 'download') {
+      const method = downloadMethod()
+      const scope = flow.answers.download_scope ?? 'all_saved'
+      const eventCount = matchesForScope(scope).length
+      return buildExportAdvice({
+        method,
+        eventCount,
+        pageCount: method === 'pdf' || method === 'share' ? pageCountForScope(scope) : 0,
+        hasLiveFollows,
+        liveEventCount: liveSchedule.length,
+        includesChangingDetails: scope === 'full_tournament' || tbdSlotCount > 0 || hasLiveFollows,
+      })
+    }
+    if (flow.flowId === 'calendar') {
+      const live = (flow.answers.calendar_update_mode ?? 'live_subscription') === 'live_subscription'
+      const eventCount = live ? liveSchedule.length : matchesForScope(flow.answers.calendar_scope).length
+      return buildExportAdvice({
+        method: live ? 'live' : 'one_time_calendar',
+        eventCount,
+        hasLiveFollows,
+        liveEventCount: liveSchedule.length,
+        includesChangingDetails: tbdSlotCount > 0 || hasLiveFollows || flow.answers.calendar_scope === 'full_tournament',
+      })
+    }
+    return null
+  }
+
   function runFinalAction() {
     if (flow.flowId === 'download') void runDownloadAction()
     if (flow.flowId === 'calendar') void runCalendarAction()
@@ -557,6 +628,8 @@ export function MySchedulePage() {
       closeFlow()
     }
   }
+
+  const currentBestFitAdvice = currentStep?.final ? bestFitAdvice() : null
 
   if (followedTeams.length === 0 && !hasLiveFollows) {
     return (
@@ -650,7 +723,7 @@ export function MySchedulePage() {
           >
             <Download size={18} />
             <span className="mt-2 block text-sm font-bold">Download</span>
-            <span className="mt-1 block text-xs text-ink/55">Print, CSV, ICS, or share.</span>
+            <span className="mt-1 block text-xs text-ink/55">PDF, CSV, ICS, or share.</span>
           </button>
           <button
             type="button"
@@ -675,13 +748,13 @@ export function MySchedulePage() {
 
       {activeFlow && currentStep &&
         createPortal(
-        <div className="fixed inset-0 z-50 bg-void/65 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 bg-void/70">
           <button type="button" className="absolute inset-0 cursor-default" aria-label="Close guide" onClick={closeFlow} />
           <section
             role="dialog"
             aria-modal="true"
             aria-label={activeFlow.title}
-            className="absolute inset-x-0 bottom-0 max-h-[92svh] overflow-y-auto rounded-t-card border border-primary/20 bg-surface p-4 shadow-2xl sm:bottom-4 sm:left-auto sm:right-4 sm:top-24 sm:w-[min(520px,calc(100vw-2rem))] sm:rounded-card"
+            className="absolute inset-x-0 bottom-0 max-h-[92svh] overflow-y-auto rounded-t-card border border-primary/20 bg-surface p-4 shadow-xl sm:inset-x-auto sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:w-[min(540px,calc(100vw-2rem))] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-card"
           >
             <div className="mb-4 flex items-start justify-between gap-3">
               <div>
@@ -712,7 +785,7 @@ export function MySchedulePage() {
                       type="button"
                       onClick={() => answerStep(currentStep, option.id)}
                       className={`w-full rounded-lg border px-3 py-3 text-left transition-colors ${
-                        selected ? 'border-primary bg-primary text-void' : 'border-primary/20 bg-page/60 hover:bg-primary/8'
+                        selected ? 'border-primary bg-primary text-void' : 'border-primary/25 bg-page/60 hover:border-primary/45'
                       }`}
                     >
                       <span className="flex items-center justify-between gap-2 text-sm font-bold">
@@ -743,13 +816,26 @@ export function MySchedulePage() {
                   </p>
                 </Panel>
 
-                {flow.flowId === 'download' && (flow.answers.download_intent ?? 'print_or_save') === 'share_copy' && (
+                {currentBestFitAdvice && (
+                  <div className={`rounded-lg border p-3 ${adviceToneClasses(currentBestFitAdvice.tone)}`}>
+                    <div className="flex items-start gap-2">
+                      <Info size={16} className="mt-0.5 shrink-0 text-primary" />
+                      <div>
+                        <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink/55">Best fit check</p>
+                        <p className="mt-1 text-sm font-bold text-ink">{currentBestFitAdvice.title}</p>
+                        <p className="mt-1 text-xs leading-relaxed text-ink/65">{currentBestFitAdvice.body}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {flow.flowId === 'download' && (flow.answers.download_intent ?? 'calendar_import') === 'share_copy' && (
                   <div className="grid gap-2 sm:grid-cols-2">
-                    <Button className="w-full" variant="export" onClick={() => exportImages(true, matchesForScope(flow.answers.download_scope))}>
-                      <FileImage size={15} /> Save image instead
-                    </Button>
                     <Button className="w-full" variant="subtle" onClick={() => copyNotes(matchesForScope(flow.answers.download_scope))}>
-                      <Copy size={15} /> Copy text instead
+                      <Copy size={15} /> Copy text
+                    </Button>
+                    <Button className="w-full" variant="ghost" onClick={() => exportImages(true, matchesForScope(flow.answers.download_scope))}>
+                      <FileImage size={15} /> Save image backup
                     </Button>
                     {liveSchedule.length > 0 && (
                       <Button className="w-full" variant="ghost" onClick={copyLiveNotes}>
@@ -759,7 +845,8 @@ export function MySchedulePage() {
                   </div>
                 )}
 
-                {flow.flowId === 'download' && (
+                {flow.flowId === 'download' &&
+                  ['print_or_save', 'share_copy'].includes(flow.answers.download_intent ?? 'calendar_import') && (
                   <div className="space-y-3">
                     <div className="grid grid-cols-2 gap-2">
                       {templates.map((item) => (
@@ -770,7 +857,7 @@ export function MySchedulePage() {
                           className={`rounded-lg border px-3 py-2 text-left text-sm font-semibold transition-colors ${
                             template === item.key
                               ? 'border-primary bg-primary text-void'
-                              : 'border-primary/20 bg-page/60 hover:bg-primary/8'
+                              : 'border-primary/25 bg-page/60 hover:border-primary/45'
                           }`}
                         >
                           {t(item.labelKey, undefined, prefs.locale)}
@@ -792,7 +879,7 @@ export function MySchedulePage() {
                             className={`px-3 py-1.5 text-xs font-semibold capitalize transition-colors ${
                               posterVariant === variantKey
                                 ? 'bg-primary text-void'
-                                : 'bg-page/60 text-ink/60 hover:bg-primary/8'
+                                : 'bg-page/60 text-ink/60 hover:text-primary'
                             }`}
                           >
                             {variantKey}
@@ -801,15 +888,20 @@ export function MySchedulePage() {
                       </div>
                     </div>
                     <p className="text-xs text-ink/50">
-                      Poster images paginate at {MAX_EVENTS_BY_TEMPLATE[template]} events per page if you choose the image path.
+                      {flow.answers.download_intent === 'print_or_save'
+                        ? `PDF pages paginate at ${MAX_EVENTS_BY_TEMPLATE[template]} events per page.`
+                        : `Poster images paginate at ${MAX_EVENTS_BY_TEMPLATE[template]} events per page if you choose the image path.`}
                     </p>
-                    {(flow.answers.download_intent ?? 'print_or_save') === 'calendar_import' && liveSchedule.length > 0 && (
-                      <Button className="w-full" variant="ghost" onClick={exportLiveIcs}>
-                        <CalendarDays size={15} /> Download all-sports ICS ({liveSchedule.length})
-                      </Button>
-                    )}
                   </div>
                 )}
+
+                {flow.flowId === 'download' &&
+                  (flow.answers.download_intent ?? 'calendar_import') === 'calendar_import' &&
+                  liveSchedule.length > 0 && (
+                    <Button className="w-full" variant="ghost" onClick={exportLiveIcs}>
+                      <CalendarDays size={15} /> Download all-sports ICS ({liveSchedule.length})
+                    </Button>
+                  )}
 
                 {flow.flowId === 'calendar' &&
                   (flow.answers.calendar_update_mode ?? 'live_subscription') === 'live_subscription' && <CalendarFeedsPage embedded />}
@@ -861,17 +953,17 @@ export function MySchedulePage() {
                       matchesForScope(flow.answers.calendar_scope).length === 0)
                   }
                 >
-                  {flow.flowId === 'download' && (flow.answers.download_intent ?? 'print_or_save') === 'edit_spreadsheet' && (
+                  {flow.flowId === 'download' && (flow.answers.download_intent ?? 'calendar_import') === 'edit_spreadsheet' && (
                     <FileSpreadsheet size={15} />
                   )}
-                  {flow.flowId === 'download' && (flow.answers.download_intent ?? 'print_or_save') === 'print_or_save' && (
+                  {flow.flowId === 'download' && (flow.answers.download_intent ?? 'calendar_import') === 'print_or_save' && (
                     <Printer size={15} />
                   )}
-                  {flow.flowId === 'download' && (flow.answers.download_intent ?? 'print_or_save') === 'share_copy' && (
+                  {flow.flowId === 'download' && (flow.answers.download_intent ?? 'calendar_import') === 'share_copy' && (
                     <Share2 size={15} />
                   )}
                   {flow.flowId === 'download' &&
-                    !['edit_spreadsheet', 'print_or_save', 'share_copy'].includes(flow.answers.download_intent ?? 'print_or_save') && (
+                    !['edit_spreadsheet', 'print_or_save', 'share_copy'].includes(flow.answers.download_intent ?? 'calendar_import') && (
                     <Download size={15} />
                   )}
                   {flow.flowId === 'calendar' && <CalendarCheck size={15} />}

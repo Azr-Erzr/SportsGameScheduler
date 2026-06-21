@@ -34,7 +34,7 @@ function LiveRouteCard({ sport, dense = false }: { sport: SportInfo; dense?: boo
   return (
     <Link
       to={route}
-      className={`group grid h-full rounded-card border bg-surface/72 transition-[border-color,background-color,transform,box-shadow] hover:-translate-y-0.5 hover:bg-primary/6 hover:shadow-md ${
+      className={`group grid h-full rounded-card border bg-surface/72 transition-colors hover:bg-primary/6 ${
         dense ? 'min-h-[132px] p-3' : 'min-h-[178px] p-4'
       }`}
       style={{ borderColor: `${theme.colors.primary}33` }}

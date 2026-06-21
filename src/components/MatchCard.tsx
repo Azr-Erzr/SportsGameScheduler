@@ -34,7 +34,7 @@ export function MatchCard({
     // PERF: plain article + CSS transitions. Framer `layout` springs on 70+ list items
     // measured the whole list every frame and was the main scroll-jank source.
     <article
-      className={`ticket-paper relative overflow-hidden p-0 transition-transform duration-150 hover:-translate-y-0.5 ${
+      className={`ticket-paper relative overflow-hidden p-0 ${
         conflicted ? 'outline outline-2 outline-offset-2 outline-neon-magenta' : ''
       }`}
     >
@@ -149,7 +149,7 @@ export function MatchCard({
               ))}
             </div>
             <p className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-paper-ink">
-              <Bell size={12} /> Alerts plug in here when times or watch details change.
+              <Bell size={12} /> Alert settings can watch time, team, venue, and watch-info changes.
             </p>
           </div>
         </div>

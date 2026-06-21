@@ -103,7 +103,6 @@ function SportGlyph({
         className="relative z-10"
         style={{
           color: 'var(--glyph-color)',
-          filter: 'drop-shadow(0 0 10px color-mix(in srgb, var(--glyph-color) 52%, transparent))',
         }}
         aria-hidden="true"
       />

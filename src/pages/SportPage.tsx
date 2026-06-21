@@ -819,7 +819,7 @@ function EventTicket({
 
   return (
     <article
-      className={`ticket-paper group flex w-full items-stretch overflow-hidden transition-transform hover:-translate-y-0.5 max-sm:flex-col ${
+      className={`ticket-paper group flex w-full items-stretch overflow-hidden max-sm:flex-col ${
         expanded ? 'ring-2 ring-primary/25' : ''
       } ${isFightCard ? 'min-h-[104px]' : ''}`}
     >
@@ -980,7 +980,7 @@ function EventQuickDetails({ eventId }: { eventId: string }) {
           ))}
         </div>
         <p className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-ink/70">
-          <Bell size={12} /> Alerts can watch for time moves and new broadcast links.
+          <Bell size={12} /> Alert settings can watch time, participant, venue, and broadcast updates.
         </p>
       </div>
 

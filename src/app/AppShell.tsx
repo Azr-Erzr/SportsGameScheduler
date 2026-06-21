@@ -76,9 +76,9 @@ function MobileNav({ locale }: { locale?: string | null }) {
             end={to === '/'}
             aria-label={t(labelKey, undefined, locale)}
             className={({ isActive }) =>
-              `group flex h-12 min-w-12 items-center justify-center gap-1.5 rounded-2xl px-2 text-[10px] font-bold leading-none transition-all ${
+              `group flex h-12 min-w-12 items-center justify-center gap-1.5 rounded-2xl px-2 text-[10px] font-bold leading-none transition-colors ${
                 isActive
-                  ? 'min-w-[5.35rem] bg-primary text-void shadow-[0_0_22px_color-mix(in_srgb,var(--mp-primary)_28%,transparent)]'
+                  ? 'min-w-[5.35rem] bg-primary text-void shadow-[0_-1px_12px_color-mix(in_srgb,var(--mp-primary)_16%,transparent)]'
                   : 'text-ink/55 hover:bg-primary/10 hover:text-primary'
               }`
             }

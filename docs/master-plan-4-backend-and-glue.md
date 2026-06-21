@@ -1,6 +1,6 @@
 # Master Plan 4: Backend Reality Check, Caching, Refresh, and the Glue That Makes Silbo Worth Using
 
-Last updated: June 15, 2026
+Last updated: June 19, 2026
 
 This plan is grounded in a live audit of the deployed Supabase project (`gcnbgdpicgeahxscpsfc`),
 the edge functions, the cron schedule, and the frontend wiring — not on what the earlier plans
@@ -189,6 +189,59 @@ the same shape into a `provider_sync_state` view if/when we add a second provide
 When licensing allows, store raw JSON snapshots in Supabase Storage keyed by
 `provider_event_id + fetched_at` so we can replay/debug diffs without re-calling the API.
 
+### 4.4 New Objective: Calendar-feed ingestion as a cheap structured-data source
+
+Many leagues, teams, federations, venues, and tournament organizers publish `.ics` or
+`webcal://` calendar feeds. These should become a second-tier hydration source after official/free
+APIs and before any HTML scraping.
+
+**Goal:** build a scheduled ingestion lane that fetches public calendar feeds, parses them into
+normalized events, hashes payloads, and upserts them into the same canonical `events` model without
+requiring an AI/browser-reading agent.
+
+**Why this matters:**
+- `.ics` is already structured event data: title, start/end time, venue/location, description,
+  UID, sequence, status, and sometimes organizer/source metadata.
+- Feeds are usually cheap or free, and often published by official sources.
+- Calendar feeds are less brittle than visual page scrapes and easier to validate with deterministic
+  parser tests.
+- Feed polling can be paced by source freshness: daily for far-future schedules, every few hours
+  around active tournaments, and more often only for followed/near-live events when the source
+  permits it.
+
+**Schema / pipeline shape:**
+- Add `source_providers` / `source_targets` rows for feed-based sources, with `source_type = 'ics'`
+  or `source_type = 'webcal'`.
+- Store each fetched feed snapshot or normalized payload hash in the provider cache layer:
+  `payload_hash`, `last_checked_at`, `last_changed_at`, `last_status`, `last_error`.
+- Parse feed items into a normalized adapter result:
+  `external_id`, `title`, `starts_at`, `ends_at`, `status`, `venue`, `source_url`, `raw_uid`,
+  `sequence`, `description`, and optional sport/league/team hints.
+- Resolve into canonical `events` through `event_external_ids`, so the same match from API-Sports,
+  TheSportsDB, and an `.ics` source can dedupe rather than duplicate.
+- Assign `source_confidence = 'official'` for official league/team/federation feeds, otherwise
+  `source_confidence = 'provider'` or `cached`.
+- Log changes into `event_status_history` when `starts_at`, `status`, title, or venue changes,
+  so reminders and change notifications reuse the existing pipeline.
+
+**Implementation steps:**
+1. Add DB columns/tables needed for provider cache maturity first (`payload_hash`,
+   `last_checked_at`, `source_confidence`, source target type).
+2. Add a generic `ics-feed` adapter/parser with tests for common feed variants.
+3. Create a small allowlist of public official feeds for low-risk sports/leagues and run them
+   through a dry-run normalizer.
+4. Upsert parsed events into staging/provider payload tables first; promote to canonical `events`
+   only after dedupe confidence is acceptable.
+5. Add cron cadence and admin observability: last check, last changed, events added/changed,
+   parser errors, and source terms notes.
+
+**Guardrails:**
+- Do not scrape private calendars, authenticated calendars, or feeds that prohibit reuse.
+- Respect `robots.txt` / terms where the feed is discovered from a website.
+- Use deterministic parsers and adapter tests; do not rely on an AI agent reading screens.
+- Treat feeds as schedule truth only when source confidence is clear; otherwise use them as
+  enrichment/corroboration until verified.
+
 ---
 
 ## 5. Full Refresh Plan (Delta-Only, Change-Driven)
@@ -325,6 +378,9 @@ Ordered by leverage-to-risk. None of these need new API keys or product decision
    exporter — small, visible, on-brand.
 6. **Flood the DB**: add a batch of `provider_targets` (§8) and let the cron absorb them.
 7. **Add `payload_hash` + `last_checked_at`** and the short-circuit, then phase-aware cadence.
+8. **Add calendar-feed ingestion** (§4.4): parse official/public `.ics` and `webcal://` feeds as
+   cheap structured schedule sources, cache payload hashes, dedupe through `event_external_ids`,
+   and upsert verified events into the canonical DB.
 
 Needs you / external setup (not blocked on me, but I can't finish alone):
 - **Email**: provision `RESEND_API_KEY` + verify a sending domain (SPF/DKIM/DMARC). Then email

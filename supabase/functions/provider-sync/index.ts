@@ -67,19 +67,60 @@ async function ensureCompetitor(
   return inserted.id
 }
 
+async function ensureVenue(db: SupabaseClient, venue: ProviderEvent['venue']): Promise<string | null> {
+  if (!venue?.name) return null
+  const { data: existing } = await db.from('venues').select('id').eq('name', venue.name).maybeSingle()
+  if (existing) return existing.id
+
+  const { data: inserted, error } = await db
+    .from('venues')
+    .insert({
+      name: venue.name,
+      city: venue.city ?? null,
+      country: venue.country ?? null,
+      timezone: venue.timezone ?? null,
+    })
+    .select('id')
+    .single()
+  if (error) throw error
+  return inserted.id
+}
+
+type ExistingEvent = {
+  id: string
+  title: string
+  status: string
+  starts_at: string | null
+  starts_at_tbd: boolean | null
+  venue_id: string | null
+  version: number
+  payload_hash: string | null
+}
+
+type NextEvent = {
+  title: string
+  status: string
+  starts_at: string | null
+  starts_at_tbd: boolean
+  venue_id: string | null
+}
+
 // Fields whose change is visible in a subscribed calendar and must bump SEQUENCE.
-function calendarVisibleChanged(
-  existing: { title: string; status: string; starts_at: string | null },
-  next: { title: string; status: string; starts_at: string | null },
-) {
-  return existing.title !== next.title || existing.status !== next.status || existing.starts_at !== next.starts_at
+function calendarVisibleChanged(existing: ExistingEvent, next: NextEvent) {
+  return (
+    existing.title !== next.title ||
+    existing.status !== next.status ||
+    existing.starts_at !== next.starts_at ||
+    Boolean(existing.starts_at_tbd) !== next.starts_at_tbd ||
+    existing.venue_id !== next.venue_id
+  )
 }
 
 function statusHistoryRows(
   eventId: string,
   providerKey: ProviderKey,
-  existing: { title: string; status: string; starts_at: string | null },
-  next: { title: string; status: string; starts_at: string | null },
+  existing: ExistingEvent,
+  next: NextEvent,
 ) {
   const rows = []
   if (existing.starts_at !== next.starts_at || existing.status !== next.status) {
@@ -95,6 +136,87 @@ function statusHistoryRows(
   return rows
 }
 
+function broadcastSignature(broadcasts: Array<{ country: string; channel: string; streamUrl?: string | null }>) {
+  return broadcasts
+    .map((broadcast) => `${broadcast.country}|${broadcast.channel}|${broadcast.streamUrl ?? ''}`)
+    .sort()
+    .join('\n')
+}
+
+function changeLogRows(
+  eventId: string,
+  providerKey: ProviderKey,
+  existing: ExistingEvent | null,
+  next: NextEvent,
+  broadcastChanged: boolean,
+) {
+  if (!existing) {
+    return [
+      {
+        event_id: eventId,
+        change_type: 'new_event',
+        significance: 'notify',
+        old_value: null,
+        new_value: next,
+        source: providerKey,
+      },
+    ]
+  }
+
+  const rows = []
+  if (existing.status !== next.status && ['cancelled', 'postponed'].includes(next.status)) {
+    rows.push({
+      event_id: eventId,
+      change_type: 'cancellation',
+      significance: 'notify',
+      old_value: { status: existing.status },
+      new_value: { status: next.status },
+      source: providerKey,
+    })
+  }
+  if (existing.starts_at !== next.starts_at || (existing.starts_at_tbd && !next.starts_at_tbd && next.starts_at)) {
+    rows.push({
+      event_id: eventId,
+      change_type: !existing.starts_at && next.starts_at ? 'time_set' : 'time_change',
+      significance: 'notify',
+      old_value: { starts_at: existing.starts_at, starts_at_tbd: existing.starts_at_tbd },
+      new_value: { starts_at: next.starts_at, starts_at_tbd: next.starts_at_tbd },
+      source: providerKey,
+    })
+  }
+  if (existing.title !== next.title) {
+    rows.push({
+      event_id: eventId,
+      change_type: 'participant_update',
+      significance: 'notify',
+      old_value: { title: existing.title },
+      new_value: { title: next.title },
+      source: providerKey,
+    })
+  }
+  if (existing.venue_id !== next.venue_id) {
+    rows.push({
+      event_id: eventId,
+      change_type: next.venue_id ? 'venue_change' : 'venue_set',
+      significance: 'notify',
+      old_value: { venue_id: existing.venue_id },
+      new_value: { venue_id: next.venue_id },
+      source: providerKey,
+    })
+  }
+  if (broadcastChanged) {
+    rows.push({
+      event_id: eventId,
+      change_type: 'broadcast_update',
+      significance: 'notify',
+      old_value: null,
+      new_value: { broadcasts_updated: true },
+      source: providerKey,
+    })
+  }
+  return rows
+}
+
 async function payloadHash(value: unknown): Promise<string> {
   const data = new TextEncoder().encode(JSON.stringify(value))
   const hash = await crypto.subtle.digest('SHA-256', data)
@@ -104,16 +226,20 @@ async function payloadHash(value: unknown): Promise<string> {
 }
 
 async function upsertNormalizedEvent(db: SupabaseClient, providerEvent: ProviderEvent, sportId: string, leagueId: string | null) {
+  const venueId = await ensureVenue(db, providerEvent.venue)
   const next = {
     title: providerEvent.title,
     status: providerEvent.status,
     starts_at: providerEvent.startsAt ?? null,
+    starts_at_tbd: providerEvent.startsAtTbd ?? false,
+    venue_id: venueId,
   }
   const checkedAt = new Date().toISOString()
   const hash = await payloadHash({
     ...next,
     short_title: providerEvent.shortTitle ?? null,
-    starts_at_tbd: providerEvent.startsAtTbd ?? false,
+    starts_at_tbd: next.starts_at_tbd,
+    venue_id: next.venue_id,
     timezone: providerEvent.timezone ?? null,
     metadata: providerEvent.metadata,
     competitors: providerEvent.competitors,
@@ -122,7 +248,7 @@ async function upsertNormalizedEvent(db: SupabaseClient, providerEvent: Provider
 
   const { data: existing } = await db
     .from('events')
-    .select('id, title, status, starts_at, version, payload_hash')
+    .select('id, title, status, starts_at, starts_at_tbd, venue_id, version, payload_hash')
     .eq('provider_key', providerEvent.providerKey)
     .eq('provider_event_id', providerEvent.providerEventId)
     .maybeSingle()
@@ -131,22 +257,38 @@ async function upsertNormalizedEvent(db: SupabaseClient, providerEvent: Provider
   let changed = false
 
   if (existing) {
-    eventId = existing.id
+    const current = existing as ExistingEvent
+    eventId = current.id
     if (existing.payload_hash === hash) {
       await db.from('events').update({ last_checked_at: checkedAt }).eq('id', eventId)
       return false
     }
-    const visibleChange = calendarVisibleChanged(existing, next)
-    const historyRows = statusHistoryRows(eventId, providerEvent.providerKey, existing, next)
+    const { data: currentBroadcasts } = await db
+      .from('broadcasts')
+      .select('country, channel, stream_url')
+      .eq('event_id', eventId)
+    const broadcastChanged =
+      providerEvent.broadcasts !== undefined &&
+      broadcastSignature(
+        (currentBroadcasts ?? []).map((broadcast) => ({
+          country: broadcast.country,
+          channel: broadcast.channel,
+          streamUrl: broadcast.stream_url,
+        })),
+      ) !== broadcastSignature(providerEvent.broadcasts ?? [])
+    const visibleChange = calendarVisibleChanged(current, next)
+    const historyRows = statusHistoryRows(eventId, providerEvent.providerKey, current, next)
+    const changeRows = changeLogRows(eventId, providerEvent.providerKey, current, next, broadcastChanged)
     changed = visibleChange
 
     const updatePayload: Record<string, unknown> = {
       ...next,
       short_title: providerEvent.shortTitle ?? null,
-      starts_at_tbd: providerEvent.startsAtTbd ?? false,
+      starts_at_tbd: next.starts_at_tbd,
+      venue_id: next.venue_id,
       timezone: providerEvent.timezone ?? null,
       metadata: providerEvent.metadata,
-      version: visibleChange ? existing.version + 1 : existing.version,
+      version: visibleChange ? current.version + 1 : current.version,
       last_checked_at: checkedAt,
       payload_hash: hash,
       source_confidence: 'provider',
@@ -158,6 +300,9 @@ async function upsertNormalizedEvent(db: SupabaseClient, providerEvent: Provider
 
     if (historyRows.length) {
       await db.from('event_status_history').insert(historyRows)
+    }
+    if (changeRows.length) {
+      await db.from('event_change_log').insert(changeRows)
     }
   } else {
     const { data: inserted, error } = await db
@@ -171,7 +316,6 @@ async function upsertNormalizedEvent(db: SupabaseClient, providerEvent: Provider
         visibility: 'public',
         ...next,
         short_title: providerEvent.shortTitle ?? null,
-        starts_at_tbd: providerEvent.startsAtTbd ?? false,
         timezone: providerEvent.timezone ?? null,
         metadata: providerEvent.metadata,
         payload_hash: hash,
@@ -183,6 +327,7 @@ async function upsertNormalizedEvent(db: SupabaseClient, providerEvent: Provider
     if (error) throw error
     eventId = inserted.id
     changed = true
+    await db.from('event_change_log').insert(changeLogRows(eventId, providerEvent.providerKey, null, next, false))
   }
 
   // Participation + broadcasts are replaced wholesale per sync (source of truth = provider).
@@ -194,16 +339,18 @@ async function upsertNormalizedEvent(db: SupabaseClient, providerEvent: Provider
   await db.from('event_competitors').delete().eq('event_id', eventId)
   if (competitorRows.length) await db.from('event_competitors').insert(competitorRows)
 
-  if (providerEvent.broadcasts?.length) {
+  if (providerEvent.broadcasts !== undefined) {
     await db.from('broadcasts').delete().eq('event_id', eventId)
-    await db.from('broadcasts').insert(
-      providerEvent.broadcasts.map((broadcast) => ({
-        event_id: eventId,
-        country: broadcast.country,
-        channel: broadcast.channel,
-        stream_url: broadcast.streamUrl ?? null,
-      })),
-    )
+    if (providerEvent.broadcasts.length) {
+      await db.from('broadcasts').insert(
+        providerEvent.broadcasts.map((broadcast) => ({
+          event_id: eventId,
+          country: broadcast.country,
+          channel: broadcast.channel,
+          stream_url: broadcast.streamUrl ?? null,
+        })),
+      )
+    }
   }
 
   return changed
