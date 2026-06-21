@@ -77,9 +77,33 @@ the full writeup):
   *transport* still needs `RESEND_API_KEY` + a verified domain; Web Push needs VAPID keys.
 - **Obj 12 / 13 (CI + tests):** GitHub Actions CI (lint + test + build) added; 28 unit tests
   (ICS multi-sport builder, sport emoji, relative-time, plus the originals).
-- **Still open (largest):** custom leagues are still localStorage-only (Obj 9 server-backing /
-  cross-device shares); email/push transport secrets; League/Team detail pages; admin dashboard
-  (Obj 11); public frontend deploy automation (Obj 12).
+- **Still open (largest, as of June 15):** custom leagues server-backing / cross-device shares;
+  email/push transport secrets; League/Team detail pages; admin dashboard (Obj 11); public frontend
+  deploy automation (Obj 12). See the June-21 correction below for the updated state.
+
+### Latest Audit Correction - June 21, 2026
+
+The June-15 "still open" list has been materially reduced:
+
+- **Obj 6 / 8 (calendar + exports):** My Schedule and exports now support multi-sport events,
+  export-fit guidance, ICS-first recommendations, CSV, Notes/share text, image packs, and branded
+  PDF generation. Live Sync feed creation writes real `calendar_feeds` rows when signed in.
+- **Obj 9 (custom leagues):** custom leagues are server-backed when signed in, local leagues merge
+  into the account path, public share pages resolve through `/s/:token`, and share controls exist.
+  Remaining import work: true `.ics` import and CSV/Sheets import flows.
+- **Obj 7 / 11 (routes + admin):** event detail, league pages, team pages, and `/admin` observability
+  now exist. Admin still needs broader source-target/provider status panels.
+- **Obj 10 (alerts):** alert settings, alert copy taxonomy, and notification materialization are
+  wired. Email waits on Resend/domain secrets; Web Push waits on VAPID keys and send implementation.
+- **Obj 12 / 13 (delivery + quality):** CI and Cloudflare deploy scripts/docs exist; unit tests cover
+  ICS, feeds, export advice, PDF rendering, alerts, notes, pagination, conflicts, and live sport
+  reads. Remaining quality gap: committed Playwright/mobile/a11y smoke tests.
+- **Obj 4 / MP4 cache work:** provider `payload_hash`, `last_checked_at`, unchanged-payload
+  short-circuiting, source targets, and calendar-feed ingestion are now in repo.
+
+Largest remaining plan work: production secrets/domain verification, Playwright/mobile/a11y tests,
+DB-backed spotlight/ranking tables, provider-adapter verification scripts, real broadcast/rightsholder
+backfill, full i18n extraction, and structured fight-card/bracket/race-weekend data.
 
 | Objective | Status | What's left |
 |---|---|---|
@@ -89,11 +113,11 @@ the full writeup):
 | 4. Provider sync + normalization | 🟡 ~60% | Adapter interface + `worldcup_json` adapter + diff-before-version-bump sync function deployed. **Gaps:** cron not scheduled, raw payload snapshots not stored, freshness UI is a simple Live/Bundled badge (no "updated X min ago"), no second provider. |
 | 5. Follows + personal schedule | 🟡 ~60% | Local follows, My Schedule with ranges/hide-finished/conflict flags work; `user_follows` + `get_my_schedule` deployed. **Gaps:** no auth → server follows unused; intents (attend/track) and finals-only filter not in UI. |
 | 6. Calendar feeds | 🟡 ~55% | `calendar-feed` Edge Function deployed (stable UID/SEQUENCE, RFC 5545 escaping/folding); snapshot `.ics` works; platform instructions in UI. **Gaps:** feed creation is localStorage-only with placeholder URLs (needs auth); no `webcal://` button; TBD/all-day/TENTATIVE rendering not implemented (see cross-doc review). |
-| 7. Multi-sport frontend | 🟢 ~80% | App shell, My Schedule, Explore, sport pages, Calendar, Export Studio, Custom Leagues + admin, share pages all live. **Gaps:** no Event Detail page, no League/Team pages (routes `/leagues/:id`, `/teams/:id`, `/events/:id`), no mocked F1/NHL data previews. |
+| 7. Multi-sport frontend | 🟢 ~90% | App shell, My Schedule, Explore, sport pages, Calendar, Export Studio, Custom Leagues + admin, share pages, Event Detail, League, and Team routes all live. **Gaps:** deeper live provider previews and DB-backed spotlight/ranking. |
 | 8. Export Studio | 🟢 ~90% | Templates, pagination (page X of Y), preview, share-sheet fallbacks, Notes export. **Gap:** poster theme tokens (same as Obj 2). |
 | 9. Custom leagues | 🟡 ~65% | Full local CRUD + share page + ICS/notes exports; backend tables + private-event RLS + owner trigger deployed. **Gaps:** cross-device sharing needs auth + server resolution; no share disable/rotate UI; no bulk paste import. |
 | 10. Notifications (email + push) | 🟡 ~50% | Queue, idempotent materializer, atomic claimer, channel-dispatching worker all deployed. **Gaps:** no alert-settings UI, `RESEND_API_KEY` not set, Web Push needs VAPID keys + send implementation, cron not scheduled. |
-| 11. Admin + observability | 🔴 ~25% | `provider_sync_runs` + indexes live; security advisors run and acted on. **Gaps:** no admin dashboard, no support tooling, no rate limiting on public endpoints. |
+| 11. Admin + observability | 🟡 ~60% | `provider_sync_runs` + indexes live; security advisors run and acted on; `/admin` dashboard exists. **Gaps:** source-target/provider status panels, support tooling, and rate limiting on public endpoints. |
 | 12. Deployment + CI | 🔴 ~20% | Migrations/functions in repo; env vars documented. **Gaps:** no public frontend deploy, no GitHub Actions workflow, no SEO/social previews. |
 | 13. Quality + security | 🟡 ~50% | 19 unit tests (time/ICS/pagination/conflicts) green; DEFINER functions locked down. **Gaps:** no RLS tests, no feed-token tests, no a11y pass, no Playwright smoke. |
 | 14. Wedge features (added in review) | 🟡 ~30% | Conflict detection shipped. **Gaps:** onboarding/first-run, anonymous→account migration (specced in auth doc), live share links for personal schedules, 12/24h toggle + full i18n. |

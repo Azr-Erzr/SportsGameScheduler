@@ -1,6 +1,6 @@
 # Master Plan 2: Consolidated Implementation Plan
 
-Last updated: June 12, 2026
+Last updated: June 21, 2026
 
 This document is the single active implementation plan for everything that is partially done,
 undone, newly discovered, or moved beyond the original product plan.
@@ -48,7 +48,7 @@ Based on the current repo and review pass:
 | Supabase schema | Partially done | Reconciliation migration exists locally; remote apply/verification still needed. |
 | Provider sync | Partially done | Demo adapter plus canonical route/change-log updates; no cron, second provider, or live freshness UI yet. |
 | Follows and My Schedule | Partially done | Local follows, expanded match cards, region/language/hour preferences, and auth UI exist; server follows and anonymous-to-account migration still pending. |
-| Calendar feeds | Partially done | Function and local UI support hashed-token/TBD/broadcast contract, copy URL, and webcal open flow; server feed creation and real production URLs still pending. |
+| Calendar feeds | Mostly done | Signed-in users create server-backed hashed-token feeds with TBD/broadcast options, copy URL, and webcal open flow; production domain/env verification remains. |
 | Multi-sport frontend | Partially done | Neutral homepage, sport-family switcher, NFL/CFL/NCAA grouping, WNBA/UFC/CFL/F1/NHL/NBA staging, track/olympic surfaces exist; detail pages and real data previews still pending. |
 | Export Studio | Mostly done | Poster theming, high-resolution PNG output, Silbo file names, and mobile overflow improved; committed Playwright/a11y coverage still needed. |
 | Custom leagues | Partially done | Local CRUD plus private-by-default share controls exist; server shares, auth ownership, and imports still pending. |
@@ -58,6 +58,42 @@ Based on the current repo and review pass:
 | Quality/security | Partial | Unit tests exist; RLS/feed-token/a11y/mobile smoke tests needed. |
 | Localization/region | Partially done | Message-key shell, football/soccer terminology, region picker, language picker, and 12/24-hour preference exist; full translated UI/exports remain. |
 | Provider sourcing | Planned | TheSportsDB premium test, OpenF1, WNBA/CFL/UFC verification, provider rights review. |
+
+### Current Reality Update - June 21, 2026
+
+The table above is retained for historical context, but the repo has moved significantly since
+the June 12 review. Treat this section and the implementation checklist below as the current
+working state.
+
+Completed or materially implemented:
+
+- Contract reconciliation: hashed calendar-feed tokens/options, event change log, certainty/TBD
+  fields, canonical sport taxonomy aliases, updated `provider-sync`, updated `calendar-feed`, and
+  notification materialization are all in repo.
+- Accounts and server state: Supabase auth, magic link, Google OAuth, account menu, local-to-account
+  merge, server follows, server preferences, server calendar feeds, and server-backed custom leagues
+  are wired.
+- Core value: real live calendar feed creation, public custom-league share pages, share disable/rotate,
+  privacy-reviewed Notes/image/PDF/CSV/ICS export paths, themed exports, and branded PDF generation
+  are in place.
+- Discovery and expansion: the neutral Silbo homepage, sports nav, baseball route, other-sports
+  coverage page, event detail page, league/team pages, i18n shell, timezone/region controls, and
+  TheSportsDB-backed secondary sports hydration are present.
+- Alerts and operations: alert settings UI, notification copy taxonomy, cron SQL, admin sync dashboard,
+  GitHub Actions CI, Cloudflare deployment scripts/docs, ads/affiliate guardrails, provider cache
+  hashes, and calendar-feed ingestion scaffolding are in repo.
+
+Still open / needs either implementation or external setup:
+
+- Resend account/domain verification and `RESEND_API_KEY` / `EMAIL_FROM` secrets.
+- Web Push VAPID keys plus actual web-push send implementation.
+- Committed Playwright/mobile/a11y smoke tests.
+- Real spotlight/ranking backend tables/jobs to replace hardcoded homepage rails.
+- Broadcast/rightsholder backfill and approved affiliate URLs.
+- Full i18n extraction/translation coverage beyond the shell.
+- Provider-adapter test scripts for TheSportsDB/API-SPORTS/OpenF1 and reliable fight-card/bout
+  order data.
+- Final public domain/env reconciliation before launch.
 
 ## Implementation Sprint Update - June 12, 2026
 
@@ -1067,57 +1103,58 @@ Use this as the working checklist once implementation begins.
 
 ### Blocker Set A: Contracts
 
-- [ ] Lock decisions in Phase 0.
-- [ ] Verify local vs remote Supabase schema.
-- [ ] Create migration for calendar feed token hashing/options.
-- [ ] Create migration for event change log.
-- [ ] Create migration for certainty/TBD fields.
-- [ ] Reconcile sport vs league taxonomy.
-- [ ] Update `provider-sync`.
-- [ ] Update `calendar-feed`.
-- [ ] Update notifications materializer.
+- [x] Lock decisions in Phase 0.
+- [x] Verify local vs remote Supabase schema.
+- [x] Create migration for calendar feed token hashing/options.
+- [x] Create migration for event change log.
+- [x] Create migration for certainty/TBD fields.
+- [x] Reconcile sport vs league taxonomy.
+- [x] Update `provider-sync`.
+- [x] Update `calendar-feed`.
+- [x] Update notifications materializer.
 
 ### Blocker Set B: Accounts And Server State
 
-- [ ] Add Supabase auth client setup.
-- [ ] Build sign-in modal.
-- [ ] Build account menu/settings shell.
-- [ ] Add anonymous-to-account migration.
-- [ ] Move follows to server when signed in.
-- [ ] Move feed creation to server.
-- [ ] Move custom-league publishing to server.
+- [x] Add Supabase auth client setup.
+- [x] Build sign-in modal.
+- [x] Build account menu/settings shell.
+- [x] Add anonymous-to-account migration.
+- [x] Move follows to server when signed in.
+- [x] Move feed creation to server.
+- [x] Move custom-league publishing to server.
 
 ### Product Set C: Core User Value
 
-- [ ] Real calendar feed creation UI.
-- [ ] Real public share pages.
-- [ ] Custom league share disable/rotate.
+- [x] Real calendar feed creation UI.
+- [x] Real public share pages.
+- [x] Custom league share disable/rotate.
 - [ ] `.ics` import for custom leagues.
 - [ ] CSV/Sheets import path.
-- [ ] Notes/image export privacy review.
-- [ ] Export poster theme tokens.
+- [x] Notes/image export privacy review.
+- [x] Export poster theme tokens.
 
 ### Product Set D: Discovery And Expansion
 
-- [ ] Add message-key/i18n shell.
-- [ ] Add region/timezone/terminology controls.
-- [ ] Build neutral `/` homepage.
+- [x] Add message-key/i18n shell.
+- [x] Add region/timezone/terminology controls.
+- [x] Build neutral `/` homepage.
 - [ ] Add spotlight events backend/table.
-- [ ] Add event detail page.
-- [ ] Add league/team pages.
-- [ ] Add staged WNBA/CFL/UFC tiles.
-- [ ] Test TheSportsDB premium for WNBA/CFL/UFC.
+- [x] Add event detail page.
+- [x] Add league/team pages.
+- [x] Add staged WNBA/CFL/UFC tiles.
+- [x] Test TheSportsDB premium for WNBA/CFL/UFC.
 
 ### Product Set E: Alerts And Operations
 
-- [ ] Alert settings UI.
+- [x] Alert settings UI.
 - [ ] Resend secrets.
 - [ ] Web Push VAPID setup.
-- [ ] Cron schedules.
-- [ ] Admin sync dashboard.
+- [x] Cron schedules.
+- [x] Admin sync dashboard.
 - [ ] Rate limiting.
 - [ ] Playwright/mobile/a11y tests.
-- [ ] CI and public deploy.
+- [x] CI workflow and deploy scaffolding.
+- [ ] Production public deploy/env verification.
 
 ## Definition Of Done For Public Beta
 

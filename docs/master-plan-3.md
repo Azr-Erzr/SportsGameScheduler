@@ -1,6 +1,6 @@
 # Master Plan 3: Identity, Sport Expansion, Data Sources, And Export Craft
 
-Last updated: June 14, 2026
+Last updated: June 21, 2026
 
 This document captures the next phase after Master Plans 1 and 2: making the product feel
 less generic, expanding sport coverage intelligently, improving exports, and designing the
@@ -765,19 +765,33 @@ before.
 
 ## Next Implementation Order
 
-1. Browser-test the new expanded cards, Popular Picks toggle, sport switcher, and high-res PNG
-   export.
-2. Finish the Exports IA: one public Exports destination with segmented Live Sync vs Static
-   Packs flows, clear auto-update caveats, and no redundant top-level module tabs.
-3. Add visual identity polish: stronger outlines, sport-specific texture layers, better active
-   states, and one homepage hero/image treatment.
-4. Add a committed Playwright mobile smoke test for homepage, sport page, expanded match card,
+1. [x] Browser-test the expanded cards, sport switcher, export modal, and heavy sport-list routes
+   after the Firefox jank pass.
+2. [x] Finish the Exports IA: My Schedule now guides users toward Live Sync/ICS first, PDF/CSV/image
+   as static paths, and warns when large exports are better handled by a live system.
+3. [x] Add visual identity polish: brand block, sports nav, larger logo treatment, sport-specific
+   ticket colors, other-sports glyphs, dark/light mode cleanup, branded PDFs, and generator-aligned
+   favicon assets.
+4. [ ] Add a committed Playwright mobile smoke test for homepage, sport page, expanded match card,
    export studio, and custom leagues.
-5. Update backend taxonomy migration to match sport families or document the display/backend
-   mapping explicitly.
-6. Build provider-adapter test scripts for TheSportsDB, API-SPORTS, OpenF1, and one combat
+5. [x] Document/backend-map sport-family aliases and canonical sport keys in migrations/functions;
+   follow-up remains to clean any legacy display keys from old seed data.
+6. [ ] Build provider-adapter test scripts for TheSportsDB, API-SPORTS, OpenF1, and one combat
    source.
-7. Build the server cache/diff tables before plugging more UI into live APIs.
-8. Add the spotlight ranking tables/jobs and region-aware world-board query.
-9. Prototype fight-card page and fight-card export template.
-10. Decide whether Silbo replaces MatchPulse before final public branding and logo work.
+7. [x] Build the server cache/diff layer before plugging more UI into live APIs: `payload_hash`,
+   `last_checked_at`, provider sync run logging, event change logs, source targets, and ICS feed
+   ingestion are in repo.
+8. [ ] Add the spotlight ranking tables/jobs and region-aware world-board query.
+9. [ ] Prototype fight-card presentation inline on sport pages; partly explored, but still needs structured `event_bouts`
+   data, reliable bout order, and a dedicated export template.
+10. [x] Move public product language to Silbo Sports; remaining launch task is legal/domain lock,
+   not UI naming exploration.
+
+### Practical Next Batch
+
+The best MP3 items to complete next are:
+
+1. Add the Playwright smoke suite and mobile viewport checks.
+2. Add provider-adapter scripts/tests for TheSportsDB, API-SPORTS, OpenF1, and combat data.
+3. Replace hardcoded homepage spotlight/world-board data with DB-backed ranking tables.
+4. Formalize fight-card/race-weekend/bracket structures once provider coverage is confirmed.

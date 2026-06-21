@@ -1,6 +1,6 @@
 # Master Plan 4: Backend Reality Check, Caching, Refresh, and the Glue That Makes Silbo Worth Using
 
-Last updated: June 19, 2026
+Last updated: June 21, 2026
 
 This plan is grounded in a live audit of the deployed Supabase project (`gcnbgdpicgeahxscpsfc`),
 the edge functions, the cron schedule, and the frontend wiring — not on what the earlier plans
@@ -39,6 +39,41 @@ turn email on; VAPID keys for push; sport-structure modeling (Wave 4); World Cup
 
 ---
 
+## 0.1 Update - Shipped Since The June 15 Audit (June 21, 2026)
+
+The audit sections below remain useful historical context, but several "broken" findings have now
+been closed in the repo:
+
+- **Exports and My Schedule are no longer World-Cup-only.** Multi-sport events flow into My
+  Schedule, export advice, ICS, CSV, Notes/share text, image packs, and branded PDFs.
+- **Live Sync is connected.** Signed-in users create real `calendar_feeds` rows with hashed tokens,
+  copy/open the deployed feed URL, include TBD placeholders/broadcast metadata, and manage active
+  feeds from the UI.
+- **Alerts are real up to the transport boundary.** Alert settings write `alert_preferences`, copy
+  is centralized, change/reminder materialization is scheduled, and notification delivery is ready
+  for Resend/VAPID secrets.
+- **Accounts now unlock real state.** Magic link/Google auth, follows, preferences, local-to-account
+  merge, custom leagues, and feed creation all have server-backed paths.
+- **Provider caching exists.** Hydrators and provider sync now compute `payload_hash`, update
+  `last_checked_at` on unchanged pulls, bump versions only on calendar-visible changes, and record
+  change history.
+- **Calendar-feed ingestion exists.** `source_providers`, `source_targets`, and
+  `event_external_ids` are in repo; `ics-feed-ingest` parses allowlisted public `.ics`/`webcal://`
+  feeds, hashes payloads, respects dry-run mode, and upserts canonical events.
+- **Coverage expanded.** Baseball is a full route, other provider-backed sports have a coverage
+  page, and the sports nav/dropdown is now the primary discovery pattern.
+
+Remaining MP4 work:
+
+- Provision email and push secrets, then verify real delivery end to end.
+- Add source-target admin review tooling and seed verified official calendar feeds.
+- Backfill factual `broadcasts`/watch-provider data and approved affiliate URLs.
+- Replace hardcoded homepage spotlight/world-board arrays with DB ranking tables/jobs.
+- Model `event_bouts`, bracket slots, playoff series, and race-weekend sessions once reliable data
+  sources are selected.
+
+---
+
 ## 1. Live State Snapshot (measured June 15, 2026)
 
 **Data in the DB (real, hydrated from TheSportsDB):**
@@ -74,7 +109,10 @@ between-seasons; events exist, just not future-dated right now.)
 
 ---
 
-## 2. Honest Subsystem Audit — Does It Actually Work?
+## 2. Honest Subsystem Audit - Historical June 15 Snapshot
+
+The findings in this section captured the state before the June 15-21 implementation passes. Use
+the June 21 update above for current status; this section remains as the original diagnosis.
 
 ### 2.1 Exports — partially, and World-Cup-only
 - `ExportStudio`, `MySchedule`, and `Home` all read `useMatches()` = **`liveMatches.ts`, which is
@@ -359,6 +397,38 @@ call/hour. 100 leagues ≈ 100 calls/hour steady-state — fine on premium with 
 
 ## 9. What I Can Tackle Right Now (no secrets / decisions needed)
 
+### Current Status - June 21, 2026
+
+Completed from the original MP4 queue:
+
+1. [x] Fix the two schema-drift bugs: `calendar-feed` uses the current `events` schema, and
+   notifications materialize from existing change/history data on cron.
+2. [x] Wire follows + prefs to Supabase when signed in, including local-to-account merge.
+3. [x] Make exports + My Schedule multi-sport with a unified "my events" path.
+4. [x] Connect Live Sync to the real `calendar-feed` function with real `calendar_feeds` rows.
+5. [x] Add calendar polish in `_shared/ics.ts` and the snapshot exporter.
+6. [x] Flood the DB/provider allowlist with secondary sports and baseball targets.
+7. [x] Add `payload_hash` + `last_checked_at` and unchanged-payload short-circuiting.
+8. [x] Add calendar-feed ingestion for allowlisted `.ics` / `webcal://` sources.
+
+New immediate backend queue:
+
+1. Create provider-adapter verification scripts for TheSportsDB, API-SPORTS, OpenF1, and one combat
+   source. These should probe coverage and normalize sample payloads without mutating production.
+2. Seed and review official calendar-feed targets. Keep `dry_run = true` until source terms and
+   source confidence are verified, then promote selected feeds.
+3. Add source/provider observability to `/admin`: target status, last checked/changed, dry-run
+   result counts, errors, and source terms notes.
+4. Backfill factual `broadcasts`, then attach approved `watch_links` with disclosure and region
+   matching.
+5. Replace hardcoded homepage data with spotlight/ranking tables and a region-aware world-board
+   query.
+6. Model `event_bouts`, fight-card sections, bracket slots, playoff series, race-weekend sessions,
+   and export templates that use those structures.
+
+The historical queue below is kept as audit context; every numbered item in it has been completed
+in the repo.
+
 Ordered by leverage-to-risk. None of these need new API keys or product decisions:
 
 1. **Fix the two schema-drift bugs** (low risk, unblocks real features):
@@ -393,6 +463,19 @@ Needs you / external setup (not blocked on me, but I can't finish alone):
 ---
 
 ## 10. Recommended Sequence
+
+Current status:
+
+- **Wave 1 (unblock + keystone):** complete in repo.
+- **Wave 2 (the promise):** complete in repo, pending production-domain/env verification.
+- **Wave 3 (retention):** partly complete. Notifications cron/change-alert pipeline is in repo but
+  needs Resend/VAPID setup; spotlight tables are still open.
+- **Wave 4 (distinctive):** still open. Fight-card, bracket, playoff-series, and race-weekend
+  structures need reliable source data and UI/export templates.
+- **Ongoing:** add verified provider/source targets, watch `payload_hash` effectiveness as volume
+  grows, and promote calendar-feed sources from dry-run only after terms/source confidence review.
+
+Historical sequence from the June 15 audit:
 
 **Wave 1 (unblock + keystone):** fix the two backend bugs → wire follows/prefs to DB →
 multi-sport "my events" query. After this, signing in and following anything across all sports
