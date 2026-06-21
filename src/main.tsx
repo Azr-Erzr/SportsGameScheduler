@@ -6,6 +6,15 @@ import './styles/tailwind.css'
 import { AppShell } from './app/AppShell'
 import { AppStateProvider } from './app/state'
 
+function applyRuntimeBrowserFlags() {
+  const isFirefox = /\bFirefox\//.test(navigator.userAgent)
+
+  document.documentElement.dataset.browser = isFirefox ? 'firefox' : 'enhanced'
+  document.documentElement.dataset.visualEffects = isFirefox ? 'reduced' : 'enhanced'
+}
+
+applyRuntimeBrowserFlags()
+
 // PERF: keep the shell small. Page modules load by route; export studio pulls the canvas
 // poster pipeline, sport pages pull banner assets, and Supabase loads only when configured.
 const HomePage = lazy(() => import('./pages/Home').then((m) => ({ default: m.HomePage })))
