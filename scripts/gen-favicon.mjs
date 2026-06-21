@@ -22,6 +22,9 @@ async function png(size, name) {
 
 const p16 = await png(16, 'favicon-16x16.png')
 const p32 = await png(32, 'favicon-32x32.png')
+// Google Search prefers a square favicon that's a multiple of 48px (>=48).
+await png(48, 'favicon-48x48.png')
+await png(96, 'favicon-96x96.png')
 
 // Build a minimal ICO containing the 16px and 32px PNG entries.
 function icoEntry(pngBuf, size, offset) {
