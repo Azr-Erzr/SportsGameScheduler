@@ -109,22 +109,20 @@ type SpotlightRow = {
   detail: string
   href: string
   global_importance: number
+  ranking_score?: number
 }
 
-let cache: SpotlightEvent[] | null = null
-let inflight: Promise<SpotlightEvent[]> | null = null
+const cache = new Map<string, SpotlightEvent[]>()
+const inflight = new Map<string, Promise<SpotlightEvent[]>>()
 
-async function fetchSpotlights(): Promise<SpotlightEvent[]> {
+async function fetchSpotlights(regionCode?: string | null): Promise<SpotlightEvent[]> {
   const supabase = await getSupabaseClient()
   if (!supabase) return fallbackSpotlightEvents
 
-  const { data, error } = await supabase
-    .from('spotlight_events')
-    .select('title, sport_key, label, detail, href, global_importance')
-    .eq('is_active', true)
-    .order('global_importance', { ascending: false })
-    .order('starts_at', { ascending: true, nullsFirst: false })
-    .limit(16)
+  const { data, error } = await supabase.rpc('spotlight_ranked', {
+    region: regionCode?.toUpperCase() ?? null,
+    limit_count: 16,
+  })
 
   if (error || !data?.length) return fallbackSpotlightEvents
   return (data as SpotlightRow[]).map((row) => ({
@@ -133,33 +131,39 @@ async function fetchSpotlights(): Promise<SpotlightEvent[]> {
     label: row.label,
     detail: row.detail,
     href: row.href,
-    importance: row.global_importance,
+    importance: row.ranking_score ?? row.global_importance,
   }))
 }
 
-function loadSpotlights() {
-  if (cache) return Promise.resolve(cache)
-  inflight ??= fetchSpotlights()
+function loadSpotlights(regionCode?: string | null) {
+  const key = regionCode?.toUpperCase() ?? 'GLOBAL'
+  const cached = cache.get(key)
+  if (cached) return Promise.resolve(cached)
+  if (inflight.has(key)) return inflight.get(key)!
+  const promise = fetchSpotlights(regionCode)
     .then((events) => {
-      cache = events
+      cache.set(key, events)
       return events
     })
     .catch(() => fallbackSpotlightEvents)
-  return inflight
+    .finally(() => inflight.delete(key))
+  inflight.set(key, promise)
+  return promise
 }
 
-export function useSpotlightEvents() {
-  const [events, setEvents] = useState(() => cache ?? fallbackSpotlightEvents)
+export function useSpotlightEvents(regionCode?: string | null) {
+  const key = regionCode?.toUpperCase() ?? 'GLOBAL'
+  const [events, setEvents] = useState(() => cache.get(key) ?? fallbackSpotlightEvents)
 
   useEffect(() => {
     let cancelled = false
-    loadSpotlights().then((next) => {
+    loadSpotlights(regionCode).then((next) => {
       if (!cancelled) setEvents(next)
     })
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [regionCode])
 
   return events
 }

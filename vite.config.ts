@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite'
+import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
@@ -9,4 +9,7 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   // Respect the harness/preview-assigned port when present (vite ignores PORT by default).
   server: { port: Number(process.env.PORT) || 5173 },
+  test: {
+    exclude: ['tests/e2e/**', 'node_modules/**', 'dist/**'],
+  },
 })

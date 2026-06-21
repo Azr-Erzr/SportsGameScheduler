@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { useAppState } from '../app/state-context'
 import { Badge, Button, EmptyState, Panel } from '../components/ui'
 import { getSupabaseClient } from '../lib/supabase'
+import { disableBrowserPush, enableBrowserPush, pushSupported, vapidPublicKey } from '../lib/push'
 import {
   defaultAlertPref,
   deleteAlertPreference,
@@ -106,6 +107,18 @@ export function AlertSettingsPage() {
     else void disable(label)
   }
 
+  async function togglePush(pref: AlertChannelPref, on: boolean) {
+    if (!userId) return
+    try {
+      if (on) await enableBrowserPush(userId)
+      else await disableBrowserPush()
+      await persist({ ...pref, pushEnabled: on })
+      setMessage(on ? 'Browser push enabled for this device.' : 'Browser push disabled for this device.')
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Browser push could not be updated.')
+    }
+  }
+
   if (!auth.configured) {
     return <EmptyState title="Alerts unavailable" body="Alert settings will appear here once account sync is connected." />
   }
@@ -178,14 +191,25 @@ export function AlertSettingsPage() {
                           onChange={(e) => persist({ ...pref, emailEnabled: e.target.checked })}
                         />
                       </label>
-                      <label className="flex items-center justify-between gap-3 rounded-lg border border-primary/15 bg-page/45 px-3 py-2 text-sm text-ink/45">
+                      <label className="flex items-center justify-between gap-3 rounded-lg border border-primary/15 bg-page/45 px-3 py-2 text-sm text-ink/75">
                         <span>
-                          <span className="inline-flex items-center gap-2 font-semibold text-ink/60">
+                          <span className="inline-flex items-center gap-2 font-semibold">
                             <Smartphone size={14} className="text-primary" /> Browser push
                           </span>
-                          <span className="mt-0.5 block text-xs">Coming after VAPID keys are provisioned.</span>
+                          <span className="mt-0.5 block text-xs text-ink/50">
+                            {pushSupported()
+                              ? 'Sends alerts to this browser.'
+                              : vapidPublicKey
+                                ? 'This browser does not support web push.'
+                                : 'Set VITE_VAPID_PUBLIC_KEY plus function VAPID secrets to enable.'}
+                          </span>
                         </span>
-                        <input type="checkbox" checked={pref.pushEnabled} disabled />
+                        <input
+                          type="checkbox"
+                          checked={pref.pushEnabled}
+                          disabled={!pushSupported()}
+                          onChange={(e) => togglePush(pref, e.target.checked)}
+                        />
                       </label>
                     </div>
 
@@ -235,7 +259,9 @@ export function AlertSettingsPage() {
             )
           })}
           {message && <p className="text-sm font-medium text-primary">{message}</p>}
-          <p className="text-xs text-ink/45">Email alerts are live once Resend secrets are set. Browser push is held until VAPID delivery is wired.</p>
+          <p className="text-xs text-ink/45">
+            Email alerts send once Resend secrets are set. Browser push sends once VAPID public/private keys are configured.
+          </p>
         </>
       )}
     </div>

@@ -86,7 +86,7 @@ function ProgramCoverCard({
 export function HomePage() {
   const { followedTeams, toggleFollow, prefs } = useAppState()
   const { matches } = useMatches()
-  const spotlightEvents = useSpotlightEvents()
+  const spotlightEvents = useSpotlightEvents(prefs.regionCode)
   const [query, setQuery] = useState('')
 
   const upcomingMatches = useMemo(() => {

@@ -9,8 +9,40 @@ type Overview = {
   generated_at: string
   totals: Record<string, number>
   sports: Array<{ sport: string; leagues: number; events: number; upcoming: number }>
-  targets: { active: number; inactive: number; errored: number }
-  recent_runs: Array<{ status: string; fetched: number | null; changed: number | null; finished_at: string | null; error: string | null }>
+  targets: { active: number; inactive: number; errored: number; stale?: number }
+  provider_targets?: Array<{
+    provider_key: string
+    active: number
+    errored: number
+    stale: number
+    last_checked_at: string | null
+    last_error: string | null
+  }>
+  source_targets?: {
+    total: number
+    active: number
+    dry_run: number
+    errored: number
+    recent: Array<{
+      target_key: string
+      sport_key: string
+      dry_run: boolean
+      last_status: string | null
+      last_checked_at: string | null
+      last_error: string | null
+    }>
+  }
+  watch?: { providers: number; active_links: number; pending_affiliates: number; approved_affiliates: number }
+  secrets?: Record<string, boolean>
+  recent_runs: Array<{
+    provider_key?: string
+    sport_key?: string
+    status: string
+    fetched: number | null
+    changed: number | null
+    finished_at: string | null
+    error: string | null
+  }>
 }
 
 export function AdminPage() {
@@ -54,12 +86,12 @@ export function AdminPage() {
       </EmptyState>
     )
   }
-  if (!data) return <p className="board-label py-10 text-center text-ink/50">Loading admin stats…</p>
+  if (!data) return <p className="board-label py-10 text-center text-ink/50">Loading admin stats...</p>
 
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-xl font-extrabold text-primary">Admin · Observability</h1>
+        <h1 className="text-xl font-extrabold text-primary">Admin Observability</h1>
         <p className="text-sm text-ink/55">Snapshot generated {relativeTimeFromNow(new Date(data.generated_at))}.</p>
       </div>
 
@@ -75,9 +107,85 @@ export function AdminPage() {
       <Panel>
         <PanelHeading
           title="Hydration targets"
-          subtitle={`${data.targets.active} active · ${data.targets.inactive} inactive · ${data.targets.errored} errored`}
+          subtitle={`${data.targets.active} active - ${data.targets.inactive} inactive - ${data.targets.errored} errored - ${data.targets.stale ?? 0} stale`}
         />
+        {data.provider_targets?.length ? (
+          <div className="mt-3 overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left font-mono text-[10px] uppercase tracking-wide text-ink/45">
+                  <th className="py-1">Provider</th>
+                  <th className="py-1 text-right">Active</th>
+                  <th className="py-1 text-right">Stale</th>
+                  <th className="py-1 text-right">Errored</th>
+                  <th className="py-1 text-right">Last check</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.provider_targets.map((target) => (
+                  <tr key={target.provider_key} className="border-t border-primary/10">
+                    <td className="py-1 font-semibold">{target.provider_key}</td>
+                    <td className="py-1 text-right">{target.active}</td>
+                    <td className="py-1 text-right">{target.stale}</td>
+                    <td className="py-1 text-right">{target.errored}</td>
+                    <td className="py-1 text-right font-mono text-[10px] text-ink/45">
+                      {target.last_checked_at ? relativeTimeFromNow(new Date(target.last_checked_at)) : 'never'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
       </Panel>
+
+      <div className="grid gap-3 lg:grid-cols-3">
+        <Panel>
+          <PanelHeading
+            title="Source targets"
+            subtitle={
+              data.source_targets
+                ? `${data.source_targets.active}/${data.source_targets.total} active - ${data.source_targets.dry_run} dry-run - ${data.source_targets.errored} errored`
+                : 'Not reported'
+            }
+          />
+          <ul className="mt-3 space-y-1 text-xs text-ink/60">
+            {(data.source_targets?.recent ?? []).slice(0, 4).map((target) => (
+              <li key={target.target_key} className="flex items-center gap-2">
+                <Badge tone={target.last_error ? 'warning' : target.dry_run ? 'muted' : 'secondary'}>
+                  {target.dry_run ? 'dry-run' : 'live'}
+                </Badge>
+                <span className="min-w-0 flex-1 truncate">{target.target_key}</span>
+              </li>
+            ))}
+          </ul>
+        </Panel>
+        <Panel>
+          <PanelHeading
+            title="Watch links"
+            subtitle={
+              data.watch
+                ? `${data.watch.active_links} links - ${data.watch.providers} providers`
+                : 'Not reported'
+            }
+          />
+          {data.watch && (
+            <p className="mt-3 text-sm text-ink/60">
+              {data.watch.pending_affiliates} pending affiliate approvals, {data.watch.approved_affiliates} approved.
+            </p>
+          )}
+        </Panel>
+        <Panel>
+          <PanelHeading title="Secrets" subtitle="Function readiness" />
+          <div className="mt-3 flex flex-wrap gap-2">
+            {Object.entries(data.secrets ?? {}).map(([key, ready]) => (
+              <Badge key={key} tone={ready ? 'secondary' : 'warning'}>
+                {key}: {ready ? 'ready' : 'missing'}
+              </Badge>
+            ))}
+          </div>
+        </Panel>
+      </div>
 
       <Panel>
         <PanelHeading title="Coverage by sport" />
@@ -111,8 +219,9 @@ export function AdminPage() {
           {data.recent_runs.map((r, i) => (
             <li key={i} className="flex items-center gap-2">
               <Badge tone={r.status === 'success' ? 'secondary' : r.status === 'running' ? 'muted' : 'warning'}>{r.status}</Badge>
+              {r.provider_key && <span className="font-mono text-[10px] uppercase text-ink/45">{r.provider_key}</span>}
               <span className="text-ink/60">
-                {r.fetched ?? 0} fetched · {r.changed ?? 0} changed
+                {r.fetched ?? 0} fetched - {r.changed ?? 0} changed
               </span>
               <span className="ml-auto font-mono text-[10px] text-ink/45">
                 {r.finished_at ? relativeTimeFromNow(new Date(r.finished_at)) : 'in progress'}

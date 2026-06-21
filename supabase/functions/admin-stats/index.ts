@@ -36,5 +36,13 @@ Deno.serve(async (req) => {
 
   const { data, error } = await supabase.rpc('admin_overview')
   if (error) return json({ error: error.message }, 500)
-  return json(data)
+  return json({
+    ...(data as Record<string, unknown>),
+    secrets: {
+      resend: Boolean(Deno.env.get('RESEND_API_KEY')),
+      vapid: Boolean(Deno.env.get('VAPID_PUBLIC_KEY') && Deno.env.get('VAPID_PRIVATE_KEY')),
+      thesportsdb: Boolean(Deno.env.get('THESPORTSDB_API_KEY')),
+      apiSports: Boolean(Deno.env.get('APISPORTS_KEY')),
+    },
+  })
 })

@@ -8,6 +8,8 @@
     "build": "npm run brand:assets && tsc -b && vite build && node scripts/generate-seo-assets.mjs",
     "lint": "eslint .",
     "test": "vitest run",
+    "test:e2e": "playwright test",
+    "provider:verify": "node scripts/verify-providers.mjs",
     "brand:assets": "node scripts/generate-brand-assets.mjs",
     "images": "node scripts/optimize-images.mjs",
     "preview": "vite preview",
@@ -24,7 +26,9 @@
     "react-router-dom": "^7.17.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.11.3",
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.61.0",
     "@tailwindcss/vite": "^4.3.0",
     "@types/node": "^24.12.3",
     "@types/react": "^19.2.14",

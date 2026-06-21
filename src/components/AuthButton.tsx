@@ -78,7 +78,12 @@ export function AuthButton() {
 
   return (
     <div className="relative">
-      <Button variant="ghost" onClick={() => setOpen((current) => !current)} className="max-sm:h-10 max-sm:w-10 max-sm:px-0">
+      <Button
+        variant="ghost"
+        onClick={() => setOpen((current) => !current)}
+        className="max-sm:h-10 max-sm:w-10 max-sm:px-0"
+        aria-label="Sign in"
+      >
         <LogIn size={16} />
         <span className="hidden sm:inline">Sign in</span>
       </Button>
