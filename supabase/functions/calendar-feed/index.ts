@@ -4,6 +4,7 @@
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { renderCalendar, type FeedEvent } from '../_shared/ics.ts'
+import { checkRateLimit, rateLimitKey, rateLimitedResponse } from '../_shared/rate-limit.ts'
 
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL')!,
@@ -43,6 +44,8 @@ Deno.serve(async (req) => {
 
   if (!token) return new Response('Not found', { status: 404 })
   const tokenHash = await sha256Hex(token)
+  const limit = checkRateLimit(rateLimitKey(req, 'calendar-feed', tokenHash), { limit: 120, windowMs: 60_000 })
+  if (!limit.allowed) return rateLimitedResponse(limit.retryAfterSeconds)
 
   const { data: feed } = await supabase
     .from('calendar_feeds')

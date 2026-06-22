@@ -39,7 +39,7 @@ Deno.serve(async (req) => {
   return json({
     ...(data as Record<string, unknown>),
     secrets: {
-      resend: Boolean(Deno.env.get('RESEND_API_KEY')),
+      resend: Boolean(Deno.env.get('RESEND_API_KEY') || Deno.env.get('RESENDAPI')),
       vapid: Boolean(Deno.env.get('VAPID_PUBLIC_KEY') && Deno.env.get('VAPID_PRIVATE_KEY')),
       thesportsdb: Boolean(Deno.env.get('THESPORTSDB_API_KEY')),
       apiSports: Boolean(Deno.env.get('APISPORTS_KEY')),

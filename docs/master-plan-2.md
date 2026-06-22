@@ -95,6 +95,24 @@ Still open / needs either implementation or external setup:
   order data.
 - Final public domain/env reconciliation before launch.
 
+### Closeout Update - June 22, 2026
+
+This pass closes the remaining MP1/MP2 practical gaps that can be completed inside the repo:
+
+- Resend transport is wired in the notification worker with branded HTML/text email rendering,
+  Resend tags, `RESEND_API_KEY` plus `RESENDAPI` compatibility, and admin secret visibility.
+- VAPID/web-push remains treated as implemented in repo; production verification now checks the
+  frontend public key and Supabase function secrets instead of redoing key generation.
+- The public `calendar-feed` function now has a lightweight burst guard in addition to the
+  required Cloudflare WAF rule.
+- `npm run verify:prod` now checks launch readiness: domain lock, Cloudflare/Vite env, Supabase
+  alert/provider secrets, VAPID, Resend, admin allowlist, OG asset, headers, and SPA fallback.
+- Custom league CSV/Sheets import is now a real admin flow for pasted/uploaded CSV schedules.
+
+Still external before launch: set/verify production secrets in Cloudflare Pages and Supabase,
+enable Cloudflare WAF rate-limit rules, verify Resend sender/domain, and confirm legal/footer
+pages and unsubscribe/alert-management links on the deployed domain.
+
 ## Implementation Sprint Update - June 12, 2026
 
 This pass moved several Master Plan 2 items from planning into repo-ready implementation. The
@@ -1129,7 +1147,7 @@ Use this as the working checklist once implementation begins.
 - [x] Real public share pages.
 - [x] Custom league share disable/rotate.
 - [ ] `.ics` import for custom leagues.
-- [ ] CSV/Sheets import path.
+- [x] CSV/Sheets import path.
 - [x] Notes/image export privacy review.
 - [x] Export poster theme tokens.
 
@@ -1147,14 +1165,14 @@ Use this as the working checklist once implementation begins.
 ### Product Set E: Alerts And Operations
 
 - [x] Alert settings UI.
-- [ ] Resend secrets.
-- [ ] Web Push VAPID setup.
+- [ ] Resend secrets in production.
+- [x] Web Push VAPID setup in repo.
 - [x] Cron schedules.
 - [x] Admin sync dashboard.
-- [ ] Rate limiting.
+- [x] Rate limiting defense-in-depth in repo; Cloudflare WAF rule still required at deploy.
 - [ ] Playwright/mobile/a11y tests.
 - [x] CI workflow and deploy scaffolding.
-- [ ] Production public deploy/env verification.
+- [x] Production public deploy/env verification script.
 
 ## Definition Of Done For Public Beta
 

@@ -6,6 +6,11 @@
 # -visit round-trip. index.html is intentionally NOT matched here so new deploys still propagate.
 # Non-hashed public images live in /assets/sub-dirs/ and are left on the platform default.
 
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+
 /assets/*.js
   Cache-Control: public, max-age=31536000, immutable
 

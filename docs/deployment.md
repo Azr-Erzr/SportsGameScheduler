@@ -21,10 +21,14 @@ Supabase key is the publishable/anon key; RLS protects data):
 - `VITE_ADSENSE_CLIENT` (optional — activates ads; see monetization doc)
 - `VITE_AFFILIATE_*` (optional — per approved affiliate program)
 
-### SPA fallback (shipped)
-`public/_redirects` contains `/*  /index.html  200` so deep links and hard refreshes resolve to
-the app shell instead of 404. **Without this, `/events/:id`, `/s/:token`, etc. break on direct
-load** — required for shareable links, calendar "View" links, and SEO.
+### SPA fallback + headers (shipped)
+`wrangler.jsonc` uses Cloudflare Workers Static Assets with
+`not_found_handling = "single-page-application"` so deep links and hard refreshes resolve to the
+app shell instead of 404. **Without this, `/events/:id`, `/s/:token`, etc. break on direct load**
+-- required for shareable links, calendar "View" links, and SEO.
+
+`public/_headers` ships conservative hardening headers plus immutable cache headers for
+fingerprinted Vite assets. Keep `index.html` off immutable caching so new deploys propagate.
 
 ### Deploy trigger — two options
 1. **Native Git integration (recommended, likely current setup):** connect the GitHub repo in the
@@ -68,15 +72,20 @@ independent of the deploy path.
   provider-hydrate-players, provider-sync) deploy via the Supabase MCP / CLI.
 - Cron jobs (`supabase/cron.sql`): provider-hydrate (15 min), players (3×/hr), notifications
   (5 min).
-- **Secrets** (Supabase → Settings → Edge Functions): `THESPORTSDB_API_KEY` (set), and for live
-  email: `RESEND_API_KEY` + `EMAIL_FROM` + `APP_URL` (pending).
+- **Secrets** (Supabase → Settings → Edge Functions): `THESPORTSDB_API_KEY`, `ADMIN_EMAILS`, and
+  for live alerts: `RESEND_API_KEY` or the existing `RESENDAPI` alias + `EMAIL_FROM` + `APP_URL`
+  + `VAPID_PUBLIC_KEY` + `VAPID_PRIVATE_KEY` + `VAPID_SUBJECT`.
+
+Run `npm run verify:prod` locally or in CI before launch. It checks the domain lock, required
+build env, Supabase function secrets, VAPID/Resend readiness, asset headers, and SPA fallback.
 
 ## Pre-launch checklist
-- [ ] Reconcile the public domain: `silbosports.com` (SEO/canonical/sitemap) vs `silbosports.app`
-      (edge `APP_URL`). Pick one; set it in index.html, `seo.ts` `SEO_ORIGIN`, sitemap, robots,
-      and edge `APP_URL`.
+- [ ] Domain lock: production is `https://silbosports.com`; keep `seo.ts` `SEO_ORIGIN`, sitemap,
+      robots, email links, calendar links, and Edge Function `APP_URL` on that domain.
 - [ ] Confirm Pages env vars are set (above) so the deployed build talks to Supabase.
 - [ ] Add a 1200×630 `public/og-cover.png` (referenced by OG/Twitter tags).
-- [ ] Verify `_redirects` is in the deployed output (`dist/_redirects`).
+- [ ] Verify Workers Static Assets SPA fallback is active in the deployed Worker.
 - [ ] Cloudflare WAF: add a rate-limiting rule on `/* ` or the Supabase functions domain (see
       Admin/observability doc) rather than a custom limiter.
+- [ ] Legal/footer lock: Terms, Privacy, contact, and unsubscribe/alert-management links are live
+      before email alerts are enabled.

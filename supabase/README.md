@@ -29,7 +29,7 @@ the production database and Edge Function path.
 1. `supabase init` / link the project, then `supabase db push`.
 2. Seed `sports` and provider targets with the checked-in migrations.
 3. Set function secrets: `WORLDCUP_JSON_URL`, `THESPORTSDB_API_KEY`, `APISPORTS_KEY`,
-   `RESEND_API_KEY`, `EMAIL_FROM`, `APP_URL`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`,
+   `RESEND_API_KEY` (or existing alias `RESENDAPI`), `EMAIL_FROM`, `APP_URL`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`,
    and `VAPID_SUBJECT`.
 4. Deploy functions:
 
@@ -72,6 +72,9 @@ Email alerts need a Resend account, a verified sending domain, and these functio
 ```sh
 supabase secrets set RESEND_API_KEY=<resend-api-key> EMAIL_FROM="Silbo Sports <alerts@yourdomain>"
 ```
+
+The deployed notification worker also accepts `RESENDAPI` for compatibility with the current
+dashboard secret name. Prefer `RESEND_API_KEY` for new environments.
 
 Browser push does not need a paid account, but it does need a VAPID keypair in both the function
 secrets and the frontend build:

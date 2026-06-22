@@ -5,18 +5,20 @@
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { alertCopyFor } from '../_shared/alert-copy.ts'
+import { renderSilboAlertEmail } from '../_shared/email-template.ts'
 
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL')!,
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
 )
 
-const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY') ?? ''
+const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY') ?? Deno.env.get('RESENDAPI') ?? ''
 const EMAIL_FROM = Deno.env.get('EMAIL_FROM') ?? 'Silbo Sports <reminders@silbosports.app>'
-const APP_URL = Deno.env.get('APP_URL') ?? 'https://silbosports.app'
+const APP_URL = normalizeAppUrl(Deno.env.get('APP_URL') ?? 'https://silbosports.app')
 const VAPID_PUBLIC_KEY = Deno.env.get('VAPID_PUBLIC_KEY') ?? ''
 const VAPID_PRIVATE_KEY = Deno.env.get('VAPID_PRIVATE_KEY') ?? ''
 const VAPID_SUBJECT = Deno.env.get('VAPID_SUBJECT') ?? `mailto:alerts@${new URL(APP_URL).hostname}`
+const RESEND_ENDPOINT = 'https://api.resend.com/emails'
 
 type Delivery = {
   id: string
@@ -36,8 +38,34 @@ type EventForAlert = {
 
 class SkipDelivery extends Error {}
 
+function normalizeAppUrl(value: string) {
+  try {
+    return new URL(value).toString().replace(/\/$/, '')
+  } catch (_) {
+    return 'https://silbosports.app'
+  }
+}
+
+function isEmail(value: string | null | undefined): value is string {
+  return Boolean(value && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value))
+}
+
+function errorMessage(error: unknown, maxLength = 900) {
+  const message = error instanceof Error ? error.message : String(error)
+  return message.length > maxLength ? `${message.slice(0, maxLength)}...` : message
+}
+
+function resendTagValue(value: string | null | undefined) {
+  return String(value ?? 'unknown').replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 80) || 'unknown'
+}
+
+async function resendError(response: Response) {
+  const body = await response.text().catch(() => '')
+  return `Email send failed: ${response.status} ${body.slice(0, 500)}`
+}
+
 async function sendReminderEmail(delivery: Delivery) {
-  if (!RESEND_API_KEY) throw new Error('RESEND_API_KEY not configured')
+  if (!RESEND_API_KEY) throw new Error('RESEND_API_KEY/RESENDAPI not configured')
   if (!delivery.user_id || !delivery.event_id) throw new Error('Delivery missing user or event')
 
   const [{ data: user }, { data: event }] = await Promise.all([
@@ -49,9 +77,11 @@ async function sendReminderEmail(delivery: Delivery) {
       .single(),
   ])
   const email = user?.user?.email
-  if (!email || !event) throw new Error('Missing recipient or event')
+  if (!isEmail(email)) throw new SkipDelivery('Missing or invalid recipient email')
+  if (!event) throw new SkipDelivery('Missing event for delivery')
 
   const row = event as EventForAlert
+  const manageUrl = `${APP_URL}/settings/alerts`
   const copy = alertCopyFor(
     delivery.kind,
     {
@@ -61,20 +91,39 @@ async function sendReminderEmail(delivery: Delivery) {
       venue_name: row.venues?.name ?? null,
       league_name: row.leagues?.name ?? null,
     },
-    `${APP_URL}/settings/alerts`,
+    manageUrl,
   )
+  const emailBody = renderSilboAlertEmail({
+    appUrl: APP_URL,
+    brandName: 'Silbo Sports',
+    copy,
+    event: {
+      title: row.title,
+      starts_at: row.starts_at,
+      timezone: row.timezone,
+      venue_name: row.venues?.name ?? null,
+      league_name: row.leagues?.name ?? null,
+    },
+    manageUrl,
+  })
 
-  const response = await fetch('https://api.resend.com/emails', {
+  const response = await fetch(RESEND_ENDPOINT, {
     method: 'POST',
     headers: { authorization: `Bearer ${RESEND_API_KEY}`, 'content-type': 'application/json' },
     body: JSON.stringify({
       from: EMAIL_FROM,
-      to: email,
-      subject: copy.subject,
-      text: copy.body,
+      to: [email],
+      subject: emailBody.subject,
+      text: emailBody.text,
+      html: emailBody.html,
+      tags: [
+        { name: 'delivery_id', value: resendTagValue(delivery.id) },
+        { name: 'kind', value: resendTagValue(delivery.kind) },
+        { name: 'channel', value: 'email' },
+      ],
     }),
   })
-  if (!response.ok) throw new Error(`Email send failed: ${response.status} ${await response.text()}`)
+  if (!response.ok) throw new Error(await resendError(response))
 }
 
 async function sendPushNotification(delivery: Delivery) {
@@ -198,14 +247,14 @@ Deno.serve(async () => {
       }
       await supabase
         .from('notification_deliveries')
-        .update({ status: 'sent', sent_at: new Date().toISOString() })
+        .update({ status: 'sent', sent_at: new Date().toISOString(), error: null })
         .eq('id', delivery.id)
       sent += 1
     } catch (error) {
       const isSkip = error instanceof SkipDelivery
       await supabase
         .from('notification_deliveries')
-        .update({ status: isSkip ? 'skipped' : 'failed', error: String(error) })
+        .update({ status: isSkip ? 'skipped' : 'failed', error: errorMessage(error) })
         .eq('id', delivery.id)
       if (isSkip) skipped += 1
       else failed += 1

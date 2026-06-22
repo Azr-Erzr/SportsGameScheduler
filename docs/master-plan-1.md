@@ -105,6 +105,23 @@ Largest remaining plan work: production secrets/domain verification, Playwright/
 DB-backed spotlight/ranking tables, provider-adapter verification scripts, real broadcast/rightsholder
 backfill, full i18n extraction, and structured fight-card/bracket/race-weekend data.
 
+### Latest Audit Correction - June 22, 2026
+
+MP1/MP2 closeout items moved forward:
+
+- **Obj 9 (custom leagues):** CSV/Sheets import now exists on the custom league admin page, with
+  parser tests and skipped-row feedback. Remaining import gap is true `.ics` import.
+- **Obj 10 (alerts):** notification email transport now uses branded Silbo HTML/text templates,
+  accepts `RESEND_API_KEY` or the current `RESENDAPI` secret alias, and reports Resend/VAPID
+  readiness in `/admin`. VAPID is considered implemented in repo; production still needs the
+  deployed secrets verified.
+- **Obj 11 / 12 (ops):** `calendar-feed` has a lightweight burst guard, Cloudflare WAF remains
+  the production limiter, `public/_headers` adds conservative hardening/cache headers, and
+  `npm run verify:prod` provides a repeatable launch/env/domain/secrets check.
+
+Remaining MP1/MP2 external gates: production secret setting, Resend domain verification,
+Cloudflare WAF click-ops, legal/footer page verification, and deployed-domain smoke testing.
+
 | Objective | Status | What's left |
 |---|---|---|
 | 1. Product foundation (nav, sport switcher, WC view, empty states) | ✅ Done | Switcher is now the brand block with per-sport icons; sport vs league split applied. |
