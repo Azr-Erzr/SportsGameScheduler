@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAppState } from '../app/state-context'
 import { Badge, Button, EmptyState, Panel } from '../components/ui'
+import { SignUpNudge } from '../components/SignUpNudge'
 import { getSupabaseClient } from '../lib/supabase'
 import { disableBrowserPush, enableBrowserPush, pushSupported, vapidPublicKey } from '../lib/push'
 import {
@@ -128,14 +129,21 @@ export function AlertSettingsPage() {
 
   if (!auth.user) {
     return (
-      <EmptyState
-        title="Sign in to manage alerts"
-        body="Reminders and schedule-change emails are tied to your account so they work across devices. Sign in, then follow leagues or players to set alerts."
-      >
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <BellRing size={20} className="text-primary" />
+          <div>
+            <h1 className="text-xl font-extrabold text-primary">Alerts</h1>
+            <p className="text-sm text-ink/60">
+              Get a heads-up the moment a followed event's time, venue, lineup, or status changes.
+            </p>
+          </div>
+        </div>
+        <SignUpNudge trigger="alerts" />
         <Link to="/my-schedule">
           <Button variant="ghost">Back to My Schedule</Button>
         </Link>
-      </EmptyState>
+      </div>
     )
   }
 

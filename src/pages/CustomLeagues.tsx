@@ -3,6 +3,7 @@ import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { useAppState } from '../app/state-context'
 import { Badge, Button, EmptyState, Field, Panel, PanelHeading } from '../components/ui'
+import { SignUpNudge } from '../components/SignUpNudge'
 import { customLeagueSportOptions } from '../domain/sports'
 import { useCustomLeagues } from '../data/customLeagues'
 import { newId, newToken, type CustomLeague } from '../lib/store'
@@ -54,6 +55,8 @@ export function CustomLeaguesPage() {
             : 'Saved on this device. Sign in to sync across devices and publish share links that work anywhere.'}
         </p>
       </div>
+
+      {!signedIn && <SignUpNudge trigger="league" />}
 
       <div className="grid gap-4 lg:grid-cols-[340px_1fr]">
         <Panel className="h-fit">

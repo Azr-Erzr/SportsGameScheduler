@@ -2,6 +2,7 @@ import { CalendarPlus, Copy, ExternalLink, Power, Trash2 } from 'lucide-react'
 import { useEffect, useState, type FormEvent } from 'react'
 import { useAppState } from '../app/state-context'
 import { Badge, Button, EmptyState, Field, Panel, PanelHeading } from '../components/ui'
+import { SignUpNudge } from '../components/SignUpNudge'
 import { copyToClipboard } from '../lib/clipboard'
 import { getSupabaseClient } from '../lib/supabase'
 import { mergeFeedsOnSignIn, sha256Hex } from '../data/feeds'
@@ -173,11 +174,7 @@ export function CalendarFeedsPage({ embedded = false }: { embedded?: boolean } =
             title="Create a feed"
             subtitle={`Includes your ${followCount} followed leagues & players, in ${prefs.timezone}.`}
           />
-          {!signedIn && (
-            <p className="mb-3 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-ink/70">
-              You're not signed in. You can preview a feed here, but a live, auto-updating URL needs an account.
-            </p>
-          )}
+          {!signedIn && <SignUpNudge trigger="feed" className="mb-3" />}
           <form onSubmit={createFeed} className="space-y-3">
             <Field label="Feed name" value={name} onChange={(e) => setName(e.target.value)} required />
             <label className="flex items-center gap-2 text-sm text-ink/70">

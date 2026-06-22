@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react'
 import { useAppState } from '../app/state-context'
 import { cityLabelFor } from '../lib/cities'
 import { Button, Panel, PanelHeading } from '../components/ui'
+import { SignUpNudge } from '../components/SignUpNudge'
 import { filterMatchesForTeams, useMatches } from '../data/liveMatches'
 import { useMyEvents } from '../data/liveSport'
 import { brand, exportFilename } from '../domain/brand'
@@ -177,6 +178,9 @@ export function ExportStudioPage() {
           </p>
         </button>
       </Panel>
+
+      {/* They're on the export page — highest intent to take their schedule with them. */}
+      <SignUpNudge trigger="export" />
 
       {mode === 'sync' ? (
         <CalendarFeedsPage embedded />
