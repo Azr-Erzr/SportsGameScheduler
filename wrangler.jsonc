@@ -18,6 +18,8 @@
   // SUPABASE_URL + publishable (anon) key — non-secret by design (RLS-protected, already inlined
   // into the browser bundle). The Worker uses them to read public event/league rows for OG tags.
   "vars": {
+    "VITE_SUPABASE_URL": "https://gcnbgdpicgeahxscpsfc.supabase.co",
+    "VITE_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_Gf0t7yXfhyQbDBWG43YB3Q_71eKDwGb",
     "SUPABASE_URL": "https://gcnbgdpicgeahxscpsfc.supabase.co",
     "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_Gf0t7yXfhyQbDBWG43YB3Q_71eKDwGb"
   }

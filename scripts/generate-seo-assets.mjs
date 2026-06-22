@@ -81,6 +81,24 @@ function readEnvFile() {
     .catch(() => {})
 }
 
+function readWranglerPublicSupabaseEnv() {
+  return fs
+    .readFile(path.join(root, 'wrangler.jsonc'), 'utf8')
+    .then((text) => {
+      const valueFor = (key) => {
+        const match = text.match(new RegExp(`"${key}"\\s*:\\s*"([^"]+)"`))
+        return match?.[1]
+      }
+
+      process.env.VITE_SUPABASE_URL ??= valueFor('VITE_SUPABASE_URL') ?? valueFor('SUPABASE_URL')
+      process.env.VITE_SUPABASE_PUBLISHABLE_KEY ??=
+        valueFor('VITE_SUPABASE_PUBLISHABLE_KEY') ??
+        valueFor('VITE_SUPABASE_ANON_KEY') ??
+        valueFor('SUPABASE_PUBLISHABLE_KEY')
+    })
+    .catch(() => {})
+}
+
 function escapeXml(value) {
   return String(value)
     .replaceAll('&', '&amp;')
@@ -117,6 +135,7 @@ async function writeRouteHtml(baseHtml, route) {
 
 async function fetchDbRoutes() {
   await readEnvFile()
+  await readWranglerPublicSupabaseEnv()
   const url = process.env.VITE_SUPABASE_URL
   const key = process.env.VITE_SUPABASE_PUBLISHABLE_KEY
   if (!url || !key) return []
