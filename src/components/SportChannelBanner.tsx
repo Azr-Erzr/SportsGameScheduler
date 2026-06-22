@@ -41,11 +41,14 @@ const assetKeyBySport: Record<string, string> = {
   olympic: 'olympic',
   baseball: 'baseball',
   custom: 'custom',
+  // Secondary "other sports" all share the neutral Other Sports banner — they have no dedicated
+  // art, and borrowing another sport's banner (rugby on a football pitch, volleyball on a court)
+  // misrepresents them.
   cricket: 'custom',
-  rugby: 'football',
-  volleyball: 'basketball',
-  handball: 'basketball',
-  cycling: 'motorsport',
+  rugby: 'custom',
+  volleyball: 'custom',
+  handball: 'custom',
+  cycling: 'custom',
   snooker: 'custom',
   darts: 'custom',
   nba: 'basketball',
