@@ -23,6 +23,12 @@ const mainSportRoutes = [
   { path: '/sports/baseball', landmark: /baseball/i },
 ]
 
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('mp.onboarded', '1')
+  })
+})
+
 test.describe('core route smoke', () => {
   for (const route of smokeRoutes) {
     test(`${route.path} renders without console errors`, async ({ page }) => {
