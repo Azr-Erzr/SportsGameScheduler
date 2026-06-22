@@ -69,9 +69,17 @@ independent of the deploy path.
 ## Backend — Supabase
 - Migrations live in `supabase/migrations/` and are applied to project `gcnbgdpicgeahxscpsfc`.
 - Edge functions in `supabase/functions/` (calendar-feed, notifications, provider-hydrate,
-  provider-hydrate-players, provider-sync) deploy via the Supabase MCP / CLI.
+  provider-hydrate-players, provider-sync, ics-feed-ingest, admin-stats) deploy via the Supabase
+  MCP / CLI.
+- **`calendar-feed` MUST be deployed with `verify_jwt = false`.** It's the public subscription
+  endpoint — Google/Apple/Outlook fetch the `.ics` URL with **no Authorization header**, so with
+  `verify_jwt = true` the gateway returns `401 UNAUTHORIZED_NO_AUTH_HEADER` and live sync is dead.
+  Auth is the unguessable URL token (resolved server-side) + a 120-req/min per-token+IP rate limit
+  (`_shared/rate-limit.ts`). Keep verify_jwt off on any redeploy.
 - Cron jobs (`supabase/cron.sql`): provider-hydrate (15 min), players (3×/hr), notifications
-  (5 min).
+  (5 min), **ics-feed-ingest (every 6 h, `17 */6 * * *`)** — the non-API ICS/webcal source
+  re-check. The function gates each `source_targets` row by its own `cadence_minutes` (12–24 h for
+  the seeded feeds), so the cron is only a heartbeat and never hammers the sources.
 - **Secrets** (Supabase → Settings → Edge Functions): `THESPORTSDB_API_KEY`, `ADMIN_EMAILS`, and
   for live alerts: `RESEND_API_KEY` or the existing `RESENDAPI` alias + `EMAIL_FROM` + `APP_URL`
   + `VAPID_PUBLIC_KEY` + `VAPID_PRIVATE_KEY` + `VAPID_SUBJECT`.
