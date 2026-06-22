@@ -5,19 +5,20 @@ import {
   ChevronRight,
   Clock,
   FileText,
-  Search,
   Sparkles,
   Trophy,
   Tv,
   Users,
 } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { useAppState } from '../app/state-context'
 import { GlobalEventBoard, PosterFeatureStrip } from '../components/PosterMotifs'
+import { GlobalSearch } from '../components/GlobalSearch'
 import { Button, Panel, PanelHeading } from '../components/ui'
 import { WorldClock } from '../components/WorldClock'
-import { deriveTeams, filterMatchesForTeams, useMatches } from '../data/liveMatches'
+import { filterMatchesForTeams, useMatches } from '../data/liveMatches'
+import { featuredTeams } from '../data/worldcup'
 import { useSpotlightEvents, type SpotlightEvent } from '../data/spotlight'
 import { brand } from '../domain/brand'
 import { associationFootballLabel, t } from '../lib/i18n'
@@ -87,18 +88,13 @@ export function HomePage() {
   const { followedTeams, toggleFollow, prefs } = useAppState()
   const { matches } = useMatches()
   const spotlightEvents = useSpotlightEvents(prefs.regionCode)
-  const [query, setQuery] = useState('')
 
   const upcomingMatches = useMemo(() => {
     return filterMatchesForTeams(matches, followedTeams).slice(0, 3)
   }, [followedTeams, matches])
 
-  const suggestions = useMemo(() => {
-    const normalized = query.trim().toLowerCase()
-    const teams = deriveTeams(matches).slice(0, 80)
-    if (!normalized) return teams.slice(0, 8)
-    return teams.filter((team) => team.toLowerCase().includes(normalized)).slice(0, 8)
-  }, [matches, query])
+  // Popular nations as quick-follow chips; the global search field above handles find-anything.
+  const suggestions = featuredTeams
 
   function toggleTeam(team: string) {
     toggleFollow({ targetType: 'team', targetId: team, intent: 'watch' })
@@ -127,16 +123,11 @@ export function HomePage() {
               </div>
 
               <div className="mt-5 rounded-xl border border-primary/20 bg-page/70 p-3">
-                <label className="flex items-center gap-2 rounded-lg bg-surface px-3 py-2 shadow-sm">
-                  <Search size={18} className="text-ink/40" />
-                  <input
-                    value={query}
-                    onChange={(event) => setQuery(event.target.value)}
-                    placeholder={t('home.searchPlaceholder', undefined, prefs.locale)}
-                    className="min-w-0 flex-1 bg-transparent text-sm outline-none"
-                  />
-                </label>
-                <div className="mt-3 flex flex-wrap gap-2">
+                <GlobalSearch placeholder={t('home.searchPlaceholder', undefined, prefs.locale)} />
+                <p className="mt-3 mb-1 font-mono text-[10px] uppercase tracking-[0.18em] text-ink/45">
+                  {t('home.popularNations', undefined, prefs.locale)}
+                </p>
+                <div className="flex flex-wrap gap-2">
                   {suggestions.map((team) => {
                     const selected = followedTeams.includes(team)
                     return (

@@ -46,6 +46,43 @@ create table if not exists public.watch_links (
   updated_at timestamptz not null default now()
 );
 
+-- Compatibility for databases that already received the earlier lightweight watch_links table
+-- from 20260612035952_reconcile_calendar_change_log_certainty_taxonomy.sql.
+alter table public.watch_links add column if not exists rule_key text;
+alter table public.watch_links add column if not exists provider_key text;
+alter table public.watch_links add column if not exists label text;
+alter table public.watch_links add column if not exists event_id uuid references public.events(id) on delete cascade;
+alter table public.watch_links add column if not exists league_id uuid references public.leagues(id) on delete cascade;
+alter table public.watch_links add column if not exists country_codes text[] not null default '{}'::text[];
+alter table public.watch_links add column if not exists sport_keys text[] not null default '{}'::text[];
+alter table public.watch_links add column if not exists link_kind text not null default 'official';
+alter table public.watch_links add column if not exists url text;
+alter table public.watch_links add column if not exists affiliate_url text;
+alter table public.watch_links add column if not exists source_confidence text not null default 'manual';
+alter table public.watch_links add column if not exists priority integer not null default 100;
+alter table public.watch_links add column if not exists ends_at timestamptz;
+alter table public.watch_links add column if not exists notes text;
+alter table public.watch_links add column if not exists updated_at timestamptz not null default now();
+
+do $$
+begin
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'watch_links' and column_name = 'region') then
+    alter table public.watch_links alter column region drop not null;
+  end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'watch_links' and column_name = 'provider_name') then
+    alter table public.watch_links alter column provider_name drop not null;
+  end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'watch_links' and column_name = 'url') then
+    alter table public.watch_links alter column url drop not null;
+  end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'watch_links' and column_name = 'link_type') then
+    alter table public.watch_links alter column link_type drop not null;
+  end if;
+end $$;
+
+create unique index if not exists watch_links_rule_key_unique_idx
+  on public.watch_links (rule_key);
+
 create index if not exists watch_providers_active_priority_idx
   on public.watch_providers (is_active, priority);
 create index if not exists watch_providers_regions_gin_idx

@@ -1,8 +1,14 @@
 import { Home, ListChecks, Moon, PlusCircle, Sun, Trophy } from 'lucide-react'
 import { Link, NavLink, Outlet, useLocation, useParams } from 'react-router-dom'
+import { useEffect, useState } from 'react'
 import { AuthButton } from '../components/AuthButton'
+import { ConsentBanner } from '../components/ConsentBanner'
+import { Onboarding } from '../components/Onboarding'
 import { SilboBrandMark } from '../components/SilboMark'
 import { SportSwitcher } from '../components/SportSwitcher'
+import { adsConfigured } from '../lib/ads'
+import { initConsent, resetConsent } from '../lib/consent'
+import { hasOnboarded } from '../lib/onboarding'
 import { useAppState } from './state-context'
 import { brand } from '../domain/brand'
 import { getSport } from '../domain/sports'
@@ -30,6 +36,9 @@ const footerLinks = [
   { to: '/calendar', label: 'Silbo Sync' },
   { to: '/custom-leagues', label: 'Create League' },
   { to: '/settings/alerts', label: 'Alerts' },
+  { to: '/account', label: 'Account' },
+  { to: '/privacy', label: 'Privacy' },
+  { to: '/terms', label: 'Terms' },
 ]
 
 function DesktopNav({ locale }: { locale?: string | null }) {
@@ -124,7 +133,10 @@ export function AppShell() {
   // Theme follows the sport in the URL where there is one; the root uses a neutral all-sports mood.
   const { sportKey } = useParams()
   const location = useLocation()
-  const { prefs, setPrefs } = useAppState()
+  const { prefs, setPrefs, follows } = useAppState()
+  // First-run onboarding: only for a brand-new visitor (no prior pass, nothing followed yet).
+  // Decided once at mount from the synchronously-loaded follows/flag — no effect needed.
+  const [showOnboarding, setShowOnboarding] = useState(() => !hasOnboarded() && follows.length === 0)
   const baseTheme = getTheme(
     location.pathname === '/'
       ? 'neutral'
@@ -136,6 +148,9 @@ export function AppShell() {
   )
   const theme = withSurfaceMode(baseTheme, prefs.themeMode)
   const programMode = prefs.themeMode === 'program'
+
+  // Restore the AdSense script if the user accepted advertising in a previous session.
+  useEffect(() => initConsent(), [])
 
   return (
     <SportThemeProvider theme={theme}>
@@ -181,12 +196,23 @@ export function AppShell() {
                     {item.label}
                   </Link>
                 ))}
+                {adsConfigured && (
+                  <button
+                    type="button"
+                    onClick={() => resetConsent()}
+                    className="text-ink/58 transition-colors hover:text-primary"
+                  >
+                    Cookie settings
+                  </button>
+                )}
               </nav>
             </div>
           </div>
         </footer>
 
         <MobileNav locale={prefs.locale} />
+        <ConsentBanner />
+        {showOnboarding && <Onboarding onClose={() => setShowOnboarding(false)} />}
       </div>
     </SportThemeProvider>
   )

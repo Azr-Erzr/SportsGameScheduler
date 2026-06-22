@@ -1,5 +1,6 @@
-import { LogIn, LogOut, Mail, UserCircle } from 'lucide-react'
+import { LogIn, Mail, UserCircle } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 import { useAppState } from '../app/state-context'
 import { Button } from './ui'
 
@@ -36,16 +37,6 @@ export function AuthButton() {
     }
   }
 
-  async function signOut() {
-    setBusy(true)
-    try {
-      await auth.signOut()
-      setOpen(false)
-    } finally {
-      setBusy(false)
-    }
-  }
-
   if (!auth.configured) {
     return (
       <Button
@@ -63,16 +54,15 @@ export function AuthButton() {
 
   if (auth.user) {
     return (
-      <Button
-        variant="subtle"
-        onClick={signOut}
-        disabled={busy}
-        title={auth.user.email ?? 'Signed in'}
-        className="max-sm:h-10 max-sm:w-10 max-sm:px-0"
+      <Link
+        to="/account"
+        title={auth.user.email ?? 'Account'}
+        aria-label="Your account"
+        className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary/12 px-4 py-2 text-sm font-semibold text-primary transition-colors hover:bg-primary/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary max-sm:h-10 max-sm:w-10 max-sm:px-0"
       >
-        <LogOut size={16} />
-        <span className="hidden sm:inline">Sign out</span>
-      </Button>
+        <UserCircle size={16} />
+        <span className="hidden sm:inline">Account</span>
+      </Link>
     )
   }
 

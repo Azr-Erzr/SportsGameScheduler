@@ -2,6 +2,7 @@ import { ArrowRight, CalendarClock, Database, PlusCircle, Search, Sparkles } fro
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAppState } from '../app/state-context'
+import { GlobalSearch } from '../components/GlobalSearch'
 import { SportAssetIcon } from '../components/SportAssetIcon'
 import { Badge, Button, Panel, PanelHeading } from '../components/ui'
 import { useSportSchedule } from '../data/liveSport'
@@ -110,6 +111,9 @@ export function ExplorePage() {
                 Core sports get full channel pages. New live-route sports sit in their own expansion lane, with live
                 counts visible before we promote them into the main dropdown.
               </p>
+              <div className="mt-4 max-w-xl">
+                <GlobalSearch placeholder="Search any sport, league, team, or player" />
+              </div>
             </div>
 
             <div className="flex flex-wrap gap-2">
@@ -132,7 +136,8 @@ export function ExplorePage() {
           </div>
         </Panel>
 
-        <Panel className="h-full">
+        {/* Launch-board stats: useful context on desktop, but it shouldn't hog a full card on mobile. */}
+        <Panel className="hidden h-full lg:block">
           <PanelHeading title="Coverage shape" subtitle="A quieter map of what is actually wired." >
             <Sparkles size={18} className="text-primary" />
           </PanelHeading>
