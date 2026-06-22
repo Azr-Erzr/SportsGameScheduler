@@ -76,6 +76,9 @@ AdSense, GAM, or an affiliate network is blocked.
 ### June 19 update: DB-backed provider catalogue
 - `watch_providers` is now the source of truth for provider name, country/region coverage,
   supported sports, direct URL, affiliate URL, network, approval status, notes, and priority.
+- `docs/where-to-watch-rights-truth.md` is the editorial/source-of-truth layer for rights
+  research. The current World Cup and broad official watch-route seed lives in
+  `supabase/migrations/20260622193000_broadcast_rights_truth_seed.sql`.
 - `watch_links` stores event/league/sport/region rules. It lets a US combat card prefer DAZN,
   Paramount+, UFC Fight Pass, Prime Video, PPV.com, and ESPN+, while a Canadian event can prefer
   TSN/Sportsnet+ and an India event can prefer SonyLIV/FanCode/JioHotstar.

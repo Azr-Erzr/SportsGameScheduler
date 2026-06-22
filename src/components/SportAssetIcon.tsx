@@ -1,6 +1,11 @@
 import type { CSSProperties } from 'react'
-import { getSport } from '../domain/sports'
+import { getSport, secondarySports } from '../domain/sports'
 import { getTheme } from '../theme/themes'
+
+// Secondary ("Other Sports") tiles all share the single Other Sports icon: we don't ship per-sport
+// art for them, and borrowing a primary sport's icon (rugby→football, volleyball→basketball) was
+// misleading. Derived from the secondarySports list so new entries are covered automatically.
+const SECONDARY_SPORT_KEYS = new Set<string>(secondarySports.map((sport) => sport.key))
 
 type SportAssetIconProps = {
   sportKey: string
@@ -10,6 +15,8 @@ type SportAssetIconProps = {
   label?: string
 }
 
+// Cross-naming for primary sport families and their leagues. Secondary sports are NOT listed here
+// — they resolve to the Other Sports icon via SECONDARY_SPORT_KEYS below.
 const aliases: Record<string, string> = {
   american_football: 'football',
   f1: 'motorsport',
@@ -28,17 +35,11 @@ const aliases: Record<string, string> = {
   trackfield: 'track',
   olympics: 'olympic',
   community: 'custom',
-  cricket: 'custom',
-  rugby: 'football',
-  volleyball: 'basketball',
-  handball: 'basketball',
-  cycling: 'motorsport',
-  snooker: 'custom',
-  darts: 'custom',
 }
 
 function sportAssetKey(key: string) {
   const sport = getSport(key)
+  if ((sport && SECONDARY_SPORT_KEYS.has(sport.key)) || SECONDARY_SPORT_KEYS.has(key)) return 'custom'
   return aliases[sport?.badgeKey ?? key] ?? sport?.badgeKey ?? aliases[key] ?? key
 }
 

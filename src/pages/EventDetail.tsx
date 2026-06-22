@@ -1,9 +1,9 @@
 import { ArrowLeft, Bell, CalendarDays, Clock, Download, MapPin, Star, Tv } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
 import { useAppState } from '../app/state-context'
+import { WatchOptionsPanel } from '../components/WatchOptionsPanel'
 import { Badge, Button, EmptyState, Panel, PanelHeading } from '../components/ui'
 import { useEvent } from '../data/liveSport'
-import { useWatchOptions } from '../data/watchLinks'
 import { matchWatchProvider, watchLinkFor } from '../lib/ads'
 import { exportFilename } from '../domain/brand'
 import { downloadBlob } from '../lib/clipboard'
@@ -238,9 +238,10 @@ export function EventDetailPage() {
             })}
           </ul>
         ) : (
-          <WatchOptions
+          <WatchOptionsPanel
             eventId={event.id}
             leagueId={event.leagueId}
+            leagueName={event.leagueName}
             sportKey={event.sportKey}
             regionCode={regionCode}
             locale={prefs.locale}
@@ -367,48 +368,4 @@ function readableFact(value: string) {
   return value.replace(/_/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase())
 }
 
-// No specific broadcast yet: surface region-relevant streaming destinations. These are
-// affiliate links when an affiliate id is configured (see lib/ads.ts), with the required
 // disclosure. Useful even unmonetized — it answers "where could I watch this?".
-function WatchOptions({
-  eventId,
-  leagueId,
-  sportKey,
-  regionCode,
-  locale,
-}: {
-  eventId?: string | null
-  leagueId?: string | null
-  sportKey?: string | null
-  regionCode?: string | null
-  locale?: string | null
-}) {
-  const { links } = useWatchOptions({ eventId, leagueId, sportKey, regionCode, limit: 5 })
-  const anyAffiliate = links.some((l) => l.affiliate)
-
-  return (
-    <div className="space-y-2">
-      <p className="text-sm text-ink/55">
-        {t('event.watchNoBroadcast', undefined, locale)}
-      </p>
-      <div className="flex flex-wrap gap-2">
-        {links.map((l) => (
-          <a
-            key={l.name}
-            href={l.href}
-            target="_blank"
-            rel={l.affiliate ? 'sponsored noopener noreferrer' : 'noopener noreferrer'}
-            className="rounded-lg border border-primary/25 px-3 py-1.5 text-sm font-semibold text-primary hover:bg-primary/10"
-          >
-            {l.name}
-          </a>
-        ))}
-      </div>
-      <p className="text-[11px] text-ink/40">
-        {anyAffiliate
-          ? t('event.watchAffiliate', undefined, locale)
-          : t('event.watchAvailability', undefined, locale)}
-      </p>
-    </div>
-  )
-}

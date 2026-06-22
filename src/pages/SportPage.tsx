@@ -1,10 +1,11 @@
-import { Bell, Check, Download, Search, Sparkles, Star, Tv, Users, X } from 'lucide-react'
+import { Bell, Check, Download, Flag, Search, Sparkles, Star, Timer, Tv, Users, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useAppState } from '../app/state-context'
 import { CityPicker } from '../components/CityPicker'
 import { MatchCard } from '../components/MatchCard'
 import { SportChannelBanner } from '../components/SportChannelBanner'
+import { WatchOptionsPanel } from '../components/WatchOptionsPanel'
 import { Badge, Button, EmptyState, Panel, PanelHeading } from '../components/ui'
 import { deriveTeams, filterMatchesForTeams, useMatches } from '../data/liveMatches'
 import { useEvent, useSportRoster, useSportSchedule, type LiveEvent } from '../data/liveSport'
@@ -20,6 +21,7 @@ import { downloadBlob } from '../lib/clipboard'
 import { useDocumentMeta } from '../lib/seo'
 import { findConflicts } from '../lib/conflicts'
 import { createIcsBlob, createMultiSportIcsBlob } from '../lib/ics'
+import { groupRaceWeekends, RACE_SESSION_LABELS, type RaceWeekend } from '../lib/raceWeekends'
 import { formatDate, formatLongDate, formatTime, relativeTimeFromNow } from '../lib/time'
 
 const INDIVIDUAL_SPORTS = ['tennis', 'golf', 'athletics', 'combat_sports']
@@ -370,6 +372,20 @@ function WorldCupPlanner() {
         ]}
       />
 
+      <Panel className="border-primary/20 bg-surface/85">
+        <PanelHeading title={`Where to watch in ${prefs.regionCode || 'US'}`} subtitle="Official World Cup broadcaster routes">
+          <Tv size={18} className="text-primary" />
+        </PanelHeading>
+        <WatchOptionsPanel
+          leagueName="FIFA World Cup 2026"
+          sportKey="soccer"
+          regionCode={prefs.regionCode}
+          locale={prefs.locale}
+          limit={4}
+          compact
+        />
+      </Panel>
+
       {/* Host-city capsules (moodboard city badges) with real venue counts. */}
       <div className="silbo-scrollbar flex snap-x gap-2.5 overflow-x-auto pb-1">
         {hostCities.map(([city, count], index) => (
@@ -499,6 +515,8 @@ function LiveSportPage({ sport }: { sport: SportInfo }) {
   const { prefs, toggleFollow, followedLeagueIds, followedCompetitorIds } = useAppState()
   const canonical = sport.canonicalSportKey
   const isIndividual = INDIVIDUAL_SPORTS.includes(canonical)
+  // Motorsport reads better as race weekends than a flat session list — group it (see raceWeekends.ts).
+  const isMotorsport = canonical === 'motorsport'
   const { leagues, events, loading, configured, lastUpdated } = useSportSchedule(canonical)
   const roster = useSportRoster(canonical, isIndividual)
   const [leagueId, setLeagueId] = useState<string | null>(null)
@@ -509,6 +527,10 @@ function LiveSportPage({ sport }: { sport: SportInfo }) {
   const shownEvents = useMemo(
     () => (leagueId ? events.filter((e) => e.leagueId === leagueId) : events),
     [events, leagueId],
+  )
+  const raceWeekends = useMemo(
+    () => (isMotorsport ? groupRaceWeekends(shownEvents) : []),
+    [isMotorsport, shownEvents],
   )
   const eventPageCount = pageCountFor(shownEvents.length)
   const eventPageKey = `${canonical}:${leagueId ?? 'all'}`
@@ -528,6 +550,16 @@ function LiveSportPage({ sport }: { sport: SportInfo }) {
   function addEventToSchedule(event: LiveEvent) {
     downloadBlob(createMultiSportIcsBlob([event], { reminderMinutes: [60] }), exportFilename('event', 'ics'))
     setAddedEventIds((current) => (current.includes(event.id) ? current : [...current, event.id]))
+  }
+
+  function addWeekendToSchedule(weekend: RaceWeekend<LiveEvent>) {
+    const events = weekend.sessions.map((s) => s.event)
+    downloadBlob(createMultiSportIcsBlob(events, { reminderMinutes: [60] }), exportFilename('race-weekend', 'ics'))
+    setAddedEventIds((current) => {
+      const next = new Set(current)
+      for (const event of events) next.add(event.id)
+      return [...next]
+    })
   }
 
   function addSeasonReturnToSchedule(marker: SeasonReturnMarker) {
@@ -576,7 +608,25 @@ function LiveSportPage({ sport }: { sport: SportInfo }) {
 
           <div className={`grid gap-4 ${isIndividual ? 'lg:grid-cols-[1fr_320px]' : ''}`}>
             <section className="min-w-0 space-y-3">
-              {shownEvents.length > 0 ? (
+              {isMotorsport && raceWeekends.length > 0 ? (
+                <>
+                  <p className="text-sm font-semibold text-ink/60">
+                    {raceWeekends.length} race {raceWeekends.length === 1 ? 'weekend' : 'weekends'} upcoming
+                  </p>
+                  {raceWeekends.map((weekend) => (
+                    <RaceWeekendCard
+                      key={weekend.key}
+                      weekend={weekend}
+                      locale={prefs.locale}
+                      hour12={prefs.hour12}
+                      timeZone={prefs.timezone}
+                      addedIds={addedEventIds}
+                      onAddSession={addEventToSchedule}
+                      onAddWeekend={() => addWeekendToSchedule(weekend)}
+                    />
+                  ))}
+                </>
+              ) : shownEvents.length > 0 ? (
                 <>
                   <p className="text-sm font-semibold text-ink/60">{shownEvents.length} upcoming</p>
                   <SchedulePagination page={eventPage} pageCount={eventPageCount} total={shownEvents.length} onPageChange={changeEventPage} label="events" />
@@ -995,6 +1045,104 @@ function LeagueFilter({
   )
 }
 
+// Race weekend grouped from flat session events (F1 etc.). Header capsule + one row per session,
+// each with its local day/time and an add button, plus an "add full weekend" shortcut.
+function RaceWeekendCard({
+  weekend,
+  locale,
+  hour12,
+  timeZone,
+  addedIds,
+  onAddSession,
+  onAddWeekend,
+}: {
+  weekend: RaceWeekend<LiveEvent>
+  locale?: string
+  hour12?: boolean | null
+  timeZone: string
+  addedIds: string[]
+  onAddSession: (event: LiveEvent) => void
+  onAddWeekend: () => void
+}) {
+  const opts = { locale, hour12: hour12 ?? undefined }
+  const dateRange =
+    weekend.start && weekend.end
+      ? weekend.start.toDateString() === weekend.end.toDateString()
+        ? formatLongDate(weekend.start, timeZone, opts)
+        : `${formatDate(weekend.start, timeZone, opts)} – ${formatLongDate(weekend.end, timeZone, opts)}`
+      : 'Dates to be confirmed'
+  const allAdded = weekend.sessions.every((s) => addedIds.includes(s.event.id))
+
+  return (
+    <article className="overflow-hidden rounded-card border border-primary/20 bg-surface">
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-primary/12 bg-page/40 px-4 py-3">
+        <div className="min-w-0">
+          <h3 className="flex items-center gap-2 truncate text-base font-bold text-primary">
+            <Flag size={15} className="shrink-0" /> {weekend.name}
+          </h3>
+          <p className="mt-0.5 flex flex-wrap gap-x-3 font-mono text-[11px] uppercase tracking-wide text-ink/50">
+            <span>{dateRange}</span>
+            {weekend.venue && <span>{weekend.venue}</span>}
+            <span>
+              {weekend.sessions.length} {weekend.sessions.length === 1 ? 'session' : 'sessions'}
+            </span>
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onAddWeekend}
+          className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-bold transition-colors ${
+            allAdded ? 'border-primary bg-primary/15 text-primary' : 'border-primary/30 text-ink/75 hover:bg-primary/10'
+          }`}
+        >
+          <Download size={13} /> {allAdded ? 'Weekend added' : 'Add weekend'}
+        </button>
+      </header>
+      <ul className="divide-y divide-primary/8">
+        {weekend.sessions.map((session) => {
+          const event = session.event
+          const isRace = session.kind === 'race'
+          const added = addedIds.includes(event.id)
+          return (
+            <li key={event.id} className="flex items-center gap-3 px-4 py-2.5">
+              <span
+                className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md ${
+                  isRace ? 'bg-primary/15 text-primary' : 'bg-ink/8 text-ink/55'
+                }`}
+                aria-hidden="true"
+              >
+                {isRace ? <Flag size={14} /> : <Timer size={14} />}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className={`truncate text-sm ${isRace ? 'font-bold text-ink' : 'font-medium text-ink/80'}`}>
+                  {RACE_SESSION_LABELS[session.kind] === session.label
+                    ? session.label
+                    : session.label || RACE_SESSION_LABELS[session.kind]}
+                </p>
+                <p className="font-mono text-[10px] uppercase tracking-wide text-ink/45">
+                  {event.startsAt && !event.startsAtTbd
+                    ? `${formatDate(event.startsAt, timeZone, opts)} · ${formatTime(event.startsAt, timeZone, opts)}`
+                    : 'Time TBD'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => onAddSession(event)}
+                aria-label={`Add ${session.label} to schedule`}
+                className={`shrink-0 rounded-lg border p-2 transition-colors ${
+                  added ? 'border-primary bg-primary/15 text-primary' : 'border-primary/25 text-ink/60 hover:bg-primary/10'
+                }`}
+              >
+                {added ? <Check size={14} /> : <Download size={14} />}
+              </button>
+            </li>
+          )
+        })}
+      </ul>
+    </article>
+  )
+}
+
 function EventTicket({
   event,
   locale,
@@ -1169,17 +1317,15 @@ function EventQuickDetails({ eventId }: { eventId: string }) {
         <p className="mb-1 flex items-center gap-2 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-ink/55">
           <Tv size={13} /> Where to watch
         </p>
-        <p className="text-sm font-semibold text-ink">Watch options reserved</p>
-        <p className="mt-1 max-w-3xl text-xs text-ink/55">
-          Local TV, streaming, radio, venue links, and affiliate offers attach here as coverage details are connected.
-        </p>
-        <div className="mt-3 flex flex-wrap gap-1.5">
-          {['TV', 'Streaming', 'Radio', 'Tickets'].map((label) => (
-            <span key={label} className="rounded-full border border-primary/15 px-2 py-0.5 font-mono text-[10px] uppercase text-ink/55">
-              {label}
-            </span>
-          ))}
-        </div>
+        <WatchOptionsPanel
+          eventId={detail.id}
+          leagueId={detail.leagueId}
+          leagueName={detail.leagueName}
+          sportKey={detail.sportKey}
+          regionCode={prefs.regionCode}
+          locale={prefs.locale}
+          compact
+        />
         <p className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-ink/70">
           <Bell size={12} /> Alert settings can watch time, participant, venue, and broadcast updates.
         </p>

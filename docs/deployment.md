@@ -69,8 +69,13 @@ independent of the deploy path.
 ## Backend — Supabase
 - Migrations live in `supabase/migrations/` and are applied to project `gcnbgdpicgeahxscpsfc`.
 - Edge functions in `supabase/functions/` (calendar-feed, notifications, provider-hydrate,
-  provider-hydrate-players, provider-sync, ics-feed-ingest, admin-stats) deploy via the Supabase
-  MCP / CLI.
+  provider-hydrate-players, provider-sync, ics-feed-ingest, admin-stats, delete-account) deploy via
+  the Supabase MCP / CLI.
+- **`delete-account` must be deployed for the account page's "Delete my account" (GDPR) to work.**
+  Keep `verify_jwt = true` (default) — only signed-in callers may invoke it. It reads the caller
+  from their own access token, then uses the service role to `auth.admin.deleteUser`; ON DELETE
+  CASCADE on `auth.users` removes the profile, follows, feeds, alert prefs, push subs, and custom
+  leagues. Until it's deployed, the UI surfaces a clear error rather than silently failing.
 - **`calendar-feed` MUST be deployed with `verify_jwt = false`.** It's the public subscription
   endpoint — Google/Apple/Outlook fetch the `.ics` URL with **no Authorization header**, so with
   `verify_jwt = true` the gateway returns `401 UNAUTHORIZED_NO_AUTH_HEADER` and live sync is dead.
@@ -95,5 +100,9 @@ build env, Supabase function secrets, VAPID/Resend readiness, asset headers, and
 - [ ] Verify Workers Static Assets SPA fallback is active in the deployed Worker.
 - [ ] Cloudflare WAF: add a rate-limiting rule on `/* ` or the Supabase functions domain (see
       Admin/observability doc) rather than a custom limiter.
-- [ ] Legal/footer lock: Terms, Privacy, contact, and unsubscribe/alert-management links are live
-      before email alerts are enabled.
+- [ ] Legal/footer lock: Terms (`/terms`), Privacy (`/privacy`), contact, and unsubscribe/alert-management
+      links are live before email alerts are enabled.
+- [ ] Consent: AdSense is loaded at runtime only after the consent banner is accepted
+      (`src/lib/consent.ts` — the static `<script>` was removed from `index.html`). Declining
+      blocks all ad cookies. Set the real contact email in `src/pages/Legal.tsx` (`CONTACT_EMAIL`).
+- [ ] Deploy the `delete-account` edge function so account deletion works.

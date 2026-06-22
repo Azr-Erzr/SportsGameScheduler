@@ -1,0 +1,3 @@
+[submodule "resend-mcp"]
+	path = resend-mcp
+	url = https://github.com/resend/resend-mcp.git

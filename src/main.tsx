@@ -34,6 +34,9 @@ const TeamPage = lazy(() => import('./pages/EntityPlaceholder').then((m) => ({ d
 const EventDetailPage = lazy(() => import('./pages/EventDetail').then((m) => ({ default: m.EventDetailPage })))
 const AlertSettingsPage = lazy(() => import('./pages/AlertSettings').then((m) => ({ default: m.AlertSettingsPage })))
 const AdminPage = lazy(() => import('./pages/AdminPage').then((m) => ({ default: m.AdminPage })))
+const AccountPage = lazy(() => import('./pages/Account').then((m) => ({ default: m.AccountPage })))
+const PrivacyPage = lazy(() => import('./pages/Legal').then((m) => ({ default: m.PrivacyPage })))
+const TermsPage = lazy(() => import('./pages/Legal').then((m) => ({ default: m.TermsPage })))
 
 function lazyRoute(element: React.ReactNode) {
   return (
@@ -66,6 +69,9 @@ const router = createBrowserRouter([
       { path: '/exports', element: lazyRoute(<ExportStudioPage />) },
       { path: '/settings/alerts', element: lazyRoute(<AlertSettingsPage />) },
       { path: '/admin', element: lazyRoute(<AdminPage />) },
+      { path: '/account', element: lazyRoute(<AccountPage />) },
+      { path: '/privacy', element: lazyRoute(<PrivacyPage />) },
+      { path: '/terms', element: lazyRoute(<TermsPage />) },
       { path: '/custom-leagues', element: lazyRoute(<CustomLeaguesPage />) },
       { path: '/custom-leagues/:leagueId/admin', element: lazyRoute(<CustomLeagueAdminPage />) },
       { path: '/s/:token', element: lazyRoute(<SharePage />) },
