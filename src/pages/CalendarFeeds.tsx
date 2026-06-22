@@ -4,6 +4,7 @@ import { useAppState } from '../app/state-context'
 import { Badge, Button, EmptyState, Field, Panel, PanelHeading } from '../components/ui'
 import { copyToClipboard } from '../lib/clipboard'
 import { getSupabaseClient } from '../lib/supabase'
+import { mergeFeedsOnSignIn, sha256Hex } from '../data/feeds'
 import { getFeeds, newId, newToken, saveFeeds, type CalendarFeed } from '../lib/store'
 
 // Live subscribed calendars (Objective 6). When signed in, feeds are persisted to Supabase with a
@@ -19,14 +20,6 @@ function webcalUrl(feed: CalendarFeed) {
   return feedUrl(feed).replace(/^https?:\/\//, 'webcal://')
 }
 
-async function sha256Hex(value: string): Promise<string> {
-  const data = new TextEncoder().encode(value)
-  const hash = await crypto.subtle.digest('SHA-256', data)
-  return Array.from(new Uint8Array(hash))
-    .map((byte) => byte.toString(16).padStart(2, '0'))
-    .join('')
-}
-
 export function CalendarFeedsPage({ embedded = false }: { embedded?: boolean } = {}) {
   const { followedLeagueIds, followedCompetitorIds, prefs, auth } = useAppState()
   const [feeds, setFeeds] = useState<CalendarFeed[]>(() => getFeeds())
@@ -39,32 +32,16 @@ export function CalendarFeedsPage({ embedded = false }: { embedded?: boolean } =
   const signedIn = Boolean(auth.user)
   const followCount = followedLeagueIds.length + followedCompetitorIds.length
 
-  // When signed in, the DB is the source of truth — load the user's feeds (token shown only once
-  // at creation, so existing rows display without a clickable URL).
+  // When signed in, the DB is the source of truth. Claim any feed previewed while signed-out into
+  // the account, then show the unified server list. Tokens held locally on this device are
+  // re-attached so their URL stays copyable; feeds created on another device list without a URL.
   useEffect(() => {
     if (!auth.user) return
     let cancelled = false
     getSupabaseClient().then(async (supabase) => {
       if (!supabase || cancelled) return
-      const { data } = await supabase
-        .from('calendar_feeds')
-        .select('id, name, timezone, filters, is_active, include_placeholders, include_broadcasts, created_at')
-        .eq('user_id', auth.user!.id)
-        .order('created_at', { ascending: false })
-      if (cancelled || !data) return
-      setFeeds(
-        data.map((row) => ({
-          id: row.id,
-          token: '', // hashed server-side; not retrievable
-          name: row.name,
-          timezone: row.timezone,
-          filters: (row.filters ?? {}) as CalendarFeed['filters'],
-          includePlaceholders: row.include_placeholders,
-          includeBroadcasts: row.include_broadcasts,
-          isActive: row.is_active,
-          createdAt: row.created_at,
-        })),
-      )
+      const merged = await mergeFeedsOnSignIn(supabase, auth.user!.id, getFeeds())
+      if (!cancelled) setFeeds(merged)
     })
     return () => {
       cancelled = true
