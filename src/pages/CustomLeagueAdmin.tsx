@@ -1,11 +1,12 @@
-import { ArrowLeft, Copy, Plus, Trash2 } from 'lucide-react'
-import { useEffect, useState, type FormEvent } from 'react'
+import { ArrowLeft, Copy, Plus, Trash2, Upload } from 'lucide-react'
+import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAppState } from '../app/state-context'
 import { Badge, Button, EmptyState, Field, Panel, PanelHeading } from '../components/ui'
 import { customLeagueSportOptions } from '../domain/sports'
 import { loadRemoteLeagues, upsertRemoteLeague } from '../data/customLeagues'
 import { copyToClipboard } from '../lib/clipboard'
+import { parseCustomLeagueEventsCsv } from '../lib/customLeagueImport'
 import { getSupabaseClient } from '../lib/supabase'
 import { formatLongDate, formatTime } from '../lib/time'
 import {
@@ -61,6 +62,7 @@ export function CustomLeagueAdminPage() {
   const [eventArrive, setEventArrive] = useState('30')
   const [eventUniform, setEventUniform] = useState('')
   const [eventNotes, setEventNotes] = useState('')
+  const [csvImportText, setCsvImportText] = useState('')
   const sportLabels = new Map<string, string>(customLeagueSportOptions.map((sport) => [sport.key, sport.label]))
 
   if (!league) {
@@ -122,6 +124,34 @@ export function CustomLeagueAdminPage() {
     setEventVenue('')
     setEventOpponent('')
     setEventNotes('')
+  }
+
+  async function loadImportFile(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    if (!file) return
+    setCsvImportText(await file.text())
+  }
+
+  function importCsvEvents() {
+    if (!league || !csvImportText.trim()) return
+    const result = parseCustomLeagueEventsCsv(csvImportText, { makeId: newId })
+    if (result.events.length) {
+      save({
+        ...league,
+        events: [...league.events, ...result.events].sort(
+          (a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime(),
+        ),
+      })
+    }
+    setMessage(
+      [
+        result.events.length ? `Imported ${result.events.length} event${result.events.length === 1 ? '' : 's'}.` : '',
+        result.errors.length ? `${result.errors.length} row${result.errors.length === 1 ? '' : 's'} skipped.` : '',
+      ]
+        .filter(Boolean)
+        .join(' '),
+    )
+    if (result.events.length && result.errors.length === 0) setCsvImportText('')
   }
 
   function setEventStatus(id: string, status: CustomEvent['status']) {
@@ -256,6 +286,30 @@ export function CustomLeagueAdminPage() {
                 <Plus size={15} /> Add event
               </Button>
             </form>
+          </Panel>
+
+          <Panel>
+            <PanelHeading
+              title="Import CSV"
+              subtitle="Paste from Sheets or upload a CSV with date, time, title, opponent, venue, notes, arrive, uniform, and status."
+            />
+            <div className="space-y-3">
+              <input
+                type="file"
+                accept=".csv,text/csv"
+                onChange={loadImportFile}
+                className="block w-full text-sm text-ink/60 file:mr-3 file:rounded-lg file:border file:border-primary/20 file:bg-surface file:px-3 file:py-2 file:text-sm file:font-semibold file:text-primary"
+              />
+              <textarea
+                value={csvImportText}
+                onChange={(event) => setCsvImportText(event.target.value)}
+                placeholder={'date,time,title,opponent,venue\n2026-07-04,18:30,Practice,Eagles,Maple Arena'}
+                className="min-h-32 w-full rounded-lg border border-primary/20 bg-surface px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40"
+              />
+              <Button className="w-full" onClick={importCsvEvents} disabled={!csvImportText.trim()}>
+                <Upload size={15} /> Import events
+              </Button>
+            </div>
           </Panel>
         </div>
 

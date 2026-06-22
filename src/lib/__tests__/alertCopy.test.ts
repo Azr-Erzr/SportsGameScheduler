@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import { alertCopyFor, normalizeAlertKind } from '../../../supabase/functions/_shared/alert-copy'
+import { renderSilboAlertEmail } from '../../../supabase/functions/_shared/email-template'
 
 describe('alert copy', () => {
   test('renders participant/bracket updates as matchup-set alerts', () => {
@@ -27,5 +28,29 @@ describe('alert copy', () => {
     expect(normalizeAlertKind('broadcast_set')).toBe('broadcast_update')
     expect(copy.subject).toBe('Watch info updated: UFC 329')
     expect(copy.body).toContain('where-to-watch information')
+  })
+
+  test('renders branded html and text email fallbacks', () => {
+    const event = {
+      title: 'Canada vs Morocco',
+      starts_at: '2026-06-18T22:00:00.000Z',
+      timezone: 'America/Toronto',
+      venue_name: 'BMO Field',
+      league_name: 'FIFA World Cup',
+    }
+    const copy = alertCopyFor('reminder', event, 'https://silbosports.com/settings/alerts')
+    const email = renderSilboAlertEmail({
+      appUrl: 'https://silbosports.com',
+      copy,
+      event,
+      manageUrl: 'https://silbosports.com/settings/alerts',
+    })
+
+    expect(email.subject).toBe('Reminder: Canada vs Morocco')
+    expect(email.text).toContain('Manage alerts: https://silbosports.com/settings/alerts')
+    expect(email.text).toContain('League: FIFA World Cup')
+    expect(email.html).toContain('Silbo Sports')
+    expect(email.html).toContain('Open schedule')
+    expect(email.html).toContain('BMO Field')
   })
 })

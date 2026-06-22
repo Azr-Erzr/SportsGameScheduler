@@ -38,7 +38,8 @@ request already hit us).
 ### Current posture
 - **`calendar-feed`** (the only public, no-JWT function): token-gated (unguessable hashed token)
   and `Cache-Control: public, max-age=300`, so repeat polls are served from Cloudflare's CDN, not
-  recomputed.
+  recomputed. The function also has a small per-isolate burst guard (`120/min/IP+feed`) as
+  defense-in-depth before it touches the database.
 - **`admin-stats`, `notifications`, `provider-hydrate*`, `provider-sync`**: `verify_jwt = true`
   (admin-stats additionally allowlist-gated; the hydrate/notify functions are cron-invoked).
 - Supabase enforces baseline platform limits; PostgREST reads are RLS-gated.
@@ -52,6 +53,7 @@ request already hit us).
    appears.
 
 ### Why not in-app
-A Deno/edge limiter would need shared state (KV/Redis) and still let the request reach the
-function. Cloudflare blocks at the edge before it costs us anything, and it's config not code.
-Revisit an app-level token-bucket only if a specific endpoint needs per-user (not per-IP) limits.
+A durable Deno/edge limiter would need shared state (KV/Redis) and still let the request reach the
+function. Cloudflare blocks at the edge before it costs us anything, and it's config not code. The
+calendar-feed burst guard is intentionally lightweight and local to an isolate; keep the WAF rule
+as the production control.
