@@ -1,4 +1,4 @@
-import { ArrowLeft, CalendarDays, Clock, Download, MapPin, Star, Tv } from 'lucide-react'
+import { ArrowLeft, Bell, CalendarDays, Clock, Download, MapPin, Star, Tv } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
 import { useAppState } from '../app/state-context'
 import { Badge, Button, EmptyState, Panel, PanelHeading } from '../components/ui'
@@ -130,6 +130,17 @@ export function EventDetailPage() {
           )}
         </dl>
 
+        {/* Plain-language answer line: states the key fact in prose for users and for AI/answer
+            engines that render JS, and frames the local-time + reminder value. */}
+        <p className="text-sm text-ink/70">
+          {event.title}
+          {event.leagueName ? ` (${event.leagueName})` : ''}{' '}
+          {event.startsAt
+            ? `${t('event.startsLine', undefined, prefs.locale)} ${when} (${prefs.timezone}).`
+            : `${t('event.timeTbd', undefined, prefs.locale)}.`}{' '}
+          {t('event.summaryTail', undefined, prefs.locale)}
+        </p>
+
         <div className="flex flex-wrap gap-2 pt-1">
           {event.leagueId && (
             <Button
@@ -147,6 +158,12 @@ export function EventDetailPage() {
           >
             <Download size={15} /> {t('event.addCalendar', undefined, prefs.locale)}
           </button>
+          <Link
+            to="/settings/alerts"
+            className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-primary/25 px-3 py-2 text-xs font-bold text-ink transition-colors hover:bg-primary/10"
+          >
+            <Bell size={15} /> {t('event.getReminders', undefined, prefs.locale)}
+          </Link>
         </div>
       </Panel>
 

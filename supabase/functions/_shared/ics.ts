@@ -28,7 +28,7 @@ export type FeedEvent = {
 export type RenderOptions = {
   /** Reminder lead times in minutes (each becomes a VALARM). Empty = no alarms. */
   reminderMinutes?: number[]
-  /** Absolute base URL for "view event" links, e.g. https://silbosports.app */
+  /** Absolute base URL for "view event" links, e.g. https://silbosports.com */
   appUrl?: string
 }
 
@@ -139,7 +139,7 @@ export function eventToVevent(event: FeedEvent, options: RenderOptions = {}): st
     'BEGIN:VEVENT',
     // Stable UID + SEQUENCE from the version column: calendar clients update in place
     // instead of duplicating, and only re-notify when version actually bumped.
-    `UID:${event.id}@silbosports.app`,
+    `UID:${event.id}@silbosports.com`,
     `SEQUENCE:${event.version}`,
     `DTSTAMP:${formatIcsDate(new Date())}`,
     `LAST-MODIFIED:${formatIcsDate(new Date(event.updated_at))}`,

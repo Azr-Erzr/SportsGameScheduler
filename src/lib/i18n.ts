@@ -94,6 +94,10 @@ const english: Messages = {
   'event.followingLeague': 'Following league',
   'event.followLeague': 'Follow league',
   'event.addCalendar': 'Add to schedule',
+  'event.startsLine': 'starts',
+  'event.summaryTail':
+    'See it in your local time, find where to watch, add it to your calendar, or get a reminder before it starts.',
+  'event.getReminders': 'Get reminders',
   'event.competitors': 'Competitors',
   'event.competitorsSubtitle': '{count} in this event',
   'event.watchNoBroadcast': 'No confirmed broadcast yet. Common ways to watch in your region:',
