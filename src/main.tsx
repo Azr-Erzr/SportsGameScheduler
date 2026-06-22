@@ -7,7 +7,7 @@ import { AppShell } from './app/AppShell'
 import { AppStateProvider } from './app/state'
 
 function applyRuntimeBrowserFlags() {
-  const isFirefox = /\bFirefox\//.test(navigator.userAgent)
+  const isFirefox = /\b(Firefox|FxiOS|Focus)\//.test(navigator.userAgent)
 
   document.documentElement.dataset.browser = isFirefox ? 'firefox' : 'enhanced'
   document.documentElement.dataset.visualEffects = isFirefox ? 'reduced' : 'enhanced'
