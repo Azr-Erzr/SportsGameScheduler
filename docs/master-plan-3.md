@@ -152,7 +152,7 @@ Research cues:
 | Mobile top bar/nav cleanup | P1 | Partial | Stop icons/text from feeling squished on small screens | Bottom dock now expands only the active label; top row spacing tightened. Future: test alternate header/sport selector if needed. |
 | Light/dark presentation modes | P2 | Partial | Offer broadcast-dark and program-paper experiences | Current theme mode exists. Program mode now routes sport cards/switcher through paper-safe colors and suppresses neon glow. Future: full contrast audit across every route/export. |
 | Standardized poster card system | P1 | Partial | Make every sport/event card use a consistent size, hierarchy, and fallback art slot | Homepage poster rail now uses fixed card tracks and has fallback cards for every current sport family. Future: formalize templates for match, race, fight card, tournament, meet/session, and community schedule cards. |
-| Self-running spotlight board | P1 | Planned | Let homepage cards and globe signals update from DB data instead of hardcoded arrays | Add competition templates/instances, `spotlight_events`, ranking rules, lifecycle statuses, expiry/promotion windows, and scheduled refresh jobs so the site promotes the biggest relevant sports moments automatically. See `docs/spotlight-lifecycle-automation.md`. |
+| Self-running spotlight board | P1 | Shipped v1 | Let homepage cards and globe signals update from DB data instead of hardcoded arrays | `spotlight_events`, ranked RPC, competition templates/instances, lifecycle statuses, expiry/result-hold fields, return stubs, and art-cache tables are in migrations. Next: remote migration-history repair/push and richer admin review. See `docs/spotlight-lifecycle-automation.md`. |
 
 ### Program Mode Color Rule
 
@@ -793,7 +793,10 @@ before.
 7. [x] Build the server cache/diff layer before plugging more UI into live APIs: `payload_hash`,
    `last_checked_at`, provider sync run logging, event change logs, source targets, and ICS feed
    ingestion are in repo.
-8. [ ] Add the spotlight ranking tables/jobs and region-aware world-board query.
+8. [x] Add the spotlight ranking tables/jobs and region-aware world-board query. The repo now has
+   `spotlight_events`, `competition_templates`, `competition_instances`, lifecycle ranking RPCs,
+   result-hold/return-stub fields, and region boosts. Remote DB push is blocked until the existing
+   migration-history mismatch is repaired.
 9. [ ] Prototype fight-card presentation inline on sport pages; partly explored, but still needs structured `event_bouts`
    data, reliable bout order, and a dedicated export template.
 10. [x] Move public product language to Silbo Sports; remaining launch task is legal/domain lock,
@@ -803,6 +806,7 @@ before.
 
 The best MP3 items to complete next are:
 
-1. Replace hardcoded homepage spotlight/world-board data with DB-backed ranking tables.
-2. Formalize fight-card/race-weekend/bracket structures once provider coverage is confirmed.
-3. Expand provider verification into stored sample fixtures and CI artifacts.
+1. Formalize fight-card/race-weekend/bracket structures once provider coverage is confirmed.
+2. Expand provider verification into stored sample fixtures and CI artifacts.
+3. Repair remote migration history, push the competition lifecycle migration, then verify the
+   ranked spotlight RPC from production data.

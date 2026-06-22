@@ -68,8 +68,8 @@ Remaining MP4 work:
 - Provision email and push secrets, then verify real delivery end to end.
 - Add source-target admin review tooling and seed verified official calendar feeds.
 - Backfill factual `broadcasts`/watch-provider data and approved affiliate URLs.
-- Replace hardcoded homepage spotlight/world-board arrays with DB ranking tables/jobs and the
-  competition lifecycle automation described in `docs/spotlight-lifecycle-automation.md`.
+- Push/verify the repo-ready competition lifecycle migration once the existing remote migration
+  history mismatch is repaired; the schema/RPC layer is in repo, but not safely applied remotely.
 - Model `event_bouts`, bracket slots, playoff series, and race-weekend sessions once reliable data
   sources are selected.
 
@@ -422,8 +422,8 @@ New immediate backend queue:
    result counts, errors, and source terms notes.
 3. Backfill factual `broadcasts`, then attach approved `watch_links` with disclosure and region
    matching.
-4. Replace hardcoded homepage data with competition templates/instances, lifecycle-aware
-   spotlight/ranking tables, and a region-aware world-board query.
+4. Repair remote migration history, then apply and verify competition templates/instances,
+   lifecycle-aware spotlight/ranking tables, and the region-aware world-board query.
 5. Model `event_bouts`, fight-card sections, bracket slots, playoff series, race-weekend sessions,
    and export templates that use those structures.
 

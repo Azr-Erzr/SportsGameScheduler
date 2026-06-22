@@ -8,6 +8,14 @@ export type SpotlightEvent = {
   detail: string
   href: string
   importance: number
+  lifecycle?: string
+  templateSlug?: string | null
+  artKey?: string | null
+  startsAt?: string | null
+  endsAt?: string | null
+  resultHoldUntil?: string | null
+  scheduleReleaseExpectedAt?: string | null
+  sourceConfidence?: string | null
 }
 
 // Fallback mirrors the seeded DB rows so the homepage still has a complete board offline.
@@ -25,23 +33,27 @@ export const fallbackSpotlightEvents: SpotlightEvent[] = [
     sportKey: 'motorsport',
     label: 'Staged',
     detail: 'Practice, qualifying, sprint, and race sessions.',
-    href: '/sports/f1',
+    href: '/sports/motorsport',
     importance: 84,
+    lifecycle: 'schedule_live',
+    templateSlug: 'race-weekend',
   },
   {
     title: 'UFC / PFL fight cards',
     sportKey: 'combat',
     label: 'Model ready',
     detail: 'Main cards, prelims, fighters, and late changes.',
-    href: '/sports/ufc',
+    href: '/sports/combat',
     importance: 72,
+    lifecycle: 'schedule_live',
+    templateSlug: 'fight-card',
   },
   {
     title: 'WNBA schedule tracking',
     sportKey: 'basketball',
     label: 'Source testing',
     detail: 'TheSportsDB premium, SportsDataIO, and Sportradar candidates.',
-    href: '/sports/wnba',
+    href: '/sports/basketball',
     importance: 55,
   },
   {
@@ -49,7 +61,7 @@ export const fallbackSpotlightEvents: SpotlightEvent[] = [
     sportKey: 'football',
     label: 'Canada focus',
     detail: 'Canadian kickoff times and broadcast-region fit.',
-    href: '/sports/cfl',
+    href: '/sports/football',
     importance: 45,
   },
   {
@@ -110,6 +122,14 @@ type SpotlightRow = {
   href: string
   global_importance: number
   ranking_score?: number
+  lifecycle?: string
+  template_slug?: string | null
+  art_key?: string | null
+  starts_at?: string | null
+  ends_at?: string | null
+  result_hold_until?: string | null
+  schedule_release_expected_at?: string | null
+  source_confidence?: string | null
 }
 
 const cache = new Map<string, SpotlightEvent[]>()
@@ -132,6 +152,14 @@ async function fetchSpotlights(regionCode?: string | null): Promise<SpotlightEve
     detail: row.detail,
     href: row.href,
     importance: row.ranking_score ?? row.global_importance,
+    lifecycle: row.lifecycle,
+    templateSlug: row.template_slug,
+    artKey: row.art_key,
+    startsAt: row.starts_at,
+    endsAt: row.ends_at,
+    resultHoldUntil: row.result_hold_until,
+    scheduleReleaseExpectedAt: row.schedule_release_expected_at,
+    sourceConfidence: row.source_confidence,
   }))
 }
 
