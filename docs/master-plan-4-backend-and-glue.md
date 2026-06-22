@@ -410,20 +410,20 @@ Completed from the original MP4 queue:
 6. [x] Flood the DB/provider allowlist with secondary sports and baseball targets.
 7. [x] Add `payload_hash` + `last_checked_at` and unchanged-payload short-circuiting.
 8. [x] Add calendar-feed ingestion for allowlisted `.ics` / `webcal://` sources.
+9. [x] Add non-mutating provider verification probes for TheSportsDB, API-SPORTS, OpenF1, and
+   combat coverage, plus a main-sport DB coverage audit for the 11 top navigation sports.
 
 New immediate backend queue:
 
-1. Create provider-adapter verification scripts for TheSportsDB, API-SPORTS, OpenF1, and one combat
-   source. These should probe coverage and normalize sample payloads without mutating production.
-2. Seed and review official calendar-feed targets. Keep `dry_run = true` until source terms and
+1. Seed and review official calendar-feed targets. Keep `dry_run = true` until source terms and
    source confidence are verified, then promote selected feeds.
-3. Add source/provider observability to `/admin`: target status, last checked/changed, dry-run
+2. Add source/provider observability to `/admin`: target status, last checked/changed, dry-run
    result counts, errors, and source terms notes.
-4. Backfill factual `broadcasts`, then attach approved `watch_links` with disclosure and region
+3. Backfill factual `broadcasts`, then attach approved `watch_links` with disclosure and region
    matching.
-5. Replace hardcoded homepage data with spotlight/ranking tables and a region-aware world-board
+4. Replace hardcoded homepage data with spotlight/ranking tables and a region-aware world-board
    query.
-6. Model `event_bouts`, fight-card sections, bracket slots, playoff series, race-weekend sessions,
+5. Model `event_bouts`, fight-card sections, bracket slots, playoff series, race-weekend sessions,
    and export templates that use those structures.
 
 The historical queue below is kept as audit context; every numbered item in it has been completed

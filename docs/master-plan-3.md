@@ -772,11 +772,11 @@ before.
 3. [x] Add visual identity polish: brand block, sports nav, larger logo treatment, sport-specific
    ticket colors, other-sports glyphs, dark/light mode cleanup, branded PDFs, and generator-aligned
    favicon assets.
-4. [ ] Add a committed Playwright mobile smoke test for homepage, sport page, expanded match card,
+4. [x] Add a committed Playwright mobile smoke test for homepage, sport page, expanded match card,
    export studio, and custom leagues.
 5. [x] Document/backend-map sport-family aliases and canonical sport keys in migrations/functions;
    follow-up remains to clean any legacy display keys from old seed data.
-6. [ ] Build provider-adapter test scripts for TheSportsDB, API-SPORTS, OpenF1, and one combat
+6. [x] Build provider-adapter test scripts for TheSportsDB, API-SPORTS, OpenF1, and one combat
    source.
 7. [x] Build the server cache/diff layer before plugging more UI into live APIs: `payload_hash`,
    `last_checked_at`, provider sync run logging, event change logs, source targets, and ICS feed
@@ -791,7 +791,6 @@ before.
 
 The best MP3 items to complete next are:
 
-1. Add the Playwright smoke suite and mobile viewport checks.
-2. Add provider-adapter scripts/tests for TheSportsDB, API-SPORTS, OpenF1, and combat data.
-3. Replace hardcoded homepage spotlight/world-board data with DB-backed ranking tables.
-4. Formalize fight-card/race-weekend/bracket structures once provider coverage is confirmed.
+1. Replace hardcoded homepage spotlight/world-board data with DB-backed ranking tables.
+2. Formalize fight-card/race-weekend/bracket structures once provider coverage is confirmed.
+3. Expand provider verification into stored sample fixtures and CI artifacts.
