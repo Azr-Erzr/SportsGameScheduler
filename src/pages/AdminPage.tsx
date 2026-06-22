@@ -29,7 +29,9 @@ type Overview = {
       dry_run: boolean
       last_status: string | null
       last_checked_at: string | null
+      last_changed_at: string | null
       last_error: string | null
+      terms_note: string | null
     }>
   }
   watch?: { providers: number; active_links: number; pending_affiliates: number; approved_affiliates: number }
@@ -139,27 +141,68 @@ export function AdminPage() {
         ) : null}
       </Panel>
 
-      <div className="grid gap-3 lg:grid-cols-3">
-        <Panel>
-          <PanelHeading
-            title="Source targets"
-            subtitle={
-              data.source_targets
-                ? `${data.source_targets.active}/${data.source_targets.total} active - ${data.source_targets.dry_run} dry-run - ${data.source_targets.errored} errored`
-                : 'Not reported'
-            }
-          />
-          <ul className="mt-3 space-y-1 text-xs text-ink/60">
-            {(data.source_targets?.recent ?? []).slice(0, 4).map((target) => (
-              <li key={target.target_key} className="flex items-center gap-2">
-                <Badge tone={target.last_error ? 'warning' : target.dry_run ? 'muted' : 'secondary'}>
-                  {target.dry_run ? 'dry-run' : 'live'}
-                </Badge>
-                <span className="min-w-0 flex-1 truncate">{target.target_key}</span>
-              </li>
-            ))}
-          </ul>
-        </Panel>
+      <Panel>
+        <PanelHeading
+          title="Source targets"
+          subtitle={
+            data.source_targets
+              ? `${data.source_targets.active}/${data.source_targets.total} active - ${data.source_targets.dry_run} dry-run - ${data.source_targets.errored} errored`
+              : 'Not reported'
+          }
+        />
+        {data.source_targets?.recent?.length ? (
+          <div className="mt-3 overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left font-mono text-[10px] uppercase tracking-wide text-ink/45">
+                  <th className="py-1">Target</th>
+                  <th className="py-1">Mode</th>
+                  <th className="py-1">Status</th>
+                  <th className="py-1 text-right">Checked</th>
+                  <th className="py-1 text-right">Changed</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.source_targets.recent.map((target) => (
+                  <tr key={target.target_key} className="border-t border-primary/10 align-top">
+                    <td className="py-1.5 pr-3">
+                      <div className="font-semibold">{target.target_key}</div>
+                      {target.terms_note && (
+                        <div className="mt-0.5 max-w-lg text-xs font-normal text-ink/45" title={target.terms_note}>
+                          {target.terms_note}
+                        </div>
+                      )}
+                      {target.last_error && (
+                        <div className="mt-0.5 max-w-lg truncate text-xs text-ink/55" style={{ color: 'var(--color-flap-chg)' }} title={target.last_error}>
+                          {target.last_error}
+                        </div>
+                      )}
+                    </td>
+                    <td className="py-1.5 pr-3">
+                      <Badge tone={target.dry_run ? 'muted' : 'secondary'}>{target.dry_run ? 'dry-run' : 'live'}</Badge>
+                    </td>
+                    <td className="py-1.5 pr-3">
+                      <Badge tone={target.last_error ? 'warning' : target.last_status ? 'secondary' : 'muted'}>
+                        {target.last_status ?? 'never run'}
+                      </Badge>
+                    </td>
+                    <td className="py-1.5 text-right font-mono text-[10px] text-ink/45">
+                      {target.last_checked_at ? relativeTimeFromNow(new Date(target.last_checked_at)) : 'never'}
+                    </td>
+                    <td className="py-1.5 text-right font-mono text-[10px] text-ink/45">
+                      {target.last_changed_at ? relativeTimeFromNow(new Date(target.last_changed_at)) : '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="mt-3 text-sm text-ink/55">No source targets reported.</p>
+        )}
+      </Panel>
+
+      <div className="grid gap-3 lg:grid-cols-2">
         <Panel>
           <PanelHeading
             title="Watch links"
