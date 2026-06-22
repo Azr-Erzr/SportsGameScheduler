@@ -1,12 +1,24 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "silbosports",
+  "main": "worker/index.ts",
   "compatibility_date": "2026-06-12",
   "assets": {
     "directory": "./dist/",
-    "not_found_handling": "single-page-application"
+    "not_found_handling": "single-page-application",
+    "binding": "ASSETS",
+    // The Worker runs first ONLY for event/league pages, where it rewrites OG/meta + injects a
+    // crawler-visible summary (see worker/index.ts). Every other path is served as a static asset
+    // directly, so the SPA's normal serving path is unchanged.
+    "run_worker_first": ["/events/*", "/leagues/*"]
   },
   "observability": {
     "enabled": true
+  },
+  // SUPABASE_URL + publishable (anon) key — non-secret by design (RLS-protected, already inlined
+  // into the browser bundle). The Worker uses them to read public event/league rows for OG tags.
+  "vars": {
+    "SUPABASE_URL": "https://gcnbgdpicgeahxscpsfc.supabase.co",
+    "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_Gf0t7yXfhyQbDBWG43YB3Q_71eKDwGb"
   }
 }

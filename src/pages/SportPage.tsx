@@ -518,6 +518,7 @@ function LiveSportPage({ sport }: { sport: SportInfo }) {
     [shownEvents, eventPage],
   )
   const seasonReturn = leagueId ? null : seasonReturnFor(canonical)
+  const selectedLeague = leagueId ? leagues.find((league) => league.id === leagueId) ?? null : null
 
   function changeEventPage(page: number) {
     setEventPager({ key: eventPageKey, page })
@@ -610,13 +611,12 @@ function LiveSportPage({ sport }: { sport: SportInfo }) {
                   onAdd={() => addSeasonReturnToSchedule(seasonReturn)}
                 />
               ) : (
-                <EmptyState
-                  title={`No upcoming ${sport.label.toLowerCase()} events`}
-                  body={
-                    isIndividual
-                      ? 'Between seasons - the next fixtures sync in automatically. Browse the players meanwhile.'
-                      : "We're tracking this sport. Upcoming events appear here as the next season is published."
-                  }
+                <CoverageStandbyNotice
+                  sport={sport}
+                  leagueCount={leagues.length}
+                  playerCount={roster.players.length}
+                  isIndividual={isIndividual}
+                  selectedLeagueName={selectedLeague?.name ?? null}
                 />
               )}
             </section>
@@ -634,6 +634,68 @@ function LiveSportPage({ sport }: { sport: SportInfo }) {
         </>
       )}
     </div>
+  )
+}
+
+function CoverageStandbyNotice({
+  sport,
+  leagueCount,
+  playerCount,
+  isIndividual,
+  selectedLeagueName,
+}: {
+  sport: SportInfo
+  leagueCount: number
+  playerCount: number
+  isIndividual: boolean
+  selectedLeagueName: string | null
+}) {
+  const title = selectedLeagueName
+    ? `${selectedLeagueName} is between schedule drops`
+    : `${sport.label} coverage is hydrated`
+  const body = selectedLeagueName
+    ? 'This league is in the system; the next fixtures will appear here as soon as the schedule window is published.'
+    : `Silbo has this ${sport.label.toLowerCase()} lane connected. Upcoming events will fill this board as the next schedule window opens.`
+
+  return (
+    <Panel className="overflow-hidden border-primary/20 bg-surface/90 p-0">
+      <div className="grid gap-0 md:grid-cols-[150px_1fr]">
+        <div className="flex flex-col justify-between bg-ticket-stub p-4 text-ticket-stub-text">
+          <span className="font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-ticket-stub-text/75">
+            Standby
+          </span>
+          <strong className="mt-6 font-head text-2xl leading-none">Ready</strong>
+          <span className="mt-2 font-mono text-[9px] uppercase tracking-wide text-ticket-stub-text/70">
+            Auto-sync lane
+          </span>
+        </div>
+        <div className="space-y-4 p-4">
+          <div>
+            <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink/45">Hydrated sport page</p>
+            <h3 className="mt-1 text-xl font-extrabold text-primary">{title}</h3>
+            <p className="mt-2 max-w-3xl text-sm text-ink/65">{body}</p>
+          </div>
+          <dl className="grid gap-2 sm:grid-cols-3">
+            <div className="rounded-lg border border-primary/15 bg-page/45 px-3 py-2">
+              <dt className="font-mono text-[10px] uppercase tracking-wide text-ink/45">Leagues ready</dt>
+              <dd className="text-sm font-extrabold text-ink">{leagueCount}</dd>
+            </div>
+            <div className="rounded-lg border border-primary/15 bg-page/45 px-3 py-2">
+              <dt className="font-mono text-[10px] uppercase tracking-wide text-ink/45">
+                {isIndividual ? 'Players tracked' : 'Event type'}
+              </dt>
+              <dd className="truncate text-sm font-extrabold text-ink">
+                {isIndividual ? (playerCount >= 500 ? '500+' : playerCount) : `${sport.eventNoun}s`}
+              </dd>
+            </div>
+            <div className="rounded-lg border border-primary/15 bg-page/45 px-3 py-2">
+              <dt className="font-mono text-[10px] uppercase tracking-wide text-ink/45">Next update</dt>
+              <dd className="text-sm font-extrabold text-ink">Automatic</dd>
+            </div>
+          </dl>
+        </div>
+      </div>
+    </Panel>
   )
 }
 

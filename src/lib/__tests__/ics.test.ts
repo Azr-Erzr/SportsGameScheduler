@@ -160,7 +160,7 @@ describe('server live-feed ICS renderer', () => {
     })
     const unfolded = vevent.replace(/\r\n /g, '')
 
-    expect(unfolded).toContain('UID:event-123@silbosports.app')
+    expect(unfolded).toContain('UID:event-123@silbosports.com')
     expect(unfolded).toContain('SEQUENCE:7')
     expect(unfolded).toContain('DTSTART:20260714T013000Z')
     expect(unfolded).toContain('LOCATION:Rogers Centre\\, Toronto')

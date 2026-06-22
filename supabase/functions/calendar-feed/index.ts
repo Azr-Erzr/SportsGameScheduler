@@ -10,7 +10,7 @@ const supabase = createClient(
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
 )
 
-const APP_URL = Deno.env.get('APP_URL') ?? 'https://silbosports.app'
+const APP_URL = Deno.env.get('APP_URL') ?? 'https://silbosports.com'
 
 async function sha256Hex(value: string): Promise<string> {
   const data = new TextEncoder().encode(value)

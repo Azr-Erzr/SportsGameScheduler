@@ -1,4 +1,45 @@
+# Silbo Sports — open to search and AI/answer engines.
+# Event/league pages carry fresh schedule data and SportsEvent JSON-LD; we want
+# them crawled and cited. AI engines are allowed explicitly (GEO), not just via *.
+
 User-agent: *
+Allow: /
+
+# Search + answer engines (explicit allow for clarity/intent)
+User-agent: Googlebot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: GPTBot
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Perplexity-User
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+User-agent: Applebot
+Allow: /
+
+User-agent: Applebot-Extended
 Allow: /
 
 Sitemap: https://silbosports.com/sitemap.xml

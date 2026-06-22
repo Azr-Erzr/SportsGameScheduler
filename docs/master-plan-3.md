@@ -152,7 +152,7 @@ Research cues:
 | Mobile top bar/nav cleanup | P1 | Partial | Stop icons/text from feeling squished on small screens | Bottom dock now expands only the active label; top row spacing tightened. Future: test alternate header/sport selector if needed. |
 | Light/dark presentation modes | P2 | Partial | Offer broadcast-dark and program-paper experiences | Current theme mode exists. Program mode now routes sport cards/switcher through paper-safe colors and suppresses neon glow. Future: full contrast audit across every route/export. |
 | Standardized poster card system | P1 | Partial | Make every sport/event card use a consistent size, hierarchy, and fallback art slot | Homepage poster rail now uses fixed card tracks and has fallback cards for every current sport family. Future: formalize templates for match, race, fight card, tournament, meet/session, and community schedule cards. |
-| Self-running spotlight board | P1 | Planned | Let homepage cards and globe signals update from DB data instead of hardcoded arrays | Add `spotlight_events`, ranking rules, lifecycle statuses, expiry/promotion windows, and scheduled refresh jobs so the site promotes the biggest relevant sports moments automatically. |
+| Self-running spotlight board | P1 | Shipped v1 | Let homepage cards and globe signals update from DB data instead of hardcoded arrays | `spotlight_events`, ranked RPC, competition templates/instances, lifecycle statuses, expiry/result-hold fields, return stubs, and art-cache tables are in migrations. Next: remote migration-history repair/push and richer admin review. See `docs/spotlight-lifecycle-automation.md`. |
 
 ### Program Mode Color Rule
 
@@ -192,6 +192,12 @@ The homepage "biggest coming up" rail and globe signal board should eventually r
 cached event data, not a hand-edited frontend list. The current hardcoded array is only a
 front-end proving ground for the card system.
 
+The detailed automation blueprint now lives in
+[`spotlight-lifecycle-automation.md`](./spotlight-lifecycle-automation.md). The key shift is
+to rank recurring competition instances (World Cup, UCL season, LA 2028 Olympics, F1 race
+weekend, UFC card, etc.) and lifecycle states before rendering frontend copy/art. That prevents
+Silbo from needing a manual redesign every time a major competition becomes relevant.
+
 ### Product Goal
 
 Silbo should feel alive when a user lands on it:
@@ -212,6 +218,8 @@ Core tables/fields to add:
 
 | Table | Purpose |
 |---|---|
+| `competition_templates` | Reusable design/copy/ranking rules for recurring moments like World Cup, UCL, Olympics, race weekends, fight cards, and league seasons. |
+| `competition_instances` | Real editions/seasons such as `FIFA World Cup 2026`, `UEFA Champions League 2026-27`, or `LA 2028 Olympics`; owns dates, schedule-release estimates, next-return markers, art, and status. |
 | `spotlight_events` | Editorial/computed homepage cards: title, sport_key, league_key, event_id, starts_at, ends_at, status, global_importance, region_importance, lifecycle, art_key, href, source_confidence. |
 | `sport_card_templates` | Reusable card templates per sport family: card_type, art_variant, color role, required fields, fallback copy. |
 | `event_rankings` | Computed scores for upcoming/live events by region and sport. |
@@ -274,6 +282,10 @@ type SpotlightEvent = {
 - Scheduled sync jobs ingest provider data into cached event tables.
 - A ranking job recomputes spotlight candidates after every provider sync and at least hourly.
 - Cards expire automatically after `ends_at` plus a configurable grace window.
+- Completed major events enter a result-hold window before expiring, so a final/result can stay
+  visible for about 24 hours instead of disappearing immediately.
+- Between-season or schedule-pending competitions produce return/reminder ticket stubs instead
+  of fake confirmed events.
 - "Live now" cards receive a temporary score boost.
 - Region-aware cards use locale/region where available, e.g. CFL in Canada, NBA/WNBA in the
   US, UEFA/club football in Europe.
@@ -772,16 +784,19 @@ before.
 3. [x] Add visual identity polish: brand block, sports nav, larger logo treatment, sport-specific
    ticket colors, other-sports glyphs, dark/light mode cleanup, branded PDFs, and generator-aligned
    favicon assets.
-4. [ ] Add a committed Playwright mobile smoke test for homepage, sport page, expanded match card,
+4. [x] Add a committed Playwright mobile smoke test for homepage, sport page, expanded match card,
    export studio, and custom leagues.
 5. [x] Document/backend-map sport-family aliases and canonical sport keys in migrations/functions;
    follow-up remains to clean any legacy display keys from old seed data.
-6. [ ] Build provider-adapter test scripts for TheSportsDB, API-SPORTS, OpenF1, and one combat
+6. [x] Build provider-adapter test scripts for TheSportsDB, API-SPORTS, OpenF1, and one combat
    source.
 7. [x] Build the server cache/diff layer before plugging more UI into live APIs: `payload_hash`,
    `last_checked_at`, provider sync run logging, event change logs, source targets, and ICS feed
    ingestion are in repo.
-8. [ ] Add the spotlight ranking tables/jobs and region-aware world-board query.
+8. [x] Add the spotlight ranking tables/jobs and region-aware world-board query. The repo now has
+   `spotlight_events`, `competition_templates`, `competition_instances`, lifecycle ranking RPCs,
+   result-hold/return-stub fields, and region boosts. Remote DB push is blocked until the existing
+   migration-history mismatch is repaired.
 9. [ ] Prototype fight-card presentation inline on sport pages; partly explored, but still needs structured `event_bouts`
    data, reliable bout order, and a dedicated export template.
 10. [x] Move public product language to Silbo Sports; remaining launch task is legal/domain lock,
@@ -791,7 +806,7 @@ before.
 
 The best MP3 items to complete next are:
 
-1. Add the Playwright smoke suite and mobile viewport checks.
-2. Add provider-adapter scripts/tests for TheSportsDB, API-SPORTS, OpenF1, and combat data.
-3. Replace hardcoded homepage spotlight/world-board data with DB-backed ranking tables.
-4. Formalize fight-card/race-weekend/bracket structures once provider coverage is confirmed.
+1. Formalize fight-card/race-weekend/bracket structures once provider coverage is confirmed.
+2. Expand provider verification into stored sample fixtures and CI artifacts.
+3. Repair remote migration history, push the competition lifecycle migration, then verify the
+   ranked spotlight RPC from production data.

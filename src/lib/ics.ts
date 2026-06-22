@@ -107,7 +107,7 @@ export function createMultiSportIcsBlob(
 
       return renderIcsLines([
         'BEGIN:VEVENT',
-        `UID:silbo-${event.id}@silbosports.app`,
+        `UID:silbo-${event.id}@silbosports.com`,
         `DTSTAMP:${formatIcsDate(new Date())}`,
         dateOnly ? `DTSTART;VALUE=DATE:${formatIcsDateOnly(start)}` : `DTSTART:${formatIcsDate(start)}`,
         dateOnly ? `DTEND;VALUE=DATE:${formatIcsDateOnly(end)}` : `DTEND:${formatIcsDate(end)}`,

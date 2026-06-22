@@ -1,0 +1,19 @@
+# Cloudflare Workers Static Assets honors this file (copied to dist/ at build).
+#
+# Vite fingerprints these build outputs (e.g. index-CoucNgDL.js), so their content can never
+# change under a given URL — safe to cache for a year and skip revalidation. Previously they were
+# served `max-age=0, must-revalidate` (CF-Cache-Status: MISS on every hit), which wasted a repeat
+# -visit round-trip. index.html is intentionally NOT matched here so new deploys still propagate.
+# Non-hashed public images live in /assets/sub-dirs/ and are left on the platform default.
+
+/assets/*.js
+  Cache-Control: public, max-age=31536000, immutable
+
+/assets/*.css
+  Cache-Control: public, max-age=31536000, immutable
+
+/assets/*.woff2
+  Cache-Control: public, max-age=31536000, immutable
+
+/assets/*.woff
+  Cache-Control: public, max-age=31536000, immutable
