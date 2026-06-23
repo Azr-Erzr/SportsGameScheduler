@@ -1,18 +1,26 @@
 import {
-  CarFront,
-  CircleDot,
-  Disc,
-  Dumbbell,
-  Gamepad2,
-  Goal,
-  LandPlot,
-  Medal,
-  Shield,
-  Timer,
-  Users,
-  Volleyball,
-  type LucideIcon,
-} from 'lucide-react'
+  IconBallAmericanFootball,
+  IconBallBaseball,
+  IconBallBasketball,
+  IconBallFootball,
+  IconBallTennis,
+  IconBallVolleyball,
+  IconBike,
+  IconCategory,
+  IconCircle,
+  IconCricket,
+  IconDeviceGamepad2,
+  IconDisc,
+  IconGolf,
+  IconHelmet,
+  IconKarate,
+  IconOlympicTorch,
+  IconPlayHandball,
+  IconRugby,
+  IconRun,
+  IconTarget,
+  type Icon,
+} from '@tabler/icons-react'
 import type { CanonicalSportKey, SportKey } from './types'
 
 export type SportInfo = {
@@ -25,7 +33,7 @@ export type SportInfo = {
   /** League/tournament examples shown as secondary context. */
   flagshipLeague: string
   leagueKey?: string
-  icon: LucideIcon
+  icon: Icon
   badgeKey: string
   enabled: boolean
   eventNoun: string
@@ -40,7 +48,7 @@ export const sports: SportInfo[] = [
     label: 'Soccer',
     flagshipLeague: 'World Cup / UEFA / EPL / La Liga',
     leagueKey: 'wc2026',
-    icon: Goal,
+    icon: IconBallFootball,
     badgeKey: 'soccer',
     enabled: true,
     eventNoun: 'match',
@@ -52,7 +60,7 @@ export const sports: SportInfo[] = [
     label: 'Basketball',
     flagshipLeague: 'NBA / WNBA / FIBA / NCAA',
     leagueKey: 'basketball',
-    icon: Volleyball,
+    icon: IconBallBasketball,
     badgeKey: 'basketball',
     enabled: true,
     eventNoun: 'game',
@@ -65,7 +73,7 @@ export const sports: SportInfo[] = [
     label: 'American Football',
     flagshipLeague: 'NFL / CFL / NCAA',
     leagueKey: 'football',
-    icon: Shield,
+    icon: IconBallAmericanFootball,
     badgeKey: 'football',
     enabled: true,
     eventNoun: 'game',
@@ -78,7 +86,7 @@ export const sports: SportInfo[] = [
     label: 'Hockey',
     flagshipLeague: 'NHL / PWHL / IIHF',
     leagueKey: 'nhl',
-    icon: Disc,
+    icon: IconDisc,
     badgeKey: 'hockey',
     enabled: true,
     eventNoun: 'game',
@@ -89,7 +97,7 @@ export const sports: SportInfo[] = [
     canonicalSportKey: 'tennis',
     label: 'Tennis',
     flagshipLeague: 'ATP / WTA / Grand Slams',
-    icon: CircleDot,
+    icon: IconBallTennis,
     badgeKey: 'tennis',
     enabled: true,
     eventNoun: 'match',
@@ -100,7 +108,7 @@ export const sports: SportInfo[] = [
     canonicalSportKey: 'golf',
     label: 'Golf',
     flagshipLeague: 'Majors / PGA / LPGA / Ryder Cup',
-    icon: LandPlot,
+    icon: IconGolf,
     badgeKey: 'golf',
     enabled: true,
     eventNoun: 'round',
@@ -112,7 +120,7 @@ export const sports: SportInfo[] = [
     label: 'Motorsport',
     flagshipLeague: 'F1 / NASCAR / IndyCar',
     leagueKey: 'f1',
-    icon: CarFront,
+    icon: IconHelmet,
     badgeKey: 'motorsport',
     enabled: true,
     eventNoun: 'session',
@@ -125,7 +133,7 @@ export const sports: SportInfo[] = [
     label: 'Combat Sports',
     flagshipLeague: 'UFC / PFL / Boxing',
     leagueKey: 'ufc',
-    icon: Dumbbell,
+    icon: IconKarate,
     badgeKey: 'combat',
     enabled: true,
     eventNoun: 'fight card',
@@ -138,7 +146,7 @@ export const sports: SportInfo[] = [
     label: 'Track & Field',
     flagshipLeague: 'World Athletics / Diamond League / Trials',
     leagueKey: 'track-field',
-    icon: Timer,
+    icon: IconRun,
     badgeKey: 'track',
     enabled: true,
     eventNoun: 'event',
@@ -151,7 +159,7 @@ export const sports: SportInfo[] = [
     label: 'Olympic Sports',
     flagshipLeague: 'Olympics / Swimming / Gymnastics / Athletics',
     leagueKey: 'olympic-sports',
-    icon: Medal,
+    icon: IconOlympicTorch,
     badgeKey: 'olympic',
     enabled: true,
     eventNoun: 'event',
@@ -164,7 +172,7 @@ export const sports: SportInfo[] = [
     label: 'Baseball',
     flagshipLeague: 'MLB / NPB / KBO / NCAA',
     leagueKey: 'mlb',
-    icon: CircleDot,
+    icon: IconBallBaseball,
     badgeKey: 'baseball',
     enabled: true,
     eventNoun: 'game',
@@ -176,7 +184,7 @@ export const sports: SportInfo[] = [
     canonicalSportKey: 'custom',
     label: 'Other Sports',
     flagshipLeague: 'Badminton · Cricket · Rugby · more',
-    icon: Users,
+    icon: IconCategory,
     badgeKey: 'custom',
     enabled: true,
     eventNoun: 'event',
@@ -191,7 +199,7 @@ export const secondarySports: SportInfo[] = [
     label: 'Cricket',
     flagshipLeague: 'IPL / Big Bash / World Cups',
     leagueKey: 'cricket',
-    icon: CircleDot,
+    icon: IconCricket,
     badgeKey: 'custom',
     enabled: true,
     eventNoun: 'match',
@@ -204,7 +212,7 @@ export const secondarySports: SportInfo[] = [
     label: 'Rugby',
     flagshipLeague: 'Six Nations / Rugby World Cup / Super Rugby',
     leagueKey: 'rugby',
-    icon: Shield,
+    icon: IconRugby,
     badgeKey: 'football',
     enabled: true,
     eventNoun: 'match',
@@ -217,7 +225,7 @@ export const secondarySports: SportInfo[] = [
     label: 'Volleyball',
     flagshipLeague: 'FIVB / CEV / domestic leagues',
     leagueKey: 'volleyball',
-    icon: Volleyball,
+    icon: IconBallVolleyball,
     badgeKey: 'basketball',
     enabled: true,
     eventNoun: 'match',
@@ -229,7 +237,7 @@ export const secondarySports: SportInfo[] = [
     label: 'Handball',
     flagshipLeague: 'Bundesliga / EHF / Worlds',
     leagueKey: 'handball',
-    icon: Disc,
+    icon: IconPlayHandball,
     badgeKey: 'basketball',
     enabled: true,
     eventNoun: 'match',
@@ -241,7 +249,7 @@ export const secondarySports: SportInfo[] = [
     label: 'Cycling',
     flagshipLeague: 'UCI World Tour / ProSeries',
     leagueKey: 'cycling',
-    icon: Timer,
+    icon: IconBike,
     badgeKey: 'motorsport',
     enabled: true,
     eventNoun: 'race',
@@ -253,7 +261,7 @@ export const secondarySports: SportInfo[] = [
     label: 'Snooker',
     flagshipLeague: 'World Snooker Tour',
     leagueKey: 'snooker',
-    icon: CircleDot,
+    icon: IconCircle,
     badgeKey: 'custom',
     enabled: true,
     eventNoun: 'match',
@@ -265,7 +273,7 @@ export const secondarySports: SportInfo[] = [
     label: 'Darts',
     flagshipLeague: 'PDC / World Championship',
     leagueKey: 'darts',
-    icon: Timer,
+    icon: IconTarget,
     badgeKey: 'custom',
     enabled: true,
     eventNoun: 'match',
@@ -277,7 +285,7 @@ export const secondarySports: SportInfo[] = [
     label: 'Esports',
     flagshipLeague: 'LoL / Dota 2 / CS / COD / R6',
     leagueKey: 'esports',
-    icon: Gamepad2,
+    icon: IconDeviceGamepad2,
     badgeKey: 'custom',
     enabled: true,
     eventNoun: 'match',
@@ -325,4 +333,19 @@ export function getSport(key: string): SportInfo | undefined {
 
 export function canonicalSportKeyForRoute(key: string): CanonicalSportKey | undefined {
   return getSport(key)?.canonicalSportKey
+}
+
+// The "other sports" category. Secondary sports share uniform Other Sports art and iconography
+// (no dedicated banners/icons yet) until one earns promotion to a main tile. Centralised here so a
+// new secondary sport is automatically treated uniformly everywhere — banner, icon, ordering.
+export const secondarySportKeys = new Set<string>(secondarySports.map((sport) => sport.key))
+
+export function isSecondarySport(key: string): boolean {
+  const sport = getSport(key)
+  return Boolean((sport && secondarySportKeys.has(sport.key)) || secondarySportKeys.has(key))
+}
+
+// Pluralise an event noun for stat labels ("match" → "matches", "race" → "races", "game" → "games").
+export function pluralizeEventNoun(noun: string): string {
+  return /(?:ch|sh|s|x|z)$/i.test(noun) ? `${noun}es` : `${noun}s`
 }

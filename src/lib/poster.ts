@@ -233,6 +233,18 @@ function drawFieldMotif(ctx: CanvasRenderingContext2D, right: number, top: numbe
   ctx.restore()
 }
 
+// The site's neon manifesto bars, rendered as a thin accent strip so exports read as Silbo.
+const BRAND_BARS = ['#54ff9f', '#46e8ff', '#ffd34d', '#ff4fd8', '#ff5247']
+function drawColorBars(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number) {
+  const gap = 10
+  const barW = (width - gap * (BRAND_BARS.length - 1)) / BRAND_BARS.length
+  BRAND_BARS.forEach((color, i) => {
+    ctx.fillStyle = color
+    roundRect(ctx, x + i * (barW + gap), y, barW, height, height / 2)
+    ctx.fill()
+  })
+}
+
 export type PosterPageInfo = { page: number; pageCount: number }
 
 export async function createScheduleCanvas(
@@ -254,19 +266,29 @@ export async function createScheduleCanvas(
   const M = 96
   const innerW = width - M * 2
 
+  // Interior pages earn their space: a slimmer header (smaller logo, no sub-line) and no footer, so
+  // they read tighter and the brand chrome only bookends the set on the first/last page.
+  const isFirst = !pageInfo || pageInfo.page <= 1
+  const isLast = !pageInfo || pageInfo.page >= pageInfo.pageCount
+  const isInterior = !isFirst && !isLast
+
   const headerTop = 78
-  const headerH = 384
-  const teamsTop = headerTop + headerH + 44
+  const headerH = isInterior ? 226 : 384
+  const logoH = isInterior ? 104 : 168
+  const barsTop = headerTop + headerH + 14
+  const barsH = 12
+  const teamsTop = barsTop + barsH + 26
   const teamsH = 134
   const rowsTop = teamsTop + teamsH + 48
   const cardH = 250
   const cardGap = 34
   const rowStride = cardH + cardGap
   const rowsBottom = rowsTop + filteredMatches.length * rowStride - cardGap
+  const showFooter = !isInterior
   const footerGap = 36
   const footerH = 150
   const footerTop = rowsBottom + footerGap
-  const height = footerTop + footerH + 78
+  const height = (showFooter ? footerTop + footerH : rowsBottom) + 78
 
   const canvas = document.createElement('canvas')
   canvas.width = width
@@ -306,10 +328,10 @@ export async function createScheduleCanvas(
   roundRect(ctx, M, headerTop, innerW, headerH, 44)
   ctx.stroke()
 
-  drawFieldMotif(ctx, width - M - 70, headerTop + 40, p)
-  drawLogo(ctx, logo, M + 178, headerTop + headerH / 2, 168, p.glow)
+  if (!isInterior) drawFieldMotif(ctx, width - M - 70, headerTop + 40, p)
+  drawLogo(ctx, logo, M + (isInterior ? 130 : 178), headerTop + headerH / 2, logoH, p.glow)
 
-  const textX = M + 392
+  const textX = M + (isInterior ? 268 : 392)
   ctx.textAlign = 'left'
   ctx.fillStyle = p.brandText
   if (p.glow) {
@@ -317,16 +339,25 @@ export async function createScheduleCanvas(
     ctx.shadowColor = p.glow
     ctx.shadowBlur = 22
   }
-  ctx.font = '900 132px Arial, sans-serif'
-  ctx.fillText(brand.appName.toUpperCase(), textX, headerTop + 168)
+  ctx.font = `900 ${isInterior ? 92 : 132}px Arial, sans-serif`
+  ctx.fillText(brand.appName.toUpperCase(), textX, headerTop + (isInterior ? 118 : 168))
   if (p.glow) ctx.restore()
-  ctx.fillStyle = p.headline
-  ctx.font = '800 60px Arial, sans-serif'
-  ctx.fillText('World Cup 2026 watch schedule', textX + 4, headerTop + 244)
-  ctx.fillStyle = p.tz
-  ctx.font = '700 42px Arial, sans-serif'
   const pageSuffix = pageInfo && pageInfo.pageCount > 1 ? `   ·   Page ${pageInfo.page} of ${pageInfo.pageCount}` : ''
-  ctx.fillText(`${cityLabel} local time · ${timeZone}${pageSuffix}`, textX + 4, headerTop + 308)
+  if (!isInterior) {
+    ctx.fillStyle = p.headline
+    ctx.font = '800 60px Arial, sans-serif'
+    ctx.fillText('World Cup 2026 watch schedule', textX + 4, headerTop + 244)
+    ctx.fillStyle = p.tz
+    ctx.font = '700 42px Arial, sans-serif'
+    ctx.fillText(`${cityLabel} local time · ${timeZone}${pageSuffix}`, textX + 4, headerTop + 308)
+  } else {
+    ctx.fillStyle = p.tz
+    ctx.font = '700 38px Arial, sans-serif'
+    ctx.fillText(`${cityLabel} · ${timeZone}${pageSuffix}`, textX + 4, headerTop + 178)
+  }
+
+  // Signature color-bars motif (matches the site's neon manifesto bars) under the header.
+  drawColorBars(ctx, M, barsTop, innerW, barsH)
 
   // ---- followed-teams bar ----
   ctx.fillStyle = p.panelBg
@@ -408,24 +439,26 @@ export async function createScheduleCanvas(
     ctx.fillText(fitOneLine(ctx, meta, contentW), contentX, y + 178)
   })
 
-  // ---- footer ----
-  ctx.fillStyle = p.panelBg
-  roundRect(ctx, M, footerTop, innerW, footerH, 30)
-  ctx.fill()
-  ctx.strokeStyle = p.panelBorder
-  ctx.lineWidth = 3
-  roundRect(ctx, M, footerTop, innerW, footerH, 30)
-  ctx.stroke()
-  // small logo mark bookending the footer
-  drawLogo(ctx, logo, M + 78, footerTop + footerH / 2, 84, p.glow)
-  const fTextX = M + 156
-  ctx.textAlign = 'left'
-  ctx.fillStyle = p.footerText
-  ctx.font = '800 46px Arial, sans-serif'
-  ctx.fillText(brand.tagline, fTextX, footerTop + 70)
-  ctx.fillStyle = p.footerSub
-  ctx.font = '600 34px Arial, sans-serif'
-  ctx.fillText(`Generated locally in your browser  ·  ${brand.domainHint}`, fTextX, footerTop + 116)
+  // ---- footer (first & last page only; interior pages drop it to read tighter) ----
+  if (showFooter) {
+    ctx.fillStyle = p.panelBg
+    roundRect(ctx, M, footerTop, innerW, footerH, 30)
+    ctx.fill()
+    ctx.strokeStyle = p.panelBorder
+    ctx.lineWidth = 3
+    roundRect(ctx, M, footerTop, innerW, footerH, 30)
+    ctx.stroke()
+    // small logo mark bookending the footer
+    drawLogo(ctx, logo, M + 78, footerTop + footerH / 2, 84, p.glow)
+    const fTextX = M + 156
+    ctx.textAlign = 'left'
+    ctx.fillStyle = p.footerText
+    ctx.font = '800 46px Arial, sans-serif'
+    ctx.fillText(brand.tagline, fTextX, footerTop + 70)
+    ctx.fillStyle = p.footerSub
+    ctx.font = '600 34px Arial, sans-serif'
+    ctx.fillText(`Generated locally in your browser  ·  ${brand.domainHint}`, fTextX, footerTop + 116)
+  }
 
   return canvas
 }

@@ -327,6 +327,18 @@ export function associationFootballLabel(locale?: string | null, regionCode?: st
   if (localeCode === 'es') return 'Futbol'
   if (localeCode === 'pt') return 'Futebol'
   if (localeCode === 'fr') return 'Football'
-  if (regionCode === 'GB' || regionCode === 'IE') return 'Football'
-  return 'Soccer'
+  // "Soccer" is really only used in the US & Canada — everywhere else the sport is "Football".
+  const region = (regionCode ?? '').toUpperCase()
+  return region === 'US' || region === 'CA' ? 'Soccer' : 'Football'
+}
+
+// Display label for a sport tile/row: soccer becomes region-aware Football/Soccer; all others
+// keep their fixed label. Centralised so every picker (onboarding, switcher, explore) agrees.
+export function displaySportLabel(
+  canonicalSportKey: string,
+  fallbackLabel: string,
+  locale?: string | null,
+  regionCode?: string | null,
+) {
+  return canonicalSportKey === 'soccer' ? associationFootballLabel(locale, regionCode) : fallbackLabel
 }

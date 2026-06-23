@@ -13,7 +13,7 @@ import { flagPoleGradient } from '../data/flagColors'
 import { allMatches, featuredTeams } from '../data/worldcup'
 import { exportFilename } from '../domain/brand'
 import type { Match } from '../domain/match'
-import { getSport, type SportInfo } from '../domain/sports'
+import { getSport, pluralizeEventNoun, type SportInfo } from '../domain/sports'
 import type { CanonicalSportKey } from '../domain/types'
 import { AdSlot } from '../components/AdSlot'
 import { interleaveAds } from '../lib/ads'
@@ -578,7 +578,7 @@ function LiveSportPage({ sport }: { sport: SportInfo }) {
     { value: String(events.length), label: 'Upcoming' },
     isIndividual
       ? { value: roster.players.length >= 500 ? '500+' : String(roster.players.length), label: 'Players' }
-      : { value: sport.eventNoun + 's', label: 'Tracked' },
+      : { value: pluralizeEventNoun(sport.eventNoun), label: 'Tracked' },
   ]
 
   return (
@@ -707,11 +707,11 @@ function CoverageStandbyNotice({
   selectedLeagueName: string | null
 }) {
   const title = selectedLeagueName
-    ? `${selectedLeagueName} is between schedule drops`
-    : `${sport.label} coverage is hydrated`
+    ? `No upcoming ${selectedLeagueName} events right now`
+    : `No upcoming ${sport.label} events right now`
   const body = selectedLeagueName
-    ? 'This league is in the system; the next fixtures will appear here as soon as the schedule window is published.'
-    : `Silbo has this ${sport.label.toLowerCase()} lane connected. Upcoming events will fill this board as the next schedule window opens.`
+    ? 'This league is connected, but it has no scheduled events in the window yet — usually an off-season gap or before the next fixtures are published. New events appear here automatically.'
+    : `${sport.label} leagues and competitors are connected, but there are no scheduled events in the window yet. This happens off-season or before the next fixtures are published — new events appear here automatically, no action needed.`
 
   return (
     <Panel className="overflow-hidden border-primary/20 bg-surface/90 p-0">
@@ -720,14 +720,14 @@ function CoverageStandbyNotice({
           <span className="font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-ticket-stub-text/75">
             Standby
           </span>
-          <strong className="mt-6 font-head text-2xl leading-none">Ready</strong>
+          <strong className="mt-6 font-head text-2xl leading-none">No events</strong>
           <span className="mt-2 font-mono text-[9px] uppercase tracking-wide text-ticket-stub-text/70">
             Auto-sync lane
           </span>
         </div>
         <div className="space-y-4 p-4">
           <div>
-            <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink/45">Hydrated sport page</p>
+            <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink/45">Connected · awaiting fixtures</p>
             <h3 className="mt-1 text-xl font-extrabold text-primary">{title}</h3>
             <p className="mt-2 max-w-3xl text-sm text-ink/65">{body}</p>
           </div>
@@ -741,7 +741,7 @@ function CoverageStandbyNotice({
                 {isIndividual ? 'Players tracked' : 'Event type'}
               </dt>
               <dd className="truncate text-sm font-extrabold text-ink">
-                {isIndividual ? (playerCount >= 500 ? '500+' : playerCount) : `${sport.eventNoun}s`}
+                {isIndividual ? (playerCount >= 500 ? '500+' : playerCount) : pluralizeEventNoun(sport.eventNoun)}
               </dd>
             </div>
             <div className="rounded-lg border border-primary/15 bg-page/45 px-3 py-2">

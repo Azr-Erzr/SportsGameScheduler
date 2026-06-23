@@ -2,7 +2,7 @@ import type { CSSProperties } from 'react'
 import { ArrowRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useAppState } from '../app/state-context'
-import { getSport } from '../domain/sports'
+import { getSport, isSecondarySport } from '../domain/sports'
 
 type BannerStat = {
   value: string
@@ -28,6 +28,9 @@ type SportChannelBannerProps = {
   stats?: BannerStat[]
 }
 
+// Main-tile sports + their league aliases each map to dedicated banner art. Every secondary
+// ("other sports") key resolves to the shared 'custom' banner via isSecondarySport below — so a new
+// secondary sport never accidentally borrows a main sport's art (e.g. esports on a soccer pitch).
 const assetKeyBySport: Record<string, string> = {
   soccer: 'soccer',
   basketball: 'basketball',
@@ -41,16 +44,6 @@ const assetKeyBySport: Record<string, string> = {
   olympic: 'olympic',
   baseball: 'baseball',
   custom: 'custom',
-  // Secondary "other sports" all share the neutral Other Sports banner — they have no dedicated
-  // art, and borrowing another sport's banner (rugby on a football pitch, volleyball on a court)
-  // misrepresents them.
-  cricket: 'custom',
-  rugby: 'custom',
-  volleyball: 'custom',
-  handball: 'custom',
-  cycling: 'custom',
-  snooker: 'custom',
-  darts: 'custom',
   nba: 'basketball',
   wnba: 'basketball',
   nfl: 'football',
@@ -58,6 +51,11 @@ const assetKeyBySport: Record<string, string> = {
   f1: 'motorsport',
   ufc: 'combat',
   mlb: 'baseball',
+}
+
+function resolveAssetKey(sportKey: string, fallbackKey: string): string {
+  if (isSecondarySport(sportKey)) return 'custom'
+  return assetKeyBySport[sportKey] ?? assetKeyBySport[fallbackKey] ?? 'soccer'
 }
 
 const artFocusByAsset: Record<string, ArtFocus> = {
@@ -100,7 +98,7 @@ export function SportChannelBanner({
 }: SportChannelBannerProps) {
   const { prefs } = useAppState()
   const sport = getSport(sportKey) ?? getSport('soccer')
-  const assetKey = assetKeyBySport[sportKey] ?? assetKeyBySport[sport?.key ?? 'soccer'] ?? 'soccer'
+  const assetKey = resolveAssetKey(sportKey, sport?.key ?? 'soccer')
   const artFocus = artFocusByAsset[assetKey] ?? artFocusByAsset.soccer
   const channelTitle = title ?? `${sport?.label ?? 'Sports'} Channel`
   const coverageBody =

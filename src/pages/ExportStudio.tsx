@@ -11,7 +11,7 @@ import { copyToClipboard, downloadBlob } from '../lib/clipboard'
 import { createIcsBlob, createMultiSportIcsBlob } from '../lib/ics'
 import { t } from '../lib/i18n'
 import { createMultiSportNotesText, createNotesText } from '../lib/notes'
-import { MAX_EVENTS_BY_TEMPLATE, paginateEvents, type ExportTemplate } from '../lib/paginate'
+import { MAX_EVENTS_BY_TEMPLATE, paginateEventsForPoster, type ExportTemplate } from '../lib/paginate'
 import { canvasToBlob, createScheduleCanvas, type PosterVariant } from '../lib/poster'
 import { createScheduleCsv, exportCompletionMessage } from '../lib/scheduleExports'
 import { formatDate, formatTime } from '../lib/time'
@@ -39,7 +39,7 @@ export function ExportStudioPage() {
   const cityLabel = cityLabelFor(prefs.timezone, prefs.city)
   const { matches } = useMatches()
   const schedule = useMemo(() => filterMatchesForTeams(matches, followedTeams), [matches, followedTeams])
-  const pages = useMemo(() => paginateEvents(schedule, template), [schedule, template])
+  const pages = useMemo(() => paginateEventsForPoster(schedule, template), [schedule, template])
 
   // Multi-sport calendar: all upcoming events from followed leagues + competitors, any sport.
   const myEvents = useMyEvents(followedLeagueIds, followedCompetitorIds)

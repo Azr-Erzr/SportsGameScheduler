@@ -6,6 +6,7 @@ import { GlobalSearch } from '../components/GlobalSearch'
 import { SportAssetIcon } from '../components/SportAssetIcon'
 import { Badge, Button, Panel, PanelHeading } from '../components/ui'
 import { useSportSchedule } from '../data/liveSport'
+import { displaySportLabel } from '../lib/i18n'
 import { secondarySports, sports, type SportInfo } from '../domain/sports'
 import { getTheme, withSurfaceMode } from '../theme/themes'
 
@@ -50,7 +51,7 @@ function LiveRouteCard({ sport, dense = false }: { sport: SportInfo; dense?: boo
           />
           <div className="min-w-0">
             <h2 className={`${dense ? 'text-base' : 'text-lg'} truncate font-black uppercase leading-none text-primary`}>
-              {sport.label}
+              {displaySportLabel(sport.canonicalSportKey, sport.label, prefs.locale, prefs.regionCode)}
             </h2>
             <p className="mt-1 truncate font-mono text-[10px] uppercase tracking-wide text-ink/45">
               {sport.flagshipLeague}

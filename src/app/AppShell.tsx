@@ -3,6 +3,8 @@ import { Link, NavLink, Outlet, useLocation, useParams } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { AuthButton } from '../components/AuthButton'
 import { ConsentBanner } from '../components/ConsentBanner'
+import { LanguageMenu } from '../components/LanguageMenu'
+import { LiveTicker } from '../components/LiveTicker'
 import { Onboarding } from '../components/Onboarding'
 import { SilboBrandMark } from '../components/SilboMark'
 import { SportSwitcher } from '../components/SportSwitcher'
@@ -174,12 +176,14 @@ export function AppShell() {
               >
                 {programMode ? <Moon size={17} /> : <Sun size={17} />}
               </button>
+              <LanguageMenu />
               <AuthButton />
             </div>
           </div>
         </header>
 
         <main className="relative z-[1] mx-auto w-full max-w-[1460px] px-4 pb-28 pt-5 md:py-6">
+          <LiveTicker />
           <Outlet />
         </main>
 

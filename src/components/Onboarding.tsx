@@ -6,7 +6,7 @@ import { Button } from './ui'
 import { TimezonePicker } from './TimezonePicker'
 import { getSport, sports } from '../domain/sports'
 import { useTopLeaguesForSports } from '../data/onboardingLeagues'
-import { localeOptions, normalizeLocale, regionOptions } from '../lib/i18n'
+import { displaySportLabel, localeOptions, normalizeLocale, regionOptions } from '../lib/i18n'
 import { isSupabaseConfigured } from '../lib/supabase'
 import { zoneCityLabel, zoneOffsetLabel } from '../lib/timezones'
 import { markOnboarded } from '../lib/onboarding'
@@ -126,7 +126,9 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
                     }`}
                   >
                     <Icon size={17} className="shrink-0" />
-                    <span className="min-w-0 truncate">{sport.label}</span>
+                    <span className="min-w-0 truncate">
+                      {displaySportLabel(sport.canonicalSportKey, sport.label, prefs.locale, prefs.regionCode)}
+                    </span>
                     {active && <Check size={15} className="ml-auto shrink-0" />}
                   </button>
                 )

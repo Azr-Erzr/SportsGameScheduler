@@ -1,11 +1,10 @@
 import type { CSSProperties } from 'react'
-import { getSport, secondarySports } from '../domain/sports'
+import { getSport, isSecondarySport } from '../domain/sports'
 import { getTheme } from '../theme/themes'
 
 // Secondary ("Other Sports") tiles all share the single Other Sports icon: we don't ship per-sport
 // art for them, and borrowing a primary sport's icon (rugby→football, volleyball→basketball) was
-// misleading. Derived from the secondarySports list so new entries are covered automatically.
-const SECONDARY_SPORT_KEYS = new Set<string>(secondarySports.map((sport) => sport.key))
+// misleading. The shared isSecondarySport rule (domain/sports.ts) keeps icon + banner uniform.
 
 type SportAssetIconProps = {
   sportKey: string
@@ -38,8 +37,8 @@ const aliases: Record<string, string> = {
 }
 
 function sportAssetKey(key: string) {
+  if (isSecondarySport(key)) return 'custom'
   const sport = getSport(key)
-  if ((sport && SECONDARY_SPORT_KEYS.has(sport.key)) || SECONDARY_SPORT_KEYS.has(key)) return 'custom'
   return aliases[sport?.badgeKey ?? key] ?? sport?.badgeKey ?? aliases[key] ?? key
 }
 
