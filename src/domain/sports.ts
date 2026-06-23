@@ -3,6 +3,7 @@ import {
   CircleDot,
   Disc,
   Dumbbell,
+  Gamepad2,
   Goal,
   LandPlot,
   Medal,
@@ -269,6 +270,19 @@ export const secondarySports: SportInfo[] = [
     enabled: true,
     eventNoun: 'match',
     tagline: 'PDC nights, majors, and world championship sessions',
+  },
+  {
+    key: 'esports',
+    canonicalSportKey: 'esports',
+    label: 'Esports',
+    flagshipLeague: 'LoL / Dota 2 / CS / COD / R6',
+    leagueKey: 'esports',
+    icon: Gamepad2,
+    badgeKey: 'custom',
+    enabled: true,
+    eventNoun: 'match',
+    tagline: 'Majors, splits, and international LANs across the biggest titles',
+    sourceNote: 'PandaScore provides schedules for League, Dota 2, CS, Call of Duty, and Rainbow Six',
   },
 ]
 

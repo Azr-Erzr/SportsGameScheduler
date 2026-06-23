@@ -1,34 +1,19 @@
-import { Clock3, Globe2, MapPin } from 'lucide-react'
+import { Clock3, Globe2 } from 'lucide-react'
 import { useAppState } from '../app/state-context'
-import { cityLabelFor, cityOptions } from '../lib/cities'
+import { TimezonePicker } from './TimezonePicker'
 import { localeOptions, normalizeLocale, regionOptions } from '../lib/i18n'
+import { zoneCityLabel } from '../lib/timezones'
 
 export function CityPicker() {
   const { prefs, setPrefs } = useAppState()
 
-  function selectCity(value: string) {
-    const option = cityOptions.find((item) => item.label === value)
-    setPrefs({ ...prefs, city: value, timezone: option ? option.zone : prefs.timezone })
-  }
-
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <label className="flex items-center gap-2 rounded-lg border border-primary/20 bg-surface px-3 py-2">
-        <MapPin size={16} className="text-primary" />
-        <input
-          value={prefs.city}
-          list="mp-cities"
-          onChange={(event) => selectCity(event.target.value)}
-          placeholder={cityLabelFor(prefs.timezone, prefs.city)}
-          aria-label="City"
-          className="w-32 bg-transparent text-sm font-medium outline-none"
-        />
-      </label>
-      <datalist id="mp-cities">
-        {cityOptions.map((option) => (
-          <option key={option.zone} value={option.label} />
-        ))}
-      </datalist>
+      <TimezonePicker
+        className="w-56"
+        zone={prefs.timezone}
+        onSelect={(zone) => setPrefs({ ...prefs, timezone: zone, city: zoneCityLabel(zone) })}
+      />
 
       <label className="flex items-center gap-2 rounded-lg border border-primary/20 bg-surface px-3 py-2">
         <Globe2 size={16} className="text-primary" />

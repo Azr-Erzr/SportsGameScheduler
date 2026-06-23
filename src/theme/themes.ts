@@ -186,6 +186,7 @@ export const themesByKey: Record<string, SportTheme> = {
   cycling: motorsportTheme,
   snooker: customTheme,
   darts: customTheme,
+  esports: customTheme,
   // Route/league aliases.
   f1: motorsportTheme,
   nhl: hockeyTheme,

@@ -80,3 +80,31 @@ select cron.schedule(
   );
   $$
 );
+
+-- PandaScore esports hydration every 30 minutes. One upcoming-matches call per game per tick
+-- (LoL/Dota2/CS/COD/R6), well under the ~1k req/hour Schedules-plan limit. Requires the
+-- PANDASCORE_TOKEN edge-function secret.
+select cron.schedule(
+  'provider-hydrate-pandascore',
+  '*/30 * * * *',
+  $$
+  select net.http_post(
+    url := 'https://<project-ref>.supabase.co/functions/v1/provider-hydrate-pandascore',
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'Authorization', 'Bearer ' || current_setting('app.settings.service_role_key')
+    ),
+    body := '{}'::jsonb
+  );
+  $$
+);
+
+-- Delete finished events once a day (retention 2 days). Pure SQL — no edge function/HTTP needed.
+-- The function is defined in migration 20260622210000_cleanup_past_events.sql. There is no results
+-- or archive feature, so past events are storage cost only; TBD placeholder rows (null starts_at)
+-- are preserved.
+select cron.schedule(
+  'cleanup-past-events',
+  '30 4 * * *',
+  $$ select public.cleanup_past_events(interval '2 days'); $$
+);

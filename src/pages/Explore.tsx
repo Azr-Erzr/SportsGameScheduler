@@ -40,7 +40,7 @@ function LiveRouteCard({ sport, dense = false }: { sport: SportInfo; dense?: boo
       }`}
       style={{ borderColor: `${theme.colors.primary}33` }}
     >
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex min-w-0 items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
           <SportAssetIcon
             sportKey={sport.key}
@@ -57,7 +57,7 @@ function LiveRouteCard({ sport, dense = false }: { sport: SportInfo; dense?: boo
             </p>
           </div>
         </div>
-        <Badge tone={liveReady ? 'secondary' : 'muted'}>
+        <Badge tone={liveReady ? 'secondary' : 'muted'} className="shrink-0 whitespace-nowrap">
           {schedule.loading ? 'Checking' : liveReady ? 'Live route' : 'Queued'}
         </Badge>
       </div>

@@ -2,6 +2,7 @@ import { AlertTriangle, Bell, ChevronDown, Download, MapPin, RadioTower, Tv } fr
 import { useState } from 'react'
 import type { Match } from '../domain/match'
 import { formatDate, formatLongDate, formatTime } from '../lib/time'
+import { WatchOptionsPanel } from './WatchOptionsPanel'
 
 // Schedule events render as TICKETS (Channel S rule): cream paper on the broadcast void,
 // deep sport-specific time stub with perforated edge, ink type. The on-screen card, the
@@ -16,6 +17,7 @@ export function MatchCard({
   hour12,
   addedToSchedule = false,
   onAddToSchedule,
+  regionCode,
 }: {
   match: Match
   timeZone: string
@@ -25,6 +27,7 @@ export function MatchCard({
   hour12?: boolean | null
   addedToSchedule?: boolean
   onAddToSchedule?: () => void
+  regionCode?: string | null
 }) {
   const [expanded, setExpanded] = useState(false)
   const title = `${match.team1} vs ${match.team2}`
@@ -134,20 +137,18 @@ export function MatchCard({
           </div>
 
           <div className="rounded-lg border border-paper-ink/15 bg-paper-ink/4 p-3">
-            <p className="mb-1 flex items-center gap-2 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-paper-ink">
+            <p className="mb-2 flex items-center gap-2 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-paper-ink">
               <Tv size={13} /> Where to watch
             </p>
-            <p className="text-sm font-semibold text-paper-ink">Watch options reserved</p>
-            <p className="mt-1 text-xs text-paper-ink/55">
-              Local TV, streaming, radio, venue links, and affiliate offers will live here when coverage details are connected.
-            </p>
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              {['TV', 'Streaming', 'Radio'].map((label) => (
-                <span key={label} className="rounded-full border border-paper-ink/15 px-2 py-0.5 font-mono text-[10px] uppercase text-paper-ink/55">
-                  {label}
-                </span>
-              ))}
-            </div>
+            <WatchOptionsPanel
+              leagueName="FIFA World Cup 2026"
+              sportKey="soccer"
+              regionCode={regionCode}
+              locale={locale}
+              limit={4}
+              compact
+              variant="paper"
+            />
             <p className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-paper-ink">
               <Bell size={12} /> Alert settings can watch time, team, venue, and watch-info changes.
             </p>

@@ -23,6 +23,7 @@ export type CanonicalSportKey =
   | 'cycling'
   | 'snooker'
   | 'darts'
+  | 'esports'
   | 'custom'
 
 export type SportKey =
@@ -51,6 +52,7 @@ export type SportKey =
   | 'cycling'
   | 'snooker'
   | 'darts'
+  | 'esports'
   | 'custom'
 
 export type EventStatus =

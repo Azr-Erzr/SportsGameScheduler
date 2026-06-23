@@ -1,4 +1,4 @@
-import { Bell, Check, Download, Flag, Search, Sparkles, Star, Timer, Tv, Users, X } from 'lucide-react'
+import { Bell, Check, ChevronDown, Download, Flag, Search, Sparkles, Star, Timer, Tv, Users, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useAppState } from '../app/state-context'
@@ -7,7 +7,7 @@ import { MatchCard } from '../components/MatchCard'
 import { SportChannelBanner } from '../components/SportChannelBanner'
 import { WatchOptionsPanel } from '../components/WatchOptionsPanel'
 import { Badge, Button, EmptyState, Panel, PanelHeading } from '../components/ui'
-import { deriveTeams, filterMatchesForTeams, useMatches } from '../data/liveMatches'
+import { deriveTeams, filterMatchesForTeams, filterUpcomingMatches, useMatches } from '../data/liveMatches'
 import { useEvent, useSportRoster, useSportSchedule, type LiveEvent } from '../data/liveSport'
 import { flagPoleGradient } from '../data/flagColors'
 import { allMatches, featuredTeams } from '../data/worldcup'
@@ -298,7 +298,12 @@ function WorldCupPlanner() {
     return normalizedQuery ? ordered.filter((team) => team.toLowerCase().includes(normalizedQuery)) : ordered
   }, [query, matches])
 
-  const filteredMatches = useMemo(() => filterMatchesForTeams(matches, followedTeams), [matches, followedTeams])
+  // Match list shows upcoming only (no finished games); the kit wall below still derives from the
+  // full set so every nation stays followable even after its group games have played.
+  const filteredMatches = useMemo(
+    () => filterUpcomingMatches(filterMatchesForTeams(matches, followedTeams)),
+    [matches, followedTeams],
+  )
   const conflicts = useMemo(() => findConflicts(filteredMatches), [filteredMatches])
   const matchPageCount = pageCountFor(filteredMatches.length)
   const followedTeamSignature = followedTeams.join('|')
@@ -500,6 +505,7 @@ function WorldCupPlanner() {
                 hour12={prefs.hour12}
                 addedToSchedule={addedMatchKeys.includes(matchKey(match))}
                 onAddToSchedule={() => addMatchToSchedule(match)}
+                regionCode={prefs.broadcastRegion || prefs.regionCode}
               />
             ))}
           <SchedulePagination page={matchPage} pageCount={matchPageCount} total={filteredMatches.length} onPageChange={changeMatchPage} label="matches" />
@@ -1221,12 +1227,12 @@ function EventTicket({
           )}
         </div>
       </button>
-      <div className="flex shrink-0 items-center border-l border-paper-ink/10 px-3 max-sm:border-l-0 max-sm:border-t max-sm:px-4 max-sm:py-3">
+      <div className="flex shrink-0 items-center gap-2 border-l border-paper-ink/10 px-3 max-sm:border-l-0 max-sm:border-t max-sm:px-4 max-sm:py-3">
         <button
           type="button"
           onClick={onAdd}
           aria-live="polite"
-          className={`inline-flex min-w-[116px] items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-bold transition-colors max-sm:w-full ${
+          className={`inline-flex min-w-[116px] items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-bold transition-colors max-sm:flex-1 ${
             added
               ? 'border-ticket-stub bg-ticket-stub text-ticket-stub-text'
               : 'border-ticket-stub/30 text-paper-ink hover:bg-ticket-stub/10'
@@ -1234,6 +1240,15 @@ function EventTicket({
         >
           <Download size={13} />
           {added ? 'Added!' : 'Add to schedule'}
+        </button>
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={expanded}
+          aria-label={`${expanded ? 'Collapse' : 'Expand'} details for ${event.title}`}
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-paper-ink/8 text-paper-ink/70 transition-colors hover:bg-paper-ink/12 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        >
+          <ChevronDown size={16} className={`transition-transform ${expanded ? 'rotate-180' : ''}`} />
         </button>
       </div>
       {event.status !== 'scheduled' && (

@@ -77,6 +77,34 @@ Primary source: FIFA's `FWC26 Media Rights Licensees Overview` PDF, last modifie
 - League-specific `watch_links.league_id` rows should only be added when the league row exists and the rights source is current for that season.
 - For future affiliate swaps, keep the `provider_key` stable and replace only `affiliate_url` / `affiliate_status`.
 
+## Frontend Wiring & Render Surfaces
+
+Audited 2026-06-22. The data layer is `src/data/watchLinks.ts` (`useWatchOptions`) and the single
+render component is `src/components/WatchOptionsPanel.tsx`. The hook resolves options in three tiers
+and always returns something (it never renders empty), highest-priority first:
+
+1. **`db`** — `watch_links` joined to `watch_providers`, filtered by `event_id` / `league_id` /
+   `country_codes` / `sport_keys`. Event-specific rows boost above league rows above sport rows.
+2. **`catalog`** — `CATALOG_RULES` in `watchLinks.ts`: curated official rights (e.g. the World Cup
+   2026 per-country buttons) matched by region + sport + league-name pattern. Use this for known
+   rights that don't yet have DB rows.
+3. **`fallback`** — region/sport providers from `WATCH_PROVIDERS` in `src/lib/ads.ts`.
+
+Because tier 3 always exists, a "Watch options reserved"-style placeholder means a surface was **not
+wired to `WatchOptionsPanel` at all** — not that data is missing.
+
+Render surfaces (keep this list current when adding new event UIs):
+
+- `src/pages/EventDetail.tsx` — prefers factual `event.broadcasts`, else `WatchOptionsPanel`.
+- `src/pages/SportPage.tsx` — `EventQuickDetails` inline panel uses `WatchOptionsPanel`.
+- `src/components/MatchCard.tsx` — World Cup match cards. **Fixed 2026-06-22:** was a hardcoded
+  "Watch options reserved" placeholder; now renders `WatchOptionsPanel` with
+  `leagueName="FIFA World Cup 2026"` + `sportKey="soccer"` and the viewer's `broadcastRegion`, so the
+  catalog World Cup rules fire. This was the lone unwired surface found in the audit.
+
+To add a surface: render `<WatchOptionsPanel eventId/leagueId/leagueName/sportKey regionCode locale />`
+and pass `prefs.broadcastRegion || prefs.regionCode` as `regionCode` so region filtering works.
+
 ## Sources
 
 - FIFA media release and full PDF link: https://inside.fifa.com/tournament-organisation/commercial/fifa-tv/media-releases/world-cup-2026-broadcast-partnerships-global-benchmark-record-reach-innovation

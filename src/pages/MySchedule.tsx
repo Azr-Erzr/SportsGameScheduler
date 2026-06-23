@@ -1123,6 +1123,7 @@ export function MySchedulePage() {
                       highlightTeams={followedTeams}
                       locale={prefs.locale}
                       hour12={prefs.hour12}
+                      regionCode={prefs.broadcastRegion || prefs.regionCode}
                     />
                   )
                 })}

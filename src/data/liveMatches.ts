@@ -112,6 +112,16 @@ export function filterMatchesForTeams(matches: Match[], selected: string[]): Mat
     .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime())
 }
 
+// Matches that haven't already finished. 3h grace keeps an in-progress kickoff visible — matching
+// the DB schedule's now-3h cutoff. The bundled World Cup dataset is static, so without this the
+// planner would keep listing group-stage games that already happened.
+const LIVE_GRACE_MS = 3 * 60 * 60 * 1000
+
+export function filterUpcomingMatches(matches: Match[], now: number = Date.now()): Match[] {
+  const cutoff = now - LIVE_GRACE_MS
+  return matches.filter((match) => match.startsAt.getTime() >= cutoff)
+}
+
 export function deriveTeams(matches: Match[]): string[] {
   return Array.from(new Set(matches.flatMap((match) => [match.team1, match.team2]))).sort((a, b) =>
     a.localeCompare(b),

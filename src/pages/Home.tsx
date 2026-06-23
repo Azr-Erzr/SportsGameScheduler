@@ -17,7 +17,7 @@ import { GlobalEventBoard, PosterFeatureStrip } from '../components/PosterMotifs
 import { GlobalSearch } from '../components/GlobalSearch'
 import { Button, Panel, PanelHeading } from '../components/ui'
 import { WorldClock } from '../components/WorldClock'
-import { filterMatchesForTeams, useMatches } from '../data/liveMatches'
+import { filterMatchesForTeams, filterUpcomingMatches, useMatches } from '../data/liveMatches'
 import { featuredTeams } from '../data/worldcup'
 import { useSpotlightEvents, type SpotlightEvent } from '../data/spotlight'
 import { brand } from '../domain/brand'
@@ -90,7 +90,7 @@ export function HomePage() {
   const spotlightEvents = useSpotlightEvents(prefs.regionCode)
 
   const upcomingMatches = useMemo(() => {
-    return filterMatchesForTeams(matches, followedTeams).slice(0, 3)
+    return filterUpcomingMatches(filterMatchesForTeams(matches, followedTeams)).slice(0, 3)
   }, [followedTeams, matches])
 
   // Popular nations as quick-follow chips; the global search field above handles find-anything.
