@@ -79,6 +79,7 @@ const KEYS = {
   prefs: 'mp.prefs',
   feeds: 'mp.feeds',
   customLeagues: 'mp.customLeagues',
+  savedMatches: 'mp.savedMatches',
 } as const
 
 function read<T>(key: string, fallback: T): T {
@@ -124,6 +125,25 @@ export function toggleFollow(follow: Follow): Follow[] {
       )
     : [...follows, follow]
   saveFollows(next)
+  return next
+}
+
+// --- saved matches ---------------------------------------------------------
+// World Cup matches are saved by key (date-team1-team2) so "Add to schedule" adds the single match
+// to My Schedule (it's reconstructed from the full match list) instead of forcing a file download.
+
+export function getSavedMatchKeys(): string[] {
+  return read<string[]>(KEYS.savedMatches, [])
+}
+
+export function isMatchSaved(key: string): boolean {
+  return getSavedMatchKeys().includes(key)
+}
+
+export function toggleSavedMatch(key: string): string[] {
+  const saved = getSavedMatchKeys()
+  const next = saved.includes(key) ? saved.filter((k) => k !== key) : [...saved, key]
+  write(KEYS.savedMatches, next)
   return next
 }
 

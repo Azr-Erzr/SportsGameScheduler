@@ -20,7 +20,8 @@ import { interleaveAds } from '../lib/ads'
 import { downloadBlob } from '../lib/clipboard'
 import { useDocumentMeta } from '../lib/seo'
 import { findConflicts } from '../lib/conflicts'
-import { createIcsBlob, createMultiSportIcsBlob } from '../lib/ics'
+import { createMultiSportIcsBlob } from '../lib/ics'
+import { getSavedMatchKeys, toggleSavedMatch } from '../lib/store'
 import { groupRaceWeekends, RACE_SESSION_LABELS, type RaceWeekend } from '../lib/raceWeekends'
 import { formatDate, formatLongDate, formatTime, relativeTimeFromNow } from '../lib/time'
 
@@ -284,7 +285,7 @@ function SoccerPage() {
 function WorldCupPlanner() {
   const { followedTeams, toggleFollow, prefs } = useAppState()
   const [query, setQuery] = useState('')
-  const [addedMatchKeys, setAddedMatchKeys] = useState<string[]>([])
+  const [savedMatchKeys, setSavedMatchKeys] = useState<string[]>(() => getSavedMatchKeys())
   const [matchPager, setMatchPager] = useState({ key: 'all', page: 1 })
   const timeZone = prefs.timezone
   const { matches, source } = useMatches()
@@ -354,10 +355,9 @@ function WorldCupPlanner() {
     return `${match.date}-${match.team1}-${match.team2}`
   }
 
+  // Add/remove the match from My Schedule (persisted) — no surprise file download.
   function addMatchToSchedule(match: Match) {
-    const key = matchKey(match)
-    downloadBlob(createIcsBlob([match], timeZone, prefs.locale, prefs.hour12), exportFilename('match', 'ics'))
-    setAddedMatchKeys((current) => (current.includes(key) ? current : [...current, key]))
+    setSavedMatchKeys(toggleSavedMatch(matchKey(match)))
   }
 
   return (
@@ -503,7 +503,7 @@ function WorldCupPlanner() {
                 highlightTeams={followedTeams}
                 locale={prefs.locale}
                 hour12={prefs.hour12}
-                addedToSchedule={addedMatchKeys.includes(matchKey(match))}
+                addedToSchedule={savedMatchKeys.includes(matchKey(match))}
                 onAddToSchedule={() => addMatchToSchedule(match)}
                 regionCode={prefs.broadcastRegion || prefs.regionCode}
               />

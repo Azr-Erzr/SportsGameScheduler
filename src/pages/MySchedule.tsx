@@ -31,6 +31,7 @@ import { filterMatchesForTeams, useMatches } from '../data/liveMatches'
 import { useMyEvents } from '../data/liveSport'
 import { allMatches, groupMatches } from '../data/worldcup'
 import type { Match } from '../domain/match'
+import { getSavedMatchKeys } from '../lib/store'
 import { brand, exportFilename } from '../domain/brand'
 import { interleaveAds } from '../lib/ads'
 import { cityLabelFor } from '../lib/cities'
@@ -230,6 +231,8 @@ export function MySchedulePage() {
   const { followedTeams, followedLeagueIds, followedCompetitorIds, toggleFollow, prefs } = useAppState()
   const [range, setRange] = useState<RangeKey>('all')
   const [hidePast, setHidePast] = useState(true)
+  // Individually-saved matches (read once on mount; "Add to schedule" elsewhere persists them).
+  const [savedMatchKeys] = useState<string[]>(() => getSavedMatchKeys())
   const [flow, setFlow] = useState<FlowState>({ flowId: null, stepIndex: 0, answers: {} })
   const [template, setTemplate] = useState<ExportTemplate>('poster')
   const [posterVariant, setPosterVariant] = useState<PosterVariant>(
@@ -254,19 +257,32 @@ export function MySchedulePage() {
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [flow.flowId])
 
+  // Base set = matches for followed teams PLUS individually-saved matches ("Add to schedule"),
+  // deduped. So saving a single match surfaces it here without following the whole nation.
+  const baseMatches = useMemo(() => {
+    const key = (m: Match) => `${m.date}-${m.team1}-${m.team2}`
+    // filterMatchesForTeams returns ALL matches when nothing is selected, but My Schedule should
+    // only show what the user actually chose — followed nations and individually-saved matches.
+    const followed = followedTeams.length ? filterMatchesForTeams(matches, followedTeams) : []
+    const followedKeys = new Set(followed.map(key))
+    const savedSet = new Set(savedMatchKeys)
+    const savedOnly = matches.filter((m) => savedSet.has(key(m)) && !followedKeys.has(key(m)))
+    return [...followed, ...savedOnly]
+  }, [matches, followedTeams, savedMatchKeys])
+
   const schedule = useMemo(() => {
-    return filterMatchesForTeams(matches, followedTeams)
+    return baseMatches
       .filter(
         (match) =>
           inRange(match.startsAt, range, nowMs) &&
           (!hidePast || match.startsAt.getTime() > nowMs - 2 * 3600_000),
       )
       .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime())
-  }, [matches, followedTeams, range, hidePast, nowMs])
+  }, [baseMatches, range, hidePast, nowMs])
 
   const savedWorldCupSchedule = useMemo(
-    () => filterMatchesForTeams(matches, followedTeams).sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime()),
-    [matches, followedTeams],
+    () => [...baseMatches].sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime()),
+    [baseMatches],
   )
 
   const fullWorldCupSchedule = useMemo(
@@ -632,7 +648,7 @@ export function MySchedulePage() {
 
   const currentBestFitAdvice = currentStep?.final ? bestFitAdvice() : null
 
-  if (followedTeams.length === 0 && !hasLiveFollows) {
+  if (followedTeams.length === 0 && !hasLiveFollows && savedMatchKeys.length === 0) {
     return (
       <EmptyState
         title={t('schedule.emptyTitle', undefined, prefs.locale)}
