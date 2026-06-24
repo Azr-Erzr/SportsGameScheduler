@@ -7,10 +7,10 @@
     "directory": "./dist/",
     "not_found_handling": "single-page-application",
     "binding": "ASSETS",
-    // The Worker runs first ONLY for event/league pages, where it rewrites OG/meta + injects a
-    // crawler-visible summary (see worker/index.ts). Every other path is served as a static asset
-    // directly, so the SPA's normal serving path is unchanged.
-    "run_worker_first": ["/events/*", "/leagues/*"]
+    // The Worker runs first ONLY for entity pages, where it rewrites OG/meta + injects a
+    // crawler-visible fixture list (see worker/index.ts). Every other path is served as a static
+    // asset directly, so the SPA's normal serving path is unchanged.
+    "run_worker_first": ["/events/*", "/leagues/*", "/sports/*", "/teams/*"]
   },
   "observability": {
     "enabled": true

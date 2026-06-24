@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { getSupabaseClient } from '../lib/supabase'
+import { readCache, retryRead, writeCache } from '../lib/resilience'
 
 // Generic live read layer for any sport: leagues, upcoming events, and (for individual
 // sports) the athlete roster — all from Supabase, gated by the public-read RLS policy.
@@ -67,6 +68,17 @@ function publicLeagueName(name: string | null | undefined) {
   return isPublicLeagueName(name) ? name!.trim() : ''
 }
 
+// Serializable mirror of LiveEvent for the localStorage cache (Date → ISO string round-trip).
+type CachedEvent = Omit<LiveEvent, 'startsAt'> & { startsAt: string | null }
+type CachedSchedule = { leagues: LiveLeague[]; events: CachedEvent[]; lastUpdated: string | null }
+
+function toCachedEvent(e: LiveEvent): CachedEvent {
+  return { ...e, startsAt: e.startsAt ? e.startsAt.toISOString() : null }
+}
+function fromCachedEvent(e: CachedEvent): LiveEvent {
+  return { ...e, startsAt: e.startsAt ? new Date(e.startsAt) : null }
+}
+
 export function useSportSchedule(canonicalSportKey: string): SportSchedule {
   // Store the key the data was loaded for; derive `loading` instead of setting state
   // synchronously in the effect (which triggers cascading renders).
@@ -74,46 +86,71 @@ export function useSportSchedule(canonicalSportKey: string): SportSchedule {
 
   useEffect(() => {
     let cancelled = false
+    const cacheKey = `schedule:${canonicalSportKey}`
+
+    // Stale-while-revalidate: paint the last good board immediately so a cold load or a transient
+    // refresh failure is never a blank "no events" screen. The network result replaces it below.
+    const cached = readCache<CachedSchedule>(cacheKey)
+    if (cached) {
+      setState({
+        forKey: canonicalSportKey,
+        leagues: cached.leagues,
+        events: cached.events.map(fromCachedEvent),
+        configured: true,
+        lastUpdated: cached.lastUpdated ? new Date(cached.lastUpdated) : null,
+      })
+    }
 
     getSupabaseClient().then(async (supabase) => {
       if (!supabase) {
-        if (!cancelled) setState({ forKey: canonicalSportKey, leagues: [], events: [], configured: false, lastUpdated: null })
+        if (!cancelled && !cached) setState({ forKey: canonicalSportKey, leagues: [], events: [], configured: false, lastUpdated: null })
         return
       }
 
       const nowIso = new Date(Date.now() - 3 * 3600_000).toISOString()
-      const [leaguesRes, eventsRes] = await Promise.all([
-        supabase
-          .from('leagues')
-          .select('id, name, logo_url, sports!inner(key)')
-          .eq('sports.key', canonicalSportKey)
-          .eq('is_public', true)
-          // Viewership/importance order (F1 before MotoGP, EPL before smaller leagues, …).
-          .order('display_rank', { ascending: true })
-          .order('name'),
-        supabase
-          .from('events')
-          .select('id, title, starts_at, starts_at_tbd, status, league_id, updated_at, venues(name), sports!inner(key)')
-          .eq('sports.key', canonicalSportKey)
-          .eq('visibility', 'public')
-          .gte('starts_at', nowIso)
-          .order('starts_at', { ascending: true })
-          .limit(120),
-      ])
+      let leaguesData: Array<{ id: string; name: string; logo_url: string | null }> | null
+      let eventRows: EventRow[] | null
+      try {
+        ;[leaguesData, eventRows] = await Promise.all([
+          retryRead(() =>
+            supabase
+              .from('leagues')
+              .select('id, name, logo_url, sports!inner(key)')
+              .eq('sports.key', canonicalSportKey)
+              .eq('is_public', true)
+              // Viewership/importance order (F1 before MotoGP, EPL before smaller leagues, …).
+              .order('display_rank', { ascending: true })
+              .order('name'),
+          ) as Promise<Array<{ id: string; name: string; logo_url: string | null }> | null>,
+          retryRead(() =>
+            supabase
+              .from('events')
+              .select('id, title, starts_at, starts_at_tbd, status, league_id, updated_at, venues(name), sports!inner(key)')
+              .eq('sports.key', canonicalSportKey)
+              .eq('visibility', 'public')
+              .gte('starts_at', nowIso)
+              .order('starts_at', { ascending: true })
+              .limit(250),
+          ) as Promise<EventRow[] | null>,
+        ])
+      } catch {
+        // Every retry failed. Keep whatever is on screen (cache/previous) rather than wiping it;
+        // only fall back to an explicit empty board if we have literally nothing to show.
+        if (!cancelled && !cached && state.forKey !== canonicalSportKey) {
+          setState({ forKey: canonicalSportKey, leagues: [], events: [], configured: true, lastUpdated: null })
+        }
+        return
+      }
 
       if (cancelled) return
 
-      const leagues: LiveLeague[] = (leaguesRes.data ?? [])
+      const allLeagues: LiveLeague[] = (leaguesData ?? [])
         .filter((l) => isPublicLeagueName(l.name))
-        .map((l) => ({
-          id: l.id,
-          name: l.name.trim(),
-          logoUrl: (l as unknown as { logo_url: string | null }).logo_url,
-        }))
-      const leagueNames = new Map(leagues.map((l) => [l.id, l.name]))
+        .map((l) => ({ id: l.id, name: l.name.trim(), logoUrl: l.logo_url }))
+      const leagueNames = new Map(allLeagues.map((l) => [l.id, l.name]))
       const visibleLeagueIds = new Set(leagueNames.keys())
 
-      const rows = (eventsRes.data ?? []) as unknown as EventRow[]
+      const rows = (eventRows ?? []) as EventRow[]
       const events: LiveEvent[] = rows
         .filter((row) => !row.league_id || visibleLeagueIds.has(row.league_id))
         .map((row) => ({
@@ -128,6 +165,13 @@ export function useSportSchedule(canonicalSportKey: string): SportSchedule {
           venue: row.venues?.name ?? null,
         }))
 
+      // Only surface leagues that actually have upcoming fixtures — no more "9 leagues, 0 events"
+      // clutter where every chip dead-ends in an empty schedule. Fall back to the full list only if
+      // the whole sport is between seasons (so the page still shows its league context).
+      const leagueIdsWithEvents = new Set(events.map((e) => e.leagueId).filter(Boolean))
+      const leaguesWithEvents = allLeagues.filter((l) => leagueIdsWithEvents.has(l.id))
+      const leagues = leaguesWithEvents.length ? leaguesWithEvents : allLeagues
+
       // Freshness: the most recent change we ingested for this sport.
       let lastUpdated: Date | null = null
       for (const row of rows) {
@@ -137,11 +181,20 @@ export function useSportSchedule(canonicalSportKey: string): SportSchedule {
       }
 
       setState({ forKey: canonicalSportKey, leagues, events, configured: true, lastUpdated })
+      // Cache only a real, non-empty result so a transient empty never poisons the fallback.
+      if (events.length || leagues.length) {
+        writeCache<CachedSchedule>(cacheKey, {
+          leagues,
+          events: events.map(toCachedEvent),
+          lastUpdated: lastUpdated ? lastUpdated.toISOString() : null,
+        })
+      }
     })
 
     return () => {
       cancelled = true
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canonicalSportKey])
 
   const loading = state.forKey !== canonicalSportKey
@@ -216,36 +269,45 @@ export function useMyEvents(
       const nowIso = new Date(Date.now() - 3 * 3600_000).toISOString()
       const byId = new Map<string, LiveEvent>()
 
-      if (leagueIds.length) {
-        const { data } = await supabase
-          .from('events')
-          .select(MY_EVENT_SELECT)
-          .in('league_id', leagueIds)
-          .eq('visibility', 'public')
-          .neq('status', 'finished')
-          .gte('starts_at', nowIso)
-          .order('starts_at', { ascending: true })
-          .limit(300)
-        for (const row of (data ?? []) as unknown as MyEventRow[]) byId.set(row.id, mapMyEvent(row))
-      }
-
-      if (competitorIds.length) {
-        const { data: links } = await supabase
-          .from('event_competitors')
-          .select('event_id')
-          .in('competitor_id', competitorIds)
-        const eventIds = [...new Set((links ?? []).map((l) => l.event_id as string))]
-        for (let i = 0; i < eventIds.length; i += 200) {
-          const { data } = await supabase
-            .from('events')
-            .select(MY_EVENT_SELECT)
-            .in('id', eventIds.slice(i, i + 200))
-            .eq('visibility', 'public')
-            .neq('status', 'finished')
-            .gte('starts_at', nowIso)
-            .order('starts_at', { ascending: true })
-          for (const row of (data ?? []) as unknown as MyEventRow[]) byId.set(row.id, mapMyEvent(row))
+      try {
+        if (leagueIds.length) {
+          const data = (await retryRead(() =>
+            supabase
+              .from('events')
+              .select(MY_EVENT_SELECT)
+              .in('league_id', leagueIds)
+              .eq('visibility', 'public')
+              .neq('status', 'finished')
+              .gte('starts_at', nowIso)
+              .order('starts_at', { ascending: true })
+              .limit(300),
+          )) as unknown as MyEventRow[] | null
+          for (const row of data ?? []) byId.set(row.id, mapMyEvent(row))
         }
+
+        if (competitorIds.length) {
+          const links = (await retryRead(() =>
+            supabase.from('event_competitors').select('event_id').in('competitor_id', competitorIds),
+          )) as { event_id: string }[] | null
+          const eventIds = [...new Set((links ?? []).map((l) => l.event_id))]
+          for (let i = 0; i < eventIds.length; i += 200) {
+            const data = (await retryRead(() =>
+              supabase
+                .from('events')
+                .select(MY_EVENT_SELECT)
+                .in('id', eventIds.slice(i, i + 200))
+                .eq('visibility', 'public')
+                .neq('status', 'finished')
+                .gte('starts_at', nowIso)
+                .order('starts_at', { ascending: true }),
+            )) as unknown as MyEventRow[] | null
+            for (const row of data ?? []) byId.set(row.id, mapMyEvent(row))
+          }
+        }
+      } catch {
+        // Every retry failed — leave the previously loaded schedule on screen rather than wiping
+        // it to empty. The next follow change or revisit re-runs this effect.
+        return
       }
 
       if (cancelled) return
@@ -595,6 +657,51 @@ export function useCompetitor(competitorId: string | undefined): {
 
   const loading = state.forKey !== (competitorId ?? '')
   return { competitor: loading ? null : state.competitor, events: loading ? [] : state.events, loading, configured: state.configured }
+}
+
+export type LeagueTeam = { id: string; name: string; country: string | null }
+
+// Teams that belong to a league (competitors.league_id), for the "follow your team" pills that
+// appear under the league selector. Mirrors the roster read but scoped to one league's teams.
+export function useLeagueTeams(leagueId: string | null): { teams: LeagueTeam[]; loading: boolean } {
+  const [state, setState] = useState<{ forKey: string; teams: LeagueTeam[] }>({ forKey: '', teams: [] })
+
+  useEffect(() => {
+    let cancelled = false
+    const key = leagueId ?? ''
+    if (!leagueId) {
+      setState({ forKey: '', teams: [] })
+      return
+    }
+
+    getSupabaseClient().then(async (supabase) => {
+      if (!supabase || cancelled) return
+      try {
+        const data = (await retryRead(() =>
+          supabase
+            .from('competitors')
+            .select('id, name, country')
+            .eq('league_id', leagueId)
+            .eq('kind', 'team')
+            .order('name')
+            .limit(100),
+        )) as LeagueTeam[] | null
+        if (cancelled) return
+        setState({ forKey: key, teams: data ?? [] })
+      } catch {
+        // Keep any previously loaded teams rather than clearing the pills on a transient failure.
+        if (!cancelled && state.forKey !== key) setState({ forKey: key, teams: [] })
+      }
+    })
+
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [leagueId])
+
+  const loading = Boolean(leagueId) && state.forKey !== (leagueId ?? '')
+  return { teams: loading ? [] : state.teams, loading }
 }
 
 export function useSportRoster(canonicalSportKey: string, enabled: boolean): { players: LivePlayer[]; loading: boolean } {

@@ -1,6 +1,6 @@
-import { Bell, Check, ChevronDown, Download, Flag, Search, Sparkles, Star, Timer, Tv, Users, X } from 'lucide-react'
+import { ArrowUpRight, Bell, Check, ChevronDown, Download, Flag, Search, Sparkles, Star, Timer, Tv, Users, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { useAppState } from '../app/state-context'
 import { CityPicker } from '../components/CityPicker'
 import { MatchCard } from '../components/MatchCard'
@@ -8,7 +8,7 @@ import { SportChannelBanner } from '../components/SportChannelBanner'
 import { WatchOptionsPanel } from '../components/WatchOptionsPanel'
 import { Badge, Button, EmptyState, Panel, PanelHeading } from '../components/ui'
 import { deriveTeams, filterMatchesForTeams, filterUpcomingMatches, useMatches } from '../data/liveMatches'
-import { useEvent, useSportRoster, useSportSchedule, type LiveEvent } from '../data/liveSport'
+import { useCompetitor, useEvent, useLeagueTeams, useSportRoster, useSportSchedule, type LeagueTeam, type LiveEvent } from '../data/liveSport'
 import { flagPoleGradient } from '../data/flagColors'
 import { allMatches, featuredTeams } from '../data/worldcup'
 import { exportFilename } from '../domain/brand'
@@ -190,22 +190,31 @@ export function SportPage() {
 // Soccer: World Cup planner by default, with pills to switch to other live soccer leagues
 // (EPL, La Liga, UCL, …) even while the World Cup is on. Leagues arrive viewership-ordered.
 function SoccerPage() {
-  const { prefs, toggleFollow, followedLeagueIds } = useAppState()
+  const { prefs, toggleFollow, followedLeagueIds, followedCompetitorIds } = useAppState()
   const { leagues, events, lastUpdated } = useSportSchedule('soccer')
   const [leagueId, setLeagueId] = useState<string | null>(null) // null = World Cup planner
+  const [teamId, setTeamId] = useState<string | null>(null)
   const [expandedEventId, setExpandedEventId] = useState<string | null>(null)
   const [addedEventIds, setAddedEventIds] = useState<string[]>([])
   const [eventPager, setEventPager] = useState({ key: 'none', page: 1 })
 
+  const { teams: leagueTeams } = useLeagueTeams(leagueId)
+  const { events: teamEvents } = useCompetitor(teamId ?? undefined)
+
+  function selectLeague(id: string | null) {
+    setLeagueId(id)
+    setTeamId(null)
+  }
+
   // Exclude the World Cup league rows (openfootball + TheSportsDB) — the planner IS the WC.
   const otherLeagues = useMemo(() => leagues.filter((l) => !/world cup/i.test(l.name)), [leagues])
   const leagueEvents = useMemo(
-    () => (leagueId ? events.filter((e) => e.leagueId === leagueId) : []),
-    [events, leagueId],
+    () => (teamId ? teamEvents : leagueId ? events.filter((e) => e.leagueId === leagueId) : []),
+    [events, leagueId, teamId, teamEvents],
   )
   const activeLeague = otherLeagues.find((l) => l.id === leagueId)
   const eventPageCount = pageCountFor(leagueEvents.length)
-  const eventPageKey = leagueId ?? 'world-cup'
+  const eventPageKey = `${leagueId ?? 'world-cup'}:${teamId ?? ''}`
   const eventPage = activePageFor(eventPager, eventPageKey, eventPageCount)
   const pagedLeagueEvents = useMemo(
     () => leagueEvents.slice((eventPage - 1) * SCHEDULE_PAGE_SIZE, eventPage * SCHEDULE_PAGE_SIZE),
@@ -229,7 +238,7 @@ function SoccerPage() {
         primaryLabel="World Cup"
         leagues={otherLeagues}
         selectedId={leagueId}
-        onSelect={setLeagueId}
+        onSelect={selectLeague}
         followedIds={followedLeagueIds}
         onToggleFollow={(league) => toggleFollow({ targetType: 'league', targetId: league.id, intent: 'watch' })}
       />
@@ -238,6 +247,13 @@ function SoccerPage() {
         <WorldCupPlanner />
       ) : (
         <section className="space-y-3">
+          <TeamFilter
+            teams={leagueTeams}
+            selectedId={teamId}
+            onSelect={setTeamId}
+            followedIds={followedCompetitorIds}
+            onToggleFollow={(team) => toggleFollow({ targetType: 'competitor', targetId: team.id, intent: 'watch' })}
+          />
           <div className="flex items-start justify-between gap-3">
             <div>
               <h1 className="text-xl font-extrabold text-primary">{activeLeague?.name}</h1>
@@ -534,20 +550,32 @@ function LiveSportPage({ sport }: { sport: SportInfo }) {
   const { leagues, events, loading, configured, lastUpdated } = useSportSchedule(canonical)
   const roster = useSportRoster(canonical, isIndividual)
   const [leagueId, setLeagueId] = useState<string | null>(null)
+  const [teamId, setTeamId] = useState<string | null>(null)
   const [expandedEventId, setExpandedEventId] = useState<string | null>(null)
   const [addedEventIds, setAddedEventIds] = useState<string[]>([])
   const [eventPager, setEventPager] = useState({ key: `${canonical}:all`, page: 1 })
 
+  // Team-follow pills only make sense for team sports with a league picked (not motorsport
+  // sessions or individual rosters, which have their own surfaces).
+  const teamPicksEnabled = Boolean(leagueId) && !isIndividual && !isMotorsport
+  const { teams: leagueTeams } = useLeagueTeams(teamPicksEnabled ? leagueId : null)
+  const { events: teamEvents } = useCompetitor(teamId ?? undefined)
+
+  function selectLeague(id: string | null) {
+    setLeagueId(id)
+    setTeamId(null)
+  }
+
   const shownEvents = useMemo(
-    () => (leagueId ? events.filter((e) => e.leagueId === leagueId) : events),
-    [events, leagueId],
+    () => (teamId ? teamEvents : leagueId ? events.filter((e) => e.leagueId === leagueId) : events),
+    [events, leagueId, teamId, teamEvents],
   )
   const raceWeekends = useMemo(
     () => (isMotorsport ? groupRaceWeekends(shownEvents) : []),
     [isMotorsport, shownEvents],
   )
   const eventPageCount = pageCountFor(shownEvents.length)
-  const eventPageKey = `${canonical}:${leagueId ?? 'all'}`
+  const eventPageKey = `${canonical}:${leagueId ?? 'all'}:${teamId ?? ''}`
   const eventPage = activePageFor(eventPager, eventPageKey, eventPageCount)
   const pagedShownEvents = useMemo(
     () => shownEvents.slice((eventPage - 1) * SCHEDULE_PAGE_SIZE, eventPage * SCHEDULE_PAGE_SIZE),
@@ -613,11 +641,21 @@ function LiveSportPage({ sport }: { sport: SportInfo }) {
                 primaryLabel="All"
                 leagues={leagues}
                 selectedId={leagueId}
-                onSelect={setLeagueId}
+                onSelect={selectLeague}
                 followedIds={followedLeagueIds}
                 onToggleFollow={(league) => toggleFollow({ targetType: 'league', targetId: league.id, intent: 'watch' })}
               />
             </div>
+          )}
+
+          {teamPicksEnabled && (
+            <TeamFilter
+              teams={leagueTeams}
+              selectedId={teamId}
+              onSelect={setTeamId}
+              followedIds={followedCompetitorIds}
+              onToggleFollow={(team) => toggleFollow({ targetType: 'competitor', targetId: team.id, intent: 'watch' })}
+            />
           )}
 
           <div className={`grid gap-4 ${isIndividual ? 'lg:grid-cols-[1fr_320px]' : ''}`}>
@@ -1055,6 +1093,125 @@ function LeagueFilter({
           </ul>
         </div>
       )}
+    </div>
+  )
+}
+
+// Follow-your-team pills: shown under the league selector once a league is picked. Each pill
+// selects the team (filtering the schedule to its fixtures), carries a follow star (→ My Schedule,
+// feeds, alerts), and deep-links to the durable /teams/:id page. Mirrors LeagueChip's visual
+// language but compacted so a 20–30 team league still reads as one scrollable row.
+function TeamChip({
+  team,
+  active,
+  followed,
+  onSelect,
+  onToggleFollow,
+}: {
+  team: LeagueTeam
+  active: boolean
+  followed: boolean
+  onSelect: (id: string | null) => void
+  onToggleFollow: (team: LeagueTeam) => void
+}) {
+  return (
+    <div
+      className={`flex shrink-0 items-center gap-0.5 rounded-full border pl-1 pr-1.5 transition-colors ${
+        active ? 'border-primary bg-primary/10' : 'border-primary/25 hover:border-primary/45'
+      }`}
+    >
+      <button
+        type="button"
+        onClick={() => onToggleFollow(team)}
+        aria-pressed={followed}
+        title={followed ? `Following ${team.name}` : `Follow ${team.name}`}
+        className="flex h-7 w-7 items-center justify-center rounded-full text-ink/45 transition-colors hover:text-primary"
+      >
+        <Star size={12} className={followed ? 'fill-primary text-primary' : ''} />
+      </button>
+      <button
+        type="button"
+        onClick={() => onSelect(active ? null : team.id)}
+        aria-pressed={active}
+        className={`max-w-[150px] truncate py-1 text-xs font-semibold ${active ? 'text-primary' : 'text-ink/75'}`}
+      >
+        {team.name}
+      </button>
+      {active && (
+        <Link
+          to={`/teams/${team.id}`}
+          title={`Open ${team.name} page`}
+          className="flex h-6 w-6 items-center justify-center rounded-full text-primary/70 hover:text-primary"
+        >
+          <ArrowUpRight size={13} />
+        </Link>
+      )}
+    </div>
+  )
+}
+
+function TeamFilter({
+  teams,
+  selectedId,
+  onSelect,
+  followedIds = [],
+  onToggleFollow,
+}: {
+  teams: LeagueTeam[]
+  selectedId: string | null
+  onSelect: (id: string | null) => void
+  followedIds?: string[]
+  onToggleFollow: (team: LeagueTeam) => void
+}) {
+  const [query, setQuery] = useState('')
+  const followedSet = useMemo(() => new Set(followedIds), [followedIds])
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    return q ? teams.filter((t) => t.name.toLowerCase().includes(q)) : teams
+  }, [teams, query])
+
+  if (!teams.length) return null
+
+  return (
+    <div className="flex flex-col gap-1.5 rounded-xl border border-primary/15 bg-surface/60 p-2.5">
+      <div className="flex items-center justify-between gap-2">
+        <p className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.18em] text-ink/45">
+          <Star size={11} className="text-primary" /> Follow a team in this league
+        </p>
+        {teams.length > 10 && (
+          <label className="flex items-center gap-1.5 rounded-full border border-primary/20 bg-page/60 px-2.5 py-1">
+            <Search size={12} className="text-ink/40" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Find team"
+              className="w-24 bg-transparent text-xs outline-none placeholder:text-ink/40"
+            />
+          </label>
+        )}
+      </div>
+      <div className="silbo-scrollbar flex gap-2 overflow-x-auto pb-1">
+        <button
+          type="button"
+          onClick={() => onSelect(null)}
+          className={`flex h-9 shrink-0 items-center rounded-full border px-3 font-mono text-[11px] uppercase tracking-wide transition-colors ${
+            selectedId === null ? 'border-primary bg-primary text-void' : 'border-primary/25 text-ink/70 hover:bg-primary/10'
+          }`}
+        >
+          All teams
+        </button>
+        {filtered.map((team) => (
+          <TeamChip
+            key={team.id}
+            team={team}
+            active={selectedId === team.id}
+            followed={followedSet.has(team.id)}
+            onSelect={onSelect}
+            onToggleFollow={onToggleFollow}
+          />
+        ))}
+        {filtered.length === 0 && <span className="px-2 py-2 text-xs text-ink/50">No teams match “{query}”.</span>}
+      </div>
     </div>
   )
 }
