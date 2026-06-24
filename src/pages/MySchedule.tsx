@@ -356,7 +356,6 @@ export function MySchedulePage() {
       exportFilename('live-schedule', 'ics'),
     )
     setMessage('All-sports calendar downloaded with 1-hour reminders.')
-    closeFlow()
   }
 
   function matchesForScope(scope = 'all_saved') {
@@ -373,14 +372,12 @@ export function MySchedulePage() {
   async function exportIcs(matchesToExport = schedule) {
     downloadBlob(createIcsBlob(matchesToExport, timeZone, prefs.locale, prefs.hour12), exportFilename('schedule', 'ics'))
     setMessage(exportCompletionMessage('ics'))
-    closeFlow()
   }
 
   async function exportCsv(matchesToExport = schedule) {
     const csv = createScheduleCsv(matchesToExport, timeZone, prefs.locale, prefs.hour12)
     downloadBlob(new Blob([csv], { type: 'text/csv;charset=utf-8' }), exportFilename('schedule', 'csv'))
     setMessage(exportCompletionMessage('csv'))
-    closeFlow()
   }
 
   async function exportImages(share: boolean, matchesToExport = schedule) {
@@ -409,14 +406,12 @@ export function MySchedulePage() {
       if (share && exportPages.length === 1 && navigator.canShare?.({ files: [file] })) {
         await navigator.share({ title: brand.scheduleTitle, files: [file] })
         setMessage('Image opened in your share sheet.')
-        closeFlow()
         return
       }
       downloadBlob(blob, filename)
       pageNumber += 1
     }
     setMessage(exportCompletionMessage(exportPages.length > 1 ? 'images' : 'image', exportPages.length))
-    closeFlow()
   }
 
   async function exportPdf(matchesToExport = schedule) {
@@ -443,21 +438,18 @@ export function MySchedulePage() {
     const blob = createPdfBlobFromImages(pdfPages, posterVariant)
     downloadBlob(blob, exportFilename('schedule', 'pdf'))
     setMessage(exportCompletionMessage('pdf', pdfPages.length))
-    closeFlow()
   }
 
   async function copyNotes(matchesToExport = schedule) {
     const text = createNotesText(matchesToExport, followedTeams, timeZone, cityLabel, prefs.locale, prefs.hour12)
     await copyToClipboard(text)
     setMessage(exportCompletionMessage('notes'))
-    closeFlow()
   }
 
   async function copyLiveNotes() {
     const text = createMultiSportNotesText(liveSchedule, timeZone, cityLabel, prefs.locale, prefs.hour12)
     await copyToClipboard(text)
     setMessage(`All-sports text schedule copied - ${liveSchedule.length} events.`)
-    closeFlow()
   }
 
   async function shareSchedule(matchesToExport = schedule) {
@@ -465,15 +457,14 @@ export function MySchedulePage() {
     if (navigator.share) {
       await navigator.share({ title: brand.scheduleTitle, text })
       setMessage(exportCompletionMessage('share'))
-      closeFlow()
       return
     }
     await copyToClipboard(text)
     setMessage('Schedule copied for sharing.')
-    closeFlow()
   }
 
   function openFlow(flowId: GuidedFlowId) {
+    setMessage('')
     setFlow({ flowId, stepIndex: 0, answers: {} })
   }
 
@@ -490,6 +481,7 @@ export function MySchedulePage() {
 
   function nextStep() {
     if (!activeFlow || !currentStep) return
+    setMessage('')
     const answer = currentAnswer || defaultAnswer(currentStep)
     setFlow((current) => ({
       ...current,
@@ -499,6 +491,7 @@ export function MySchedulePage() {
   }
 
   function previousStep() {
+    setMessage('')
     setFlow((current) => ({
       ...current,
       stepIndex: Math.max(current.stepIndex - 1, 0),
@@ -525,7 +518,6 @@ export function MySchedulePage() {
       return exportIcs(matchesToExport)
     }
     setMessage('Use the Silbo Sync controls to create, copy, or open a live calendar feed.')
-    closeFlow()
   }
 
   function enableReminderFlow() {
@@ -541,7 +533,6 @@ export function MySchedulePage() {
     )
     setReminderSummary(`${scope}, ${timing.toLowerCase()}`)
     setMessage('Reminder preference noted. The notification setup page still controls delivery channels.')
-    closeFlow()
   }
 
   function finalActionLabel() {
@@ -642,7 +633,6 @@ export function MySchedulePage() {
     if (flow.flowId === 'reminders') enableReminderFlow()
     if (flow.flowId === 'settings') {
       setMessage('Schedule settings saved for this view.')
-      closeFlow()
     }
   }
 
@@ -768,7 +758,15 @@ export function MySchedulePage() {
       {activeFlow && currentStep &&
         createPortal(
         <div className="fixed inset-0 z-50 bg-void/70">
-          <button type="button" className="absolute inset-0 cursor-default" aria-label="Close guide" onClick={closeFlow} />
+          {/* Deliberate close only: a double-click outside dismisses, so a stray tap or tab-switch
+              never wipes choices in progress. The header X is the primary close. */}
+          <button
+            type="button"
+            className="absolute inset-0 cursor-default"
+            aria-label="Double-click to close"
+            title="Double-click to close"
+            onDoubleClick={closeFlow}
+          />
           <section
             role="dialog"
             aria-modal="true"
@@ -864,8 +862,10 @@ export function MySchedulePage() {
                   </div>
                 )}
 
+                {/* Image template + style only matter for an actual image/PDF export — hidden for
+                    text/ICS/CSV so the size picker doesn't show when it's irrelevant. */}
                 {flow.flowId === 'download' &&
-                  ['print_or_save', 'share_copy'].includes(flow.answers.download_intent ?? 'calendar_import') && (
+                  (flow.answers.download_intent ?? 'calendar_import') === 'print_or_save' && (
                   <div className="space-y-3">
                     <div className="grid grid-cols-2 gap-2">
                       {templates.map((item) => (
@@ -948,6 +948,14 @@ export function MySchedulePage() {
                   </div>
                 )}
               </div>
+            )}
+
+            {/* Confirmation stays in the modal so you can export again (a PDF, then a story image,
+                then a sync) without it closing and losing your choices. */}
+            {message && (
+              <p className="mt-4 flex items-center gap-2 rounded-lg border border-primary/25 bg-primary/8 px-3 py-2 text-sm font-medium text-primary">
+                <CalendarCheck size={15} className="shrink-0" /> {message}
+              </p>
             )}
 
             <div className="sticky bottom-0 -mx-4 mt-5 flex items-center gap-2 border-t border-primary/15 bg-surface px-4 pt-3">
