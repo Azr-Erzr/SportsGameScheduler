@@ -144,6 +144,17 @@ export const WATCH_PROVIDERS: WatchProvider[] = [
   { key: 'sonyliv', name: 'SonyLIV', network: 'Cuelinks', affiliateStatus: 'pending', regions: ['IN'], sports: ['soccer', 'cricket', 'combat', 'tennis'], url: 'https://www.sonyliv.com/' },
   { key: 'fancode', name: 'FanCode', network: 'Direct', affiliateStatus: 'pending', regions: ['IN'], sports: ['cricket', 'soccer', 'basketball', 'baseball'], url: 'https://www.fancode.com/' },
   { key: 'hotstar_jio', name: 'JioHotstar', network: 'Direct', affiliateStatus: 'pending', regions: ['IN'], sports: ['cricket', 'football', 'soccer', 'tennis', 'olympic'], url: 'https://www.hotstar.com/in' },
+  // League-rights providers referenced by the per-league CATALOG_RULES (docs/where-to-watch-rights-truth.md).
+  // All start as unpaid direct links; swap to affiliate via VITE_AFFILIATE_<KEY> when approved.
+  { key: 'nbc_sports', name: 'NBC Sports', network: 'Direct', affiliateStatus: 'none', regions: ['US'], sports: ['soccer', 'football'], url: 'https://www.nbcsports.com/soccer/premier-league' },
+  { key: 'premier_sports', name: 'Premier Sports', network: 'Direct', affiliateStatus: 'none', regions: ['GB', 'IE'], sports: ['soccer'], url: 'https://www.premiersports.com/' },
+  { key: 'viaplay', name: 'Viaplay', network: 'Direct', affiliateStatus: 'none', regions: ['NL', 'SE', 'NO', 'DK', 'FI', 'GB', 'PL'], sports: ['soccer', 'football', 'f1', 'motorsport'], url: 'https://viaplay.com/' },
+  { key: 'sky_de', name: 'Sky Deutschland', network: 'Direct', affiliateStatus: 'none', regions: ['DE', 'AT'], sports: ['soccer', 'f1', 'motorsport'], url: 'https://www.sky.de/sport' },
+  { key: 'sky_it', name: 'Sky Italia', network: 'Direct', affiliateStatus: 'none', regions: ['IT'], sports: ['soccer', 'f1', 'motorsport'], url: 'https://www.sky.it/sport' },
+  { key: 'ziggo_sport', name: 'Ziggo Sport', network: 'Direct', affiliateStatus: 'none', regions: ['NL'], sports: ['soccer', 'f1', 'motorsport'], url: 'https://www.ziggosport.nl/' },
+  { key: 'channel4', name: 'Channel 4', network: 'Direct', affiliateStatus: 'none', regions: ['GB'], sports: ['motorsport', 'f1'], url: 'https://www.channel4.com/now/C4' },
+  { key: 'tudn', name: 'TUDN', network: 'Direct', affiliateStatus: 'none', regions: ['US'], sports: ['soccer'], url: 'https://www.tudn.com/' },
+  { key: 'wimbledon_tv', name: 'Wimbledon Watch', network: 'Direct', affiliateStatus: 'none', regions: [], sports: ['tennis'], url: 'https://www.wimbledon.com/en_GB/about/tv_coverage' },
 ]
 
 const PROVIDER_BY_KEY = new Map(WATCH_PROVIDERS.map((p) => [p.key, p]))

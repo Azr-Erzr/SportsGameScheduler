@@ -104,6 +104,68 @@ const CATALOG_RULES: CatalogRule[] = [
   { ruleKey: 'hockey_international_nhl_tv_dazn', providerKey: 'nhl_tv_dazn', label: 'NHL.TV on DAZN', countryCodes: ['GB', 'DE', 'FR', 'IT', 'ES', 'NL', 'BE'], sportKeys: ['hockey'], leagueNamePattern: /\bnhl\b|national hockey league/i, priority: 18 },
   { ruleKey: 'cricket_us_ca_willow', providerKey: 'willow_tv', label: 'Willow TV', countryCodes: ['US', 'CA'], sportKeys: ['cricket'], priority: 10 },
   { ruleKey: 'table_tennis_wtt_live', providerKey: 'wtt_live', label: 'World Table Tennis', countryCodes: ['US', 'CA', 'GB', 'DE', 'FR', 'IT', 'ES'], sportKeys: ['table_tennis'], priority: 30 },
+
+  // --- Soccer leagues (docs/where-to-watch-rights-truth.md "Soccer Leagues And Competitions").
+  // Official rights holders per market; matched on league name so no DB league_id is required.
+  // English Premier League
+  { ruleKey: 'epl_us_nbc', providerKey: 'nbc_sports', label: 'NBC Sports', countryCodes: ['US'], sportKeys: ['soccer'], leagueNamePattern: /premier league/i, priority: 1 },
+  { ruleKey: 'epl_us_peacock', providerKey: 'peacock', label: 'Peacock', countryCodes: ['US'], sportKeys: ['soccer'], leagueNamePattern: /premier league/i, priority: 2 },
+  { ruleKey: 'epl_us_fubo', providerKey: 'fubo', label: 'Fubo', countryCodes: ['US'], sportKeys: ['soccer'], leagueNamePattern: /premier league/i, priority: 3 },
+  { ruleKey: 'epl_ca_fubo', providerKey: 'fubo', label: 'Fubo', countryCodes: ['CA'], sportKeys: ['soccer'], leagueNamePattern: /premier league/i, priority: 1 },
+  { ruleKey: 'epl_gb_sky', providerKey: 'sky_sports', label: 'Sky Sports', countryCodes: ['GB', 'IE'], sportKeys: ['soccer'], leagueNamePattern: /premier league/i, priority: 1 },
+  { ruleKey: 'epl_gb_tnt', providerKey: 'tnt_sports_uk', label: 'TNT Sports', countryCodes: ['GB', 'IE'], sportKeys: ['soccer'], leagueNamePattern: /premier league/i, priority: 2 },
+  { ruleKey: 'epl_gb_bbc', providerKey: 'bbc_iplayer', label: 'BBC (highlights)', countryCodes: ['GB'], sportKeys: ['soccer'], leagueNamePattern: /premier league/i, priority: 3 },
+  { ruleKey: 'epl_fr_canal', providerKey: 'canal_plus', label: 'CANAL+', countryCodes: ['FR'], sportKeys: ['soccer'], leagueNamePattern: /premier league/i, priority: 1 },
+  { ruleKey: 'epl_de_sky', providerKey: 'sky_de', label: 'Sky Deutschland', countryCodes: ['DE', 'AT'], sportKeys: ['soccer'], leagueNamePattern: /premier league/i, priority: 1 },
+  { ruleKey: 'epl_it_sky', providerKey: 'sky_it', label: 'Sky Italia', countryCodes: ['IT'], sportKeys: ['soccer'], leagueNamePattern: /premier league/i, priority: 1 },
+  { ruleKey: 'epl_es_dazn', providerKey: 'dazn_es', label: 'DAZN', countryCodes: ['ES'], sportKeys: ['soccer'], leagueNamePattern: /premier league/i, priority: 1 },
+  { ruleKey: 'epl_nl_viaplay', providerKey: 'viaplay', label: 'Viaplay', countryCodes: ['NL'], sportKeys: ['soccer'], leagueNamePattern: /premier league/i, priority: 1 },
+  // UEFA Champions League
+  { ruleKey: 'ucl_us_paramount', providerKey: 'paramount_plus', label: 'Paramount+', countryCodes: ['US'], sportKeys: ['soccer'], leagueNamePattern: /champions league/i, priority: 1 },
+  { ruleKey: 'ucl_us_tudn', providerKey: 'tudn', label: 'TUDN', countryCodes: ['US'], sportKeys: ['soccer'], leagueNamePattern: /champions league/i, priority: 2 },
+  { ruleKey: 'ucl_ca_dazn', providerKey: 'dazn', label: 'DAZN', countryCodes: ['CA'], sportKeys: ['soccer'], leagueNamePattern: /champions league/i, priority: 1 },
+  { ruleKey: 'ucl_gb_tnt', providerKey: 'tnt_sports_uk', label: 'TNT Sports', countryCodes: ['GB', 'IE'], sportKeys: ['soccer'], leagueNamePattern: /champions league/i, priority: 1 },
+  { ruleKey: 'ucl_fr_canal', providerKey: 'canal_plus', label: 'CANAL+', countryCodes: ['FR'], sportKeys: ['soccer'], leagueNamePattern: /champions league/i, priority: 1 },
+  { ruleKey: 'ucl_de_dazn', providerKey: 'dazn', label: 'DAZN', countryCodes: ['DE', 'AT'], sportKeys: ['soccer'], leagueNamePattern: /champions league/i, priority: 1 },
+  { ruleKey: 'ucl_it_sky', providerKey: 'sky_it', label: 'Sky Italia', countryCodes: ['IT'], sportKeys: ['soccer'], leagueNamePattern: /champions league/i, priority: 1 },
+  { ruleKey: 'ucl_it_prime', providerKey: 'prime_video', label: 'Prime Video', countryCodes: ['IT'], sportKeys: ['soccer'], leagueNamePattern: /champions league/i, priority: 2 },
+  { ruleKey: 'ucl_es_movistar', providerKey: 'movistar_plus', label: 'Movistar Plus+', countryCodes: ['ES'], sportKeys: ['soccer'], leagueNamePattern: /champions league/i, priority: 1 },
+  { ruleKey: 'ucl_nl_ziggo', providerKey: 'ziggo_sport', label: 'Ziggo Sport', countryCodes: ['NL'], sportKeys: ['soccer'], leagueNamePattern: /champions league/i, priority: 1 },
+  // LaLiga
+  { ruleKey: 'laliga_us_espn', providerKey: 'espn_plus', label: 'ESPN+', countryCodes: ['US'], sportKeys: ['soccer'], leagueNamePattern: /la\s?liga/i, priority: 1 },
+  { ruleKey: 'laliga_gb_premier', providerKey: 'premier_sports', label: 'Premier Sports', countryCodes: ['GB', 'IE'], sportKeys: ['soccer'], leagueNamePattern: /la\s?liga/i, priority: 1 },
+  { ruleKey: 'laliga_es_movistar', providerKey: 'movistar_plus', label: 'Movistar Plus+', countryCodes: ['ES'], sportKeys: ['soccer'], leagueNamePattern: /la\s?liga/i, priority: 1 },
+  // Bundesliga
+  { ruleKey: 'bundesliga_us_espn', providerKey: 'espn_plus', label: 'ESPN+', countryCodes: ['US'], sportKeys: ['soccer'], leagueNamePattern: /bundesliga/i, priority: 1 },
+  { ruleKey: 'bundesliga_de_sky', providerKey: 'sky_de', label: 'Sky Deutschland', countryCodes: ['DE', 'AT'], sportKeys: ['soccer'], leagueNamePattern: /bundesliga/i, priority: 1 },
+  // Serie A
+  { ruleKey: 'seriea_us_paramount', providerKey: 'paramount_plus', label: 'Paramount+', countryCodes: ['US'], sportKeys: ['soccer'], leagueNamePattern: /serie a/i, priority: 1 },
+  { ruleKey: 'seriea_ca_fubo', providerKey: 'fubo', label: 'Fubo', countryCodes: ['CA'], sportKeys: ['soccer'], leagueNamePattern: /serie a/i, priority: 1 },
+  { ruleKey: 'seriea_gb_dazn', providerKey: 'dazn', label: 'DAZN', countryCodes: ['GB', 'IE'], sportKeys: ['soccer'], leagueNamePattern: /serie a/i, priority: 1 },
+  { ruleKey: 'seriea_it_dazn', providerKey: 'dazn_it', label: 'DAZN', countryCodes: ['IT'], sportKeys: ['soccer'], leagueNamePattern: /serie a/i, priority: 1 },
+  // Ligue 1
+  { ruleKey: 'ligue1_ca_bein', providerKey: 'bein_sports', label: 'beIN SPORTS', countryCodes: ['CA'], sportKeys: ['soccer'], leagueNamePattern: /ligue 1/i, priority: 1 },
+  { ruleKey: 'ligue1_us_bein', providerKey: 'bein_sports', label: 'beIN SPORTS', countryCodes: ['US'], sportKeys: ['soccer'], leagueNamePattern: /ligue 1/i, priority: 1 },
+  { ruleKey: 'ligue1_fr_canal', providerKey: 'canal_plus', label: 'CANAL+', countryCodes: ['FR'], sportKeys: ['soccer'], leagueNamePattern: /ligue 1/i, priority: 1 },
+
+  // --- Major multi-sport routes (docs "Major Multi-Sport Watch Routes").
+  // NBA
+  { ruleKey: 'nba_global_leaguepass', providerKey: 'nba_league_pass', label: 'NBA League Pass', countryCodes: ['US', 'CA', 'GB', 'AU', 'IN'], sportKeys: ['basketball'], leagueNamePattern: /\bnba\b|national basketball/i, priority: 4 },
+  { ruleKey: 'nba_us_prime', providerKey: 'prime_video', label: 'Prime Video', countryCodes: ['US'], sportKeys: ['basketball'], leagueNamePattern: /\bnba\b|national basketball/i, priority: 2 },
+  { ruleKey: 'nba_us_espn', providerKey: 'espn_plus', label: 'ESPN', countryCodes: ['US'], sportKeys: ['basketball'], leagueNamePattern: /\bnba\b|national basketball/i, priority: 3 },
+  // MLB
+  { ruleKey: 'mlb_global_mlbtv', providerKey: 'mlb_tv', label: 'MLB.TV', countryCodes: ['US', 'CA', 'GB', 'AU', 'JP'], sportKeys: ['baseball'], leagueNamePattern: /\bmlb\b|major league baseball/i, priority: 4 },
+  // Formula 1 (US is Apple TV from 2026; canonical country/broadcaster table on formula1.com)
+  { ruleKey: 'f1_global_f1tv', providerKey: 'formula1_tv', label: 'F1 TV', countryCodes: [], sportKeys: ['motorsport'], leagueNamePattern: /formula 1|formula one|\bf1\b/i, priority: 5 },
+  { ruleKey: 'f1_us_apple', providerKey: 'apple_tv', label: 'Apple TV', countryCodes: ['US'], sportKeys: ['motorsport'], leagueNamePattern: /formula 1|formula one|\bf1\b/i, priority: 1 },
+  { ruleKey: 'f1_ca_tsn', providerKey: 'tsn', label: 'TSN / RDS', countryCodes: ['CA'], sportKeys: ['motorsport'], leagueNamePattern: /formula 1|formula one|\bf1\b/i, priority: 1 },
+  { ruleKey: 'f1_gb_sky', providerKey: 'sky_sports', label: 'Sky Sports F1', countryCodes: ['GB', 'IE'], sportKeys: ['motorsport'], leagueNamePattern: /formula 1|formula one|\bf1\b/i, priority: 1 },
+  { ruleKey: 'f1_gb_c4', providerKey: 'channel4', label: 'Channel 4 (highlights)', countryCodes: ['GB'], sportKeys: ['motorsport'], leagueNamePattern: /formula 1|formula one|\bf1\b/i, priority: 2 },
+  { ruleKey: 'f1_es_dazn', providerKey: 'dazn_es', label: 'DAZN', countryCodes: ['ES'], sportKeys: ['motorsport'], leagueNamePattern: /formula 1|formula one|\bf1\b/i, priority: 1 },
+  { ruleKey: 'f1_fr_canal', providerKey: 'canal_plus', label: 'CANAL+', countryCodes: ['FR'], sportKeys: ['motorsport'], leagueNamePattern: /formula 1|formula one|\bf1\b/i, priority: 1 },
+  { ruleKey: 'f1_de_sky', providerKey: 'sky_de', label: 'Sky Deutschland', countryCodes: ['DE', 'AT'], sportKeys: ['motorsport'], leagueNamePattern: /formula 1|formula one|\bf1\b/i, priority: 1 },
+  // Tennis — Wimbledon official coverage page (Slam-specific rights)
+  { ruleKey: 'tennis_wimbledon', providerKey: 'wimbledon_tv', label: 'Wimbledon', countryCodes: [], sportKeys: ['tennis'], leagueNamePattern: /wimbledon/i, priority: 2 },
 ]
 
 function sportAliases(sportKey: string | null | undefined) {
