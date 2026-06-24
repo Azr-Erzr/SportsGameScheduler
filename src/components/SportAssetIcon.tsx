@@ -17,7 +17,11 @@ type SportAssetIconProps = {
 // Cross-naming for primary sport families and their leagues. Secondary sports are NOT listed here
 // — they resolve to the Other Sports icon via SECONDARY_SPORT_KEYS below.
 const aliases: Record<string, string> = {
+  // Canonical sport keys (as stored in the DB / spotlight rows) → their asset filename. Without
+  // these, a DB sportKey like "combat_sports" requests combat_sports.webp, which 404s.
   american_football: 'football',
+  combat_sports: 'combat',
+  olympic_sports: 'olympic',
   f1: 'motorsport',
   formula1: 'motorsport',
   nba: 'basketball',

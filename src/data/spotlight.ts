@@ -1,5 +1,12 @@
 import { useEffect, useState } from 'react'
 import { getSupabaseClient } from '../lib/supabase'
+import { getSport } from '../domain/sports'
+
+// Spotlight rows arrive with inconsistent sport keys (route keys like "combat" AND canonical keys
+// like "combat_sports"). Collapse to the canonical key so dedupe treats them as one sport.
+function canonicalKey(sportKey: string): string {
+  return getSport(sportKey)?.canonicalSportKey ?? sportKey
+}
 
 export type SpotlightEvent = {
   title: string
@@ -179,6 +186,34 @@ function loadSpotlights(regionCode?: string | null) {
   return promise
 }
 
+// A spotlight is disqualified once its event has demonstrably passed. We only drop entries that
+// carry a concrete end/start in the past — evergreen promos (no date) and still-running multi-day
+// events (World Cup: started, but ends weeks out) stay. Keeps stale/finished competitions off the
+// board even if the DB ranking hasn't caught up.
+export function isSpotlightCurrent(event: SpotlightEvent, now = Date.now()): boolean {
+  const cutoff = event.endsAt ?? event.startsAt
+  if (!cutoff) return true
+  const time = new Date(cutoff).getTime()
+  if (Number.isNaN(time)) return true
+  // 12h grace so an event finishing today doesn't vanish mid-day.
+  return time >= now - 12 * 60 * 60 * 1000
+}
+
+// One card per sport on the board: a single sport showing twice (e.g. World Cup + Champions League)
+// reads as a bug. Keep the highest-importance current entry for each sport, importance-ordered.
+export function dedupeSpotlightBySport(events: SpotlightEvent[]): SpotlightEvent[] {
+  const ranked = [...events].sort((a, b) => b.importance - a.importance)
+  const seen = new Set<string>()
+  const out: SpotlightEvent[] = []
+  for (const event of ranked) {
+    const key = canonicalKey(event.sportKey)
+    if (seen.has(key)) continue
+    seen.add(key)
+    out.push(event)
+  }
+  return out
+}
+
 export function useSpotlightEvents(regionCode?: string | null) {
   const key = regionCode?.toUpperCase() ?? 'GLOBAL'
   const [events, setEvents] = useState(() => cache.get(key) ?? fallbackSpotlightEvents)
@@ -193,5 +228,6 @@ export function useSpotlightEvents(regionCode?: string | null) {
     }
   }, [regionCode])
 
-  return events
+  // Disqualify passed events regardless of the DB ranking; the site stays oriented to today's date.
+  return events.filter((event) => isSpotlightCurrent(event))
 }

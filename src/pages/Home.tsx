@@ -19,7 +19,7 @@ import { Button, Panel, PanelHeading } from '../components/ui'
 import { WorldClock } from '../components/WorldClock'
 import { filterMatchesForTeams, filterUpcomingMatches, useMatches } from '../data/liveMatches'
 import { featuredTeams } from '../data/worldcup'
-import { useSpotlightEvents, type SpotlightEvent } from '../data/spotlight'
+import { dedupeSpotlightBySport, useSpotlightEvents, type SpotlightEvent } from '../data/spotlight'
 import { brand } from '../domain/brand'
 import { associationFootballLabel, t } from '../lib/i18n'
 import { formatLongDate, formatTime } from '../lib/time'
@@ -88,6 +88,8 @@ export function HomePage() {
   const { followedTeams, toggleFollow, prefs } = useAppState()
   const { matches } = useMatches()
   const spotlightEvents = useSpotlightEvents(prefs.regionCode)
+  // One card per sport on the homepage board/strip — no sport (e.g. soccer) showing up twice.
+  const spotlightBySport = useMemo(() => dedupeSpotlightBySport(spotlightEvents), [spotlightEvents])
 
   const upcomingMatches = useMemo(() => {
     return filterUpcomingMatches(filterMatchesForTeams(matches, followedTeams)).slice(0, 3)
@@ -224,7 +226,7 @@ export function HomePage() {
         </Panel>
       </section>
 
-      <GlobalEventBoard events={spotlightEvents} variant="room" />
+      <GlobalEventBoard events={spotlightBySport} variant="room" />
 
       <section>
         <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
@@ -237,7 +239,7 @@ export function HomePage() {
           </Link>
         </div>
         <div className="silbo-scrollbar flex snap-x gap-3 overflow-x-auto pb-3">
-          {spotlightEvents.map((event, index) => (
+          {spotlightBySport.map((event, index) => (
             <ProgramCoverCard key={event.title} event={event} index={index} surfaceMode={prefs.themeMode} />
           ))}
         </div>
