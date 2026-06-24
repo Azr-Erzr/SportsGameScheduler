@@ -19,7 +19,7 @@ import { AdSlot } from '../components/AdSlot'
 import { interleaveAds } from '../lib/ads'
 import { downloadBlob } from '../lib/clipboard'
 import { useDocumentMeta } from '../lib/seo'
-import { findConflicts } from '../lib/conflicts'
+import { findConflictTiers, type OverlapTier } from '../lib/sportTiming'
 import { createMultiSportIcsBlob } from '../lib/ics'
 import { getSavedMatchKeys, toggleSavedMatch } from '../lib/store'
 import { groupRaceWeekends, RACE_SESSION_LABELS, type RaceWeekend } from '../lib/raceWeekends'
@@ -305,7 +305,15 @@ function WorldCupPlanner() {
     () => filterUpcomingMatches(filterMatchesForTeams(matches, followedTeams)),
     [matches, followedTeams],
   )
-  const conflicts = useMemo(() => findConflicts(filteredMatches), [filteredMatches])
+  // Overlap is a personal-schedule signal: only flag clashes once the user has narrowed to their
+  // teams. On the full browse (no follows) every match has a simultaneous twin, which is just noise.
+  const conflicts = useMemo(
+    () =>
+      followedTeams.length
+        ? findConflictTiers(filteredMatches.map((m) => ({ startsAt: m.startsAt, sportKey: 'soccer' })))
+        : new Map<number, OverlapTier>(),
+    [filteredMatches, followedTeams],
+  )
   const matchPageCount = pageCountFor(filteredMatches.length)
   const followedTeamSignature = followedTeams.join('|')
   const matchPageKey = followedTeamSignature || 'all'
@@ -499,7 +507,7 @@ function WorldCupPlanner() {
                 key={`${match.date}-${match.team1}-${match.team2}`}
                 match={match}
                 timeZone={timeZone}
-                conflicted={conflicts.has(index)}
+                conflict={conflicts.get(index) ?? null}
                 highlightTeams={followedTeams}
                 locale={prefs.locale}
                 hour12={prefs.hour12}

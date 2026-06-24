@@ -36,7 +36,7 @@ import { brand, exportFilename } from '../domain/brand'
 import { interleaveAds } from '../lib/ads'
 import { cityLabelFor } from '../lib/cities'
 import { copyToClipboard, downloadBlob } from '../lib/clipboard'
-import { findConflicts } from '../lib/conflicts'
+import { findConflictTiers } from '../lib/sportTiming'
 import { buildExportAdvice, type ExportAdvice, type ExportAdviceMethod } from '../lib/exportAdvice'
 import { createIcsBlob, createMultiSportIcsBlob, sportEmoji } from '../lib/ics'
 import { t } from '../lib/i18n'
@@ -303,7 +303,10 @@ export function MySchedulePage() {
     [myEvents.events, range, hidePast, nowMs],
   )
 
-  const conflicts = useMemo(() => findConflicts(schedule), [schedule])
+  const conflicts = useMemo(
+    () => findConflictTiers(schedule.map((m) => ({ startsAt: m.startsAt, sportKey: 'soccer' }))),
+    [schedule],
+  )
   const dateGroups = useMemo(
     () => groupByLocalDate(schedule, timeZone, prefs.locale, prefs.hour12),
     [schedule, timeZone, prefs.locale, prefs.hour12],
@@ -1143,7 +1146,7 @@ export function MySchedulePage() {
                       key={`${match.date}-${match.team1}-${match.team2}`}
                       match={match}
                       timeZone={timeZone}
-                      conflicted={conflicts.has(index)}
+                      conflict={conflicts.get(index) ?? null}
                       highlightTeams={followedTeams}
                       locale={prefs.locale}
                       hour12={prefs.hour12}

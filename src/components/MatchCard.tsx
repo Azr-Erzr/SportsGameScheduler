@@ -1,6 +1,7 @@
 import { AlertTriangle, Bell, ChevronDown, Download, MapPin, RadioTower, Tv } from 'lucide-react'
 import { useState } from 'react'
 import type { Match } from '../domain/match'
+import type { OverlapTier } from '../lib/sportTiming'
 import { formatDate, formatLongDate, formatTime } from '../lib/time'
 import { WatchOptionsPanel } from './WatchOptionsPanel'
 
@@ -8,10 +9,17 @@ import { WatchOptionsPanel } from './WatchOptionsPanel'
 // deep sport-specific time stub with perforated edge, ink type. The on-screen card, the
 // poster export, and the share card are deliberately the same object.
 
+// Retro-future neon — bare-minimum glow so it pops ever so slightly, no bloom.
+// overlap = true clash (same time / within full-time); close = just clips or just misses.
+const CONFLICT_STYLE: Record<OverlapTier, { color: string; label: string }> = {
+  overlap: { color: '#ff2f9a', label: 'Overlap' }, // 80s neon pink
+  close: { color: '#ffcf3a', label: 'Close' }, // amber heads-up
+}
+
 export function MatchCard({
   match,
   timeZone,
-  conflicted = false,
+  conflict = null,
   highlightTeams = [],
   locale,
   hour12,
@@ -21,7 +29,7 @@ export function MatchCard({
 }: {
   match: Match
   timeZone: string
-  conflicted?: boolean
+  conflict?: OverlapTier | null
   highlightTeams?: string[]
   locale?: string
   hour12?: boolean | null
@@ -32,19 +40,26 @@ export function MatchCard({
   const [expanded, setExpanded] = useState(false)
   const title = `${match.team1} vs ${match.team2}`
   const timeOptions = { locale, hour12: hour12 ?? undefined }
+  const tier = conflict ? CONFLICT_STYLE[conflict] : null
 
   return (
     // PERF: plain article + CSS transitions. Framer `layout` springs on 70+ list items
     // measured the whole list every frame and was the main scroll-jank source.
     <article
-      className={`ticket-paper relative overflow-hidden p-0 ${
-        conflicted ? 'outline outline-2 outline-offset-2 outline-neon-magenta' : ''
-      }`}
+      className="ticket-paper relative overflow-hidden p-0"
+      style={
+        tier
+          ? { outline: `2px solid ${tier.color}`, outlineOffset: '2px', boxShadow: `0 0 5px ${tier.color}66` }
+          : undefined
+      }
     >
-      {conflicted && (
-        <span className="absolute right-3 top-0 z-10 rounded-b-sm bg-neon-magenta px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-void">
+      {tier && (
+        <span
+          className="absolute right-3 top-0 z-10 rounded-b-sm px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-void"
+          style={{ background: tier.color, boxShadow: `0 0 4px ${tier.color}55` }}
+        >
           <AlertTriangle size={9} className="mr-1 inline-block" />
-          Overlap
+          {tier.label}
         </span>
       )}
 
