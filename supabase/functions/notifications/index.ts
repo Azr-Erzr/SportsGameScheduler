@@ -82,6 +82,7 @@ async function sendReminderEmail(delivery: Delivery) {
 
   const row = event as EventForAlert
   const manageUrl = `${APP_URL}/settings/alerts`
+  const eventUrl = `${APP_URL}/events/${delivery.event_id}`
   const copy = alertCopyFor(
     delivery.kind,
     {
@@ -105,6 +106,7 @@ async function sendReminderEmail(delivery: Delivery) {
       league_name: row.leagues?.name ?? null,
     },
     manageUrl,
+    eventUrl,
   })
 
   const response = await fetch(RESEND_ENDPOINT, {

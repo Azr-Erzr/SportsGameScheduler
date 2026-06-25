@@ -6,6 +6,8 @@ type RenderAlertEmailOptions = {
   copy: AlertCopy
   event: AlertCopyEvent
   manageUrl: string
+  /** Deep link to the specific event; the primary CTA points here (falls back to appUrl). */
+  eventUrl?: string
 }
 
 function escapeHtml(value: unknown) {
@@ -65,6 +67,7 @@ function detailRow(label: string, value: string | null | undefined) {
 export function renderSilboAlertEmail(options: RenderAlertEmailOptions) {
   const brandName = options.brandName || 'Silbo Sports'
   const appUrl = normalizeUrl(options.appUrl)
+  const eventUrl = options.eventUrl ? normalizeUrl(options.eventUrl) : appUrl
   const start = formatStart(options.event.starts_at, options.event.timezone)
   const details = textDetails(options.event)
   const text = [
@@ -72,7 +75,7 @@ export function renderSilboAlertEmail(options: RenderAlertEmailOptions) {
     '',
     ...details,
     '',
-    `Open schedule: ${appUrl}`,
+    `View event: ${eventUrl}`,
     `Manage alerts: ${options.manageUrl}`,
   ].join('\n')
 
@@ -115,7 +118,7 @@ export function renderSilboAlertEmail(options: RenderAlertEmailOptions) {
             </tr>
             <tr>
               <td style="padding:2px 24px 28px;">
-                <a href="${escapeHtml(appUrl)}" style="display:inline-block;background:#28f070;color:#061008;text-decoration:none;font:900 14px/1 Arial,sans-serif;padding:13px 18px;border-radius:6px;">Open schedule</a>
+                <a href="${escapeHtml(eventUrl)}" style="display:inline-block;background:#28f070;color:#061008;text-decoration:none;font:900 14px/1 Arial,sans-serif;padding:13px 18px;border-radius:6px;">View event</a>
                 <a href="${escapeHtml(options.manageUrl)}" style="display:inline-block;color:#9be7b4;text-decoration:none;font:700 13px/1 Arial,sans-serif;margin-left:14px;">Manage alerts</a>
               </td>
             </tr>
