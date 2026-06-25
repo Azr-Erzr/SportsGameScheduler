@@ -37,4 +37,21 @@ describe('fallbackWatchOptions league-specific rights', () => {
   it('an unmatched league still returns non-empty regional fallback', () => {
     expect(names('US', 'soccer', 'Some Obscure League').length).toBeGreaterThan(0)
   })
+
+  // League-name patterns are anchored so look-alikes don't inherit the wrong country's routing.
+  // A matched league returns ONLY its catalog rights; a look-alike falls through to generic
+  // providers — so the test is whether the broadcaster came from the league rule (source 'catalog').
+  function sourceOf(region: string, sport: string, league: string, name: string) {
+    return fallbackWatchOptions(region, sport, 8, league).find((o) => o.name === name)?.source
+  }
+
+  it('applies Italian Serie A routing to Italian, not Brazilian, Serie A', () => {
+    expect(sourceOf('US', 'soccer', 'Italian Serie A', 'Paramount+')).toBe('catalog')
+    expect(sourceOf('US', 'soccer', 'Brazilian Serie A', 'Paramount+')).not.toBe('catalog')
+  })
+
+  it('applies English Premier League routing to English, not Scottish, Premier League', () => {
+    expect(sourceOf('US', 'soccer', 'English Premier League', 'NBC Sports')).toBe('catalog')
+    expect(sourceOf('US', 'soccer', 'Scottish Premier League', 'NBC Sports')).not.toBe('catalog')
+  })
 })
