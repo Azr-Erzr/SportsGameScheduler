@@ -5,7 +5,7 @@
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { alertCopyFor } from '../_shared/alert-copy.ts'
-import { renderSilboAlertEmail } from '../_shared/email-template.ts'
+import { renderSilboAlertEmail, type WatchOption } from '../_shared/email-template.ts'
 
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL')!,
@@ -32,8 +32,10 @@ type EventForAlert = {
   title: string
   starts_at: string | null
   timezone: string | null
+  league_id: string | null
   venues: { name: string | null } | null
   leagues: { name: string | null } | null
+  sports: { key: string | null } | null
 }
 
 class SkipDelivery extends Error {}
@@ -64,25 +66,115 @@ async function resendError(response: Response) {
   return `Email send failed: ${response.status} ${body.slice(0, 500)}`
 }
 
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+// ISO → Google Calendar template format (YYYYMMDDTHHMMSSZ).
+function toCalendarStamp(date: Date) {
+  return date.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '')
+}
+
+// One-tap "add to calendar" via the Google Calendar template URL (works inline in email, no hosting).
+function buildCalendarUrl(title: string, startsAt: string | null, venue: string | null, eventUrl: string) {
+  if (!startsAt) return null
+  const start = new Date(startsAt)
+  if (Number.isNaN(start.getTime())) return null
+  const end = new Date(start.getTime() + 2 * 60 * 60 * 1000)
+  const params = new URLSearchParams({
+    action: 'TEMPLATE',
+    text: title,
+    dates: `${toCalendarStamp(start)}/${toCalendarStamp(end)}`,
+    details: `View on Silbo Sports: ${eventUrl}`,
+  })
+  if (venue) params.set('location', venue)
+  return `https://calendar.google.com/calendar/render?${params.toString()}`
+}
+
+// Region for where-to-watch: profiles only stores locale + timezone, so mirror the app and derive
+// the country from the locale (en-US → US), defaulting to US.
+function regionFromLocale(locale: string | null | undefined) {
+  const part = locale?.split('-')[1]
+  return (part || 'US').toUpperCase()
+}
+
+// Official where-to-watch destinations from the DB (watch_links + watch_providers), scoped to the
+// event/league/sport and filtered to the recipient's region. Mirrors the app's `db` tier; returns
+// nothing (graceful) when a competition has no seeded rows.
+async function fetchWatchOptions(
+  eventId: string | null,
+  leagueId: string | null,
+  sportKey: string | null,
+  region: string,
+): Promise<WatchOption[]> {
+  const { data } = await supabase
+    .from('watch_links')
+    .select('provider_key, label, country_codes, sport_keys, event_id, league_id, url, priority, watch_providers(name, direct_url)')
+    .eq('is_active', true)
+    .order('priority', { ascending: true })
+    .limit(200)
+  if (!data) return []
+
+  const sportAliases = sportKey === 'soccer' ? ['soccer', 'world_cup'] : sportKey ? [sportKey] : []
+  const seen = new Set<string>()
+  const out: WatchOption[] = []
+  for (const row of data as unknown as Array<{
+    label: string | null
+    country_codes: string[] | null
+    sport_keys: string[] | null
+    event_id: string | null
+    league_id: string | null
+    url: string | null
+    watch_providers: { name: string | null; direct_url: string | null } | null
+  }>) {
+    const inScope =
+      (row.event_id && row.event_id === eventId) ||
+      (row.league_id && row.league_id === leagueId) ||
+      (!row.event_id && !row.league_id && (row.sport_keys ?? []).some((s) => sportAliases.includes(s)))
+    if (!inScope) continue
+    const countries = row.country_codes ?? []
+    if (countries.length && !countries.includes(region)) continue
+    const name = row.label ?? row.watch_providers?.name
+    const url = row.url ?? row.watch_providers?.direct_url
+    if (!name || !url) continue
+    const dedupe = `${name}:${url}`
+    if (seen.has(dedupe)) continue
+    seen.add(dedupe)
+    out.push({ name, url })
+    if (out.length >= 3) break
+  }
+  return out
+}
+
 async function sendReminderEmail(delivery: Delivery) {
   if (!RESEND_API_KEY) throw new Error('RESEND_API_KEY/RESENDAPI not configured')
   if (!delivery.user_id || !delivery.event_id) throw new Error('Delivery missing user or event')
 
-  const [{ data: user }, { data: event }] = await Promise.all([
+  const [{ data: user }, { data: event }, { data: profile }] = await Promise.all([
     supabase.auth.admin.getUserById(delivery.user_id),
     supabase
       .from('events')
-      .select('title, starts_at, timezone, venues(name), leagues(name)')
+      .select('title, starts_at, timezone, league_id, venues(name), leagues(name), sports(key)')
       .eq('id', delivery.event_id)
       .single(),
+    supabase
+      .from('profiles')
+      .select('default_timezone, locale, hour12')
+      .eq('user_id', delivery.user_id)
+      .maybeSingle(),
   ])
   const email = user?.user?.email
   if (!isEmail(email)) throw new SkipDelivery('Missing or invalid recipient email')
   if (!event) throw new SkipDelivery('Missing event for delivery')
 
   const row = event as EventForAlert
+  const prefs = (profile ?? {}) as { default_timezone: string | null; locale: string | null; hour12: boolean | null }
+  const region = regionFromLocale(prefs.locale)
   const manageUrl = `${APP_URL}/settings/alerts`
   const eventUrl = `${APP_URL}/events/${delivery.event_id}`
+  const watch = await fetchWatchOptions(delivery.event_id, row.league_id, row.sports?.key ?? null, region)
+  const calendarUrl = buildCalendarUrl(row.title, row.starts_at, row.venues?.name ?? null, eventUrl)
+
   const copy = alertCopyFor(
     delivery.kind,
     {
@@ -107,9 +199,17 @@ async function sendReminderEmail(delivery: Delivery) {
     },
     manageUrl,
     eventUrl,
+    kind: delivery.kind,
+    // Show the start time in the recipient's own timezone — the core promise — falling back to the
+    // event's timezone, then UTC, inside the template.
+    displayTimezone: prefs.default_timezone,
+    hour12: prefs.hour12,
+    region,
+    watch,
+    calendarUrl,
   })
 
-  const response = await fetch(RESEND_ENDPOINT, {
+  const request: RequestInit = {
     method: 'POST',
     headers: { authorization: `Bearer ${RESEND_API_KEY}`, 'content-type': 'application/json' },
     body: JSON.stringify({
@@ -124,7 +224,14 @@ async function sendReminderEmail(delivery: Delivery) {
         { name: 'channel', value: 'email' },
       ],
     }),
-  })
+  }
+  let response = await fetch(RESEND_ENDPOINT, request)
+  // Resend caps at 5 req/s; on a burst (many fixtures due at once) back off once and retry so an
+  // alert is never silently dropped. The per-send throttle in the dispatch loop makes this rare.
+  if (response.status === 429) {
+    await sleep(1200)
+    response = await fetch(RESEND_ENDPOINT, request)
+  }
   if (!response.ok) throw new Error(await resendError(response))
 }
 
@@ -240,11 +347,15 @@ Deno.serve(async () => {
   let failed = 0
   let skipped = 0
 
+  let emailsSent = 0
   for (const delivery of (claimed ?? []) as Delivery[]) {
     try {
       if (delivery.channel === 'push') {
         await sendPushNotification(delivery)
       } else {
+        // Stay under Resend's 5/s cap when a batch of email alerts comes due together.
+        if (emailsSent > 0) await sleep(220)
+        emailsSent += 1
         await sendReminderEmail(delivery)
       }
       await supabase
