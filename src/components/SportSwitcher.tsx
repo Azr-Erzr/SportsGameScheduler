@@ -2,7 +2,7 @@ import { ChevronDown, Trophy } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useAppState } from '../app/state-context'
-import { getSport, sports } from '../domain/sports'
+import { sports } from '../domain/sports'
 import { getTheme, withSurfaceMode } from '../theme/themes'
 import { SportAssetIcon } from './SportAssetIcon'
 
@@ -22,7 +22,6 @@ export function SportSwitcher() {
       : location.pathname === '/other-sports'
         ? 'custom'
         : sportKey ?? 'soccer'
-  const activeSport = getSport(activeKey)
   const sportIconVariant = prefs.themeMode === 'program' ? 'brush' : 'neon3d'
   const sportsArea = location.pathname === '/explore' || location.pathname === '/other-sports' || location.pathname.startsWith('/sports/')
 
@@ -47,13 +46,26 @@ export function SportSwitcher() {
     navigate(key === 'custom' ? '/other-sports' : `/sports/${key}`)
   }
 
+  function openDirectory() {
+    setOpen(false)
+    navigate('/explore')
+  }
+
+  function onTriggerClick() {
+    // First click opens the picker; clicking the already-open trigger takes you to the full
+    // sports directory (/explore) so the hub page is reachable, not just buried in the footer.
+    if (open) openDirectory()
+    else setOpen(true)
+  }
+
   return (
     <div ref={containerRef} className="relative">
       <button
         type="button"
-        onClick={() => setOpen((current) => !current)}
+        onClick={onTriggerClick}
         aria-expanded={open}
         aria-haspopup="menu"
+        title={open ? 'Open the full sports directory' : 'Pick a sport'}
         className={`sport-switcher-trigger relative flex h-10 items-center gap-2 whitespace-nowrap rounded-lg px-3 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
           sportsArea ? 'bg-primary text-void' : 'text-ink/70 hover:bg-primary/10 hover:text-primary'
         }`}
@@ -74,9 +86,13 @@ export function SportSwitcher() {
           >
             <div className="flex flex-wrap items-end justify-between gap-2 px-1 pb-2">
               <p className="board-label text-ink/40">Pick your sport</p>
-              <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink/45">
-                {activeSport ? activeSport.label : 'Directory'}
-              </p>
+              <button
+                type="button"
+                onClick={openDirectory}
+                className="font-mono text-[10px] uppercase tracking-[0.18em] text-primary transition-colors hover:text-primary/80"
+              >
+                Browse all sports →
+              </button>
             </div>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               {sports.map((sport, index) => {
@@ -121,6 +137,14 @@ export function SportSwitcher() {
                 )
               })}
             </div>
+            <button
+              type="button"
+              role="menuitem"
+              onClick={openDirectory}
+              className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-primary/25 px-3 py-2.5 text-sm font-bold text-primary transition-colors hover:bg-primary/10"
+            >
+              <Trophy size={14} /> Open the full sports directory
+            </button>
           </div>
         )}
     </div>

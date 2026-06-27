@@ -81,7 +81,7 @@ export default defineConfig(({ mode }) => {
     // Respect the harness/preview-assigned port when present (vite ignores PORT by default).
     server: { port: Number(process.env.PORT) || 5173 },
     test: {
-      exclude: ['tests/e2e/**', 'node_modules/**', 'dist/**'],
+      exclude: ['tests/e2e/**', 'node_modules/**', 'dist/**', 'resend-mcp/**'],
     },
   }
 })

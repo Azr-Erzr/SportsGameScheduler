@@ -18,6 +18,16 @@ export type LiveEvent = {
   leagueName: string
   sportKey: string | null
   venue: string | null
+  participants?: EventParticipant[]
+}
+
+export type EventParticipant = {
+  id: string
+  name: string
+  country: string | null
+  kind: string
+  role: string
+  logoUrl: string | null
 }
 
 export type LivePlayer = { id: string; name: string; country: string | null; logoUrl: string | null }
@@ -39,6 +49,12 @@ type EventRow = {
   league_id: string | null
   updated_at: string | null
   venues: { name: string } | null
+}
+
+type EventCompetitorRow = {
+  event_id: string
+  role: string
+  competitors: { id: string; name: string; country: string | null; kind: string; logo_url: string | null } | null
 }
 
 type ScheduleState = {
@@ -92,12 +108,15 @@ export function useSportSchedule(canonicalSportKey: string): SportSchedule {
     // refresh failure is never a blank "no events" screen. The network result replaces it below.
     const cached = readCache<CachedSchedule>(cacheKey)
     if (cached) {
-      setState({
-        forKey: canonicalSportKey,
-        leagues: cached.leagues,
-        events: cached.events.map(fromCachedEvent),
-        configured: true,
-        lastUpdated: cached.lastUpdated ? new Date(cached.lastUpdated) : null,
+      queueMicrotask(() => {
+        if (cancelled) return
+        setState({
+          forKey: canonicalSportKey,
+          leagues: cached.leagues,
+          events: cached.events.map(fromCachedEvent),
+          configured: true,
+          lastUpdated: cached.lastUpdated ? new Date(cached.lastUpdated) : null,
+        })
       })
     }
 
@@ -151,6 +170,34 @@ export function useSportSchedule(canonicalSportKey: string): SportSchedule {
       const visibleLeagueIds = new Set(leagueNames.keys())
 
       const rows = (eventRows ?? []) as EventRow[]
+      const eventIds = rows.map((row) => row.id)
+      let eventCompetitors = new Map<string, EventParticipant[]>()
+      if (eventIds.length) {
+        try {
+          const competitorRows = (await retryRead(() =>
+            supabase
+              .from('event_competitors')
+              .select('event_id, role, competitors(id, name, country, kind, logo_url)')
+              .in('event_id', eventIds),
+          )) as unknown as EventCompetitorRow[] | null
+          eventCompetitors = (competitorRows ?? []).reduce((map, row) => {
+            if (!row.competitors) return map
+            const current = map.get(row.event_id) ?? []
+            current.push({
+              id: row.competitors.id,
+              name: row.competitors.name,
+              country: row.competitors.country,
+              kind: row.competitors.kind,
+              role: row.role,
+              logoUrl: row.competitors.logo_url,
+            })
+            map.set(row.event_id, current)
+            return map
+          }, new Map<string, EventParticipant[]>())
+        } catch {
+          eventCompetitors = new Map()
+        }
+      }
       const events: LiveEvent[] = rows
         .filter((row) => !row.league_id || visibleLeagueIds.has(row.league_id))
         .map((row) => ({
@@ -163,6 +210,7 @@ export function useSportSchedule(canonicalSportKey: string): SportSchedule {
           leagueName: (row.league_id && leagueNames.get(row.league_id)) || '',
           sportKey: canonicalSportKey,
           venue: row.venues?.name ?? null,
+          participants: eventCompetitors.get(row.id) ?? [],
         }))
 
       // Only surface leagues that actually have upcoming fixtures — no more "9 leagues, 0 events"
@@ -670,7 +718,9 @@ export function useLeagueTeams(leagueId: string | null): { teams: LeagueTeam[]; 
     let cancelled = false
     const key = leagueId ?? ''
     if (!leagueId) {
-      setState({ forKey: '', teams: [] })
+      queueMicrotask(() => {
+        if (!cancelled) setState({ forKey: '', teams: [] })
+      })
       return
     }
 

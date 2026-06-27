@@ -1,4 +1,4 @@
-import { ArrowUpRight, Bell, Check, ChevronDown, Download, Flag, Search, Sparkles, Star, Timer, Tv, Users, X } from 'lucide-react'
+import { ArrowUpRight, Bell, Check, ChevronDown, Download, Flag, Search, Sparkles, Star, Timer, Trophy, Tv, Users, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useAppState } from '../app/state-context'
@@ -8,7 +8,7 @@ import { SportChannelBanner } from '../components/SportChannelBanner'
 import { WatchOptionsPanel } from '../components/WatchOptionsPanel'
 import { Badge, Button, EmptyState, Panel, PanelHeading } from '../components/ui'
 import { deriveTeams, filterMatchesForTeams, filterUpcomingMatches, useMatches } from '../data/liveMatches'
-import { useCompetitor, useEvent, useLeagueTeams, useSportRoster, useSportSchedule, type LeagueTeam, type LiveEvent } from '../data/liveSport'
+import { useEvent, useSportRoster, useSportSchedule, type LeagueTeam, type LiveEvent } from '../data/liveSport'
 import { flagPoleGradient } from '../data/flagColors'
 import { allMatches, featuredTeams } from '../data/worldcup'
 import { exportFilename } from '../domain/brand'
@@ -192,29 +192,26 @@ export function SportPage() {
 function SoccerPage() {
   const { prefs, toggleFollow, followedLeagueIds, followedCompetitorIds } = useAppState()
   const { leagues, events, lastUpdated } = useSportSchedule('soccer')
-  const [leagueId, setLeagueId] = useState<string | null>(null) // null = World Cup planner
-  const [teamId, setTeamId] = useState<string | null>(null)
+  const [selectedLeagueIds, setSelectedLeagueIds] = useState<string[]>([])
+  const [selectedCompetitorIds, setSelectedCompetitorIds] = useState<string[]>([])
+  const [selectedCompetitionIds, setSelectedCompetitionIds] = useState<string[]>([])
   const [expandedEventId, setExpandedEventId] = useState<string | null>(null)
   const [addedEventIds, setAddedEventIds] = useState<string[]>([])
   const [eventPager, setEventPager] = useState({ key: 'none', page: 1 })
 
-  const { teams: leagueTeams } = useLeagueTeams(leagueId)
-  const { events: teamEvents } = useCompetitor(teamId ?? undefined)
-
-  function selectLeague(id: string | null) {
-    setLeagueId(id)
-    setTeamId(null)
-  }
-
   // Exclude the World Cup league rows (openfootball + TheSportsDB) — the planner IS the WC.
   const otherLeagues = useMemo(() => leagues.filter((l) => !/world cup/i.test(l.name)), [leagues])
-  const leagueEvents = useMemo(
-    () => (teamId ? teamEvents : leagueId ? events.filter((e) => e.leagueId === leagueId) : []),
-    [events, leagueId, teamId, teamEvents],
+  const liveSoccerEvents = useMemo(
+    () => events.filter((event) => !/world cup/i.test(event.leagueName)),
+    [events],
   )
-  const activeLeague = otherLeagues.find((l) => l.id === leagueId)
+  const leagueEvents = useMemo(
+    () => filterEventsBySelections(liveSoccerEvents, selectedLeagueIds, selectedCompetitorIds, selectedCompetitionIds),
+    [liveSoccerEvents, selectedLeagueIds, selectedCompetitorIds, selectedCompetitionIds],
+  )
+  const hasLiveFilters = selectedLeagueIds.length > 0 || selectedCompetitorIds.length > 0 || selectedCompetitionIds.length > 0
   const eventPageCount = pageCountFor(leagueEvents.length)
-  const eventPageKey = `${leagueId ?? 'world-cup'}:${teamId ?? ''}`
+  const eventPageKey = `soccer:${selectedLeagueIds.join(',')}:${selectedCompetitorIds.join(',')}:${selectedCompetitionIds.join(',')}`
   const eventPage = activePageFor(eventPager, eventPageKey, eventPageCount)
   const pagedLeagueEvents = useMemo(
     () => leagueEvents.slice((eventPage - 1) * SCHEDULE_PAGE_SIZE, eventPage * SCHEDULE_PAGE_SIZE),
@@ -234,29 +231,38 @@ function SoccerPage() {
   return (
     <div className="space-y-4">
       <DataFreshness lastUpdated={lastUpdated} />
-      <LeagueFilter
-        primaryLabel="World Cup"
+      <SportEntityFilters
         leagues={otherLeagues}
-        selectedId={leagueId}
-        onSelect={selectLeague}
-        followedIds={followedLeagueIds}
-        onToggleFollow={(league) => toggleFollow({ targetType: 'league', targetId: league.id, intent: 'watch' })}
+        events={liveSoccerEvents}
+        selectedLeagueIds={selectedLeagueIds}
+        selectedCompetitorIds={selectedCompetitorIds}
+        selectedCompetitionIds={selectedCompetitionIds}
+        followedLeagueIds={followedLeagueIds}
+        followedCompetitorIds={followedCompetitorIds}
+        competitorLabel="Teams"
+        competitionLabel="Cups / Competitions"
+        emptyCompetitionsLabel="Cup and tournament filters appear when those fixtures are in the live window."
+        onToggleLeague={(id) => setSelectedLeagueIds((current) => toggleId(current, id))}
+        onToggleCompetitor={(id) => setSelectedCompetitorIds((current) => toggleId(current, id))}
+        onToggleCompetition={(id) => setSelectedCompetitionIds((current) => toggleId(current, id))}
+        onToggleLeagueFollow={(league) => toggleFollow({ targetType: 'league', targetId: league.id, intent: 'watch' })}
+        onToggleCompetitorFollow={(competitor) => toggleFollow({ targetType: 'competitor', targetId: competitor.id, intent: 'watch' })}
+        onClear={() => {
+          setSelectedLeagueIds([])
+          setSelectedCompetitorIds([])
+          setSelectedCompetitionIds([])
+        }}
       />
 
-      {leagueId === null ? (
+      {!hasLiveFilters ? (
         <WorldCupPlanner />
       ) : (
         <section className="space-y-3">
-          <TeamFilter
-            teams={leagueTeams}
-            selectedId={teamId}
-            onSelect={setTeamId}
-            followedIds={followedCompetitorIds}
-            onToggleFollow={(team) => toggleFollow({ targetType: 'competitor', targetId: team.id, intent: 'watch' })}
-          />
           <div className="flex items-start justify-between gap-3">
             <div>
-              <h1 className="text-xl font-extrabold text-primary">{activeLeague?.name}</h1>
+              <h1 className="text-xl font-extrabold text-primary">
+                {filterSummary('Soccer', selectedLeagueIds, selectedCompetitorIds, selectedCompetitionIds)}
+              </h1>
               <p className="text-sm text-ink/60">
                 {leagueEvents.length} upcoming - shown in {prefs.timezone}
               </p>
@@ -549,40 +555,30 @@ function LiveSportPage({ sport }: { sport: SportInfo }) {
   const isMotorsport = canonical === 'motorsport'
   const { leagues, events, loading, configured, lastUpdated } = useSportSchedule(canonical)
   const roster = useSportRoster(canonical, isIndividual)
-  const [leagueId, setLeagueId] = useState<string | null>(null)
-  const [teamId, setTeamId] = useState<string | null>(null)
+  const [selectedLeagueIds, setSelectedLeagueIds] = useState<string[]>([])
+  const [selectedCompetitorIds, setSelectedCompetitorIds] = useState<string[]>([])
+  const [selectedCompetitionIds, setSelectedCompetitionIds] = useState<string[]>([])
   const [expandedEventId, setExpandedEventId] = useState<string | null>(null)
   const [addedEventIds, setAddedEventIds] = useState<string[]>([])
   const [eventPager, setEventPager] = useState({ key: `${canonical}:all`, page: 1 })
 
-  // Team-follow pills only make sense for team sports with a league picked (not motorsport
-  // sessions or individual rosters, which have their own surfaces).
-  const teamPicksEnabled = Boolean(leagueId) && !isIndividual && !isMotorsport
-  const { teams: leagueTeams } = useLeagueTeams(teamPicksEnabled ? leagueId : null)
-  const { events: teamEvents } = useCompetitor(teamId ?? undefined)
-
-  function selectLeague(id: string | null) {
-    setLeagueId(id)
-    setTeamId(null)
-  }
-
   const shownEvents = useMemo(
-    () => (teamId ? teamEvents : leagueId ? events.filter((e) => e.leagueId === leagueId) : events),
-    [events, leagueId, teamId, teamEvents],
+    () => filterEventsBySelections(events, selectedLeagueIds, selectedCompetitorIds, selectedCompetitionIds),
+    [events, selectedLeagueIds, selectedCompetitorIds, selectedCompetitionIds],
   )
   const raceWeekends = useMemo(
     () => (isMotorsport ? groupRaceWeekends(shownEvents) : []),
     [isMotorsport, shownEvents],
   )
   const eventPageCount = pageCountFor(shownEvents.length)
-  const eventPageKey = `${canonical}:${leagueId ?? 'all'}:${teamId ?? ''}`
+  const eventPageKey = `${canonical}:${selectedLeagueIds.join(',')}:${selectedCompetitorIds.join(',')}:${selectedCompetitionIds.join(',')}`
   const eventPage = activePageFor(eventPager, eventPageKey, eventPageCount)
   const pagedShownEvents = useMemo(
     () => shownEvents.slice((eventPage - 1) * SCHEDULE_PAGE_SIZE, eventPage * SCHEDULE_PAGE_SIZE),
     [shownEvents, eventPage],
   )
-  const seasonReturn = leagueId ? null : seasonReturnFor(canonical)
-  const selectedLeague = leagueId ? leagues.find((league) => league.id === leagueId) ?? null : null
+  const hasFilters = selectedLeagueIds.length > 0 || selectedCompetitorIds.length > 0 || selectedCompetitionIds.length > 0
+  const seasonReturn = hasFilters ? null : seasonReturnFor(canonical)
 
   function changeEventPage(page: number) {
     setEventPager({ key: eventPageKey, page })
@@ -635,28 +631,28 @@ function LiveSportPage({ sport }: { sport: SportInfo }) {
       ) : (
         <>
           <DataFreshness lastUpdated={lastUpdated} />
-          {leagues.length > 1 && (
-            <div className="flex flex-wrap items-center gap-2">
-              <LeagueFilter
-                primaryLabel="All"
-                leagues={leagues}
-                selectedId={leagueId}
-                onSelect={selectLeague}
-                followedIds={followedLeagueIds}
-                onToggleFollow={(league) => toggleFollow({ targetType: 'league', targetId: league.id, intent: 'watch' })}
-              />
-            </div>
-          )}
-
-          {teamPicksEnabled && (
-            <TeamFilter
-              teams={leagueTeams}
-              selectedId={teamId}
-              onSelect={setTeamId}
-              followedIds={followedCompetitorIds}
-              onToggleFollow={(team) => toggleFollow({ targetType: 'competitor', targetId: team.id, intent: 'watch' })}
-            />
-          )}
+          <SportEntityFilters
+            leagues={leagues}
+            events={events}
+            selectedLeagueIds={selectedLeagueIds}
+            selectedCompetitorIds={selectedCompetitorIds}
+            selectedCompetitionIds={selectedCompetitionIds}
+            followedLeagueIds={followedLeagueIds}
+            followedCompetitorIds={followedCompetitorIds}
+            competitorLabel={isIndividual ? 'Players' : isMotorsport ? 'Drivers / Constructors' : 'Teams'}
+            competitionLabel={isMotorsport ? 'Sessions / GPs' : isIndividual ? 'Tournaments' : 'Cups / Competitions'}
+            emptyCompetitionsLabel={`${sport.label} competition filters appear when the current schedule has cups, playoffs, tournaments, or session types.`}
+            onToggleLeague={(id) => setSelectedLeagueIds((current) => toggleId(current, id))}
+            onToggleCompetitor={(id) => setSelectedCompetitorIds((current) => toggleId(current, id))}
+            onToggleCompetition={(id) => setSelectedCompetitionIds((current) => toggleId(current, id))}
+            onToggleLeagueFollow={(league) => toggleFollow({ targetType: 'league', targetId: league.id, intent: 'watch' })}
+            onToggleCompetitorFollow={(competitor) => toggleFollow({ targetType: 'competitor', targetId: competitor.id, intent: 'watch' })}
+            onClear={() => {
+              setSelectedLeagueIds([])
+              setSelectedCompetitorIds([])
+              setSelectedCompetitionIds([])
+            }}
+          />
 
           <div className={`grid gap-4 ${isIndividual ? 'lg:grid-cols-[1fr_320px]' : ''}`}>
             <section className="min-w-0 space-y-3">
@@ -718,7 +714,7 @@ function LiveSportPage({ sport }: { sport: SportInfo }) {
                   leagueCount={leagues.length}
                   playerCount={roster.players.length}
                   isIndividual={isIndividual}
-                  selectedLeagueName={selectedLeague?.name ?? null}
+                  selectedLeagueName={hasFilters ? 'those filters' : null}
                 />
               )}
             </section>
@@ -904,6 +900,323 @@ function FollowButton({
   )
 }
 
+type FilterMode = 'leagues' | 'competitors' | 'competitions'
+
+type FilterOption = {
+  id: string
+  label: string
+  count: number
+  meta?: string
+  logoUrl?: string | null
+}
+
+const FILTER_MODES: Array<{ id: FilterMode; label: string; icon: typeof Trophy }> = [
+  { id: 'leagues', label: 'Leagues', icon: Flag },
+  { id: 'competitors', label: 'Teams', icon: Users },
+  { id: 'competitions', label: 'Cups', icon: Trophy },
+]
+
+function toggleId(current: string[], id: string) {
+  return current.includes(id) ? current.filter((value) => value !== id) : [...current, id]
+}
+
+function filterSummary(label: string, leagueIds: string[], competitorIds: string[], competitionIds: string[]) {
+  const count = leagueIds.length + competitorIds.length + competitionIds.length
+  return count ? `${label} filters (${count})` : label
+}
+
+function slugifyFilter(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+}
+
+function initialsForFilter(label: string) {
+  return label
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase()
+}
+
+function leagueOptionsWithCounts(leagues: Array<{ id: string; name: string; logoUrl?: string | null }>, events: LiveEvent[]): FilterOption[] {
+  const counts = new Map<string, number>()
+  for (const event of events) {
+    if (event.leagueId) counts.set(event.leagueId, (counts.get(event.leagueId) ?? 0) + 1)
+  }
+  return leagues.map((league) => ({ id: league.id, label: league.name, count: counts.get(league.id) ?? 0, logoUrl: league.logoUrl }))
+}
+
+function competitorOptionsFromEvents(events: LiveEvent[]): FilterOption[] {
+  const options = new Map<string, FilterOption>()
+  for (const event of events) {
+    for (const competitor of event.participants ?? []) {
+      const current = options.get(competitor.id)
+      options.set(competitor.id, {
+        id: competitor.id,
+        label: competitor.name,
+        count: (current?.count ?? 0) + 1,
+        meta: competitor.country ?? readableSportFact(competitor.kind),
+        logoUrl: current?.logoUrl ?? competitor.logoUrl,
+      })
+    }
+  }
+  return [...options.values()].sort((a, b) => b.count - a.count || a.label.localeCompare(b.label))
+}
+
+function isCompetitionLikeLeague(name: string) {
+  return /\b(cup|trophy|champions|championship|tournament|open|masters|prix|grand prix|playoffs?|finals?|bowl|classic|series|league cup|nations|world)\b/i.test(name)
+}
+
+function stageOptionForTitle(title: string): FilterOption | null {
+  const match = /\b(final|semifinal|semi-final|quarterfinal|quarter-final|playoff|play-off|qualifying|qualification|sprint|practice|heat|main card|prelims?)\b/.exec(title.toLowerCase())
+  if (!match) return null
+  const label = readableSportFact(match[1].replace('-', '_'))
+  return { id: `stage:${slugifyFilter(label)}`, label, count: 1, meta: 'Stage' }
+}
+
+function kindOptionForEvent(event: LiveEvent): FilterOption | null {
+  const raw = (event as LiveEvent & { kind?: string | null }).kind
+  if (!raw) return null
+  const label = readableSportFact(raw)
+  return { id: `kind:${slugifyFilter(raw)}`, label, count: 1, meta: 'Format' }
+}
+
+function competitionKeysForEvent(event: LiveEvent) {
+  const keys: string[] = []
+  if (event.leagueName && isCompetitionLikeLeague(event.leagueName)) keys.push(`league:${event.leagueId ?? slugifyFilter(event.leagueName)}`)
+  const stage = stageOptionForTitle(event.title)
+  if (stage) keys.push(stage.id)
+  const kind = kindOptionForEvent(event)
+  if (kind) keys.push(kind.id)
+  return keys
+}
+
+function competitionOptionsFromEvents(events: LiveEvent[]): FilterOption[] {
+  const options = new Map<string, FilterOption>()
+  function add(option: FilterOption) {
+    const current = options.get(option.id)
+    options.set(option.id, { ...option, count: (current?.count ?? 0) + option.count })
+  }
+  for (const event of events) {
+    if (event.leagueName && isCompetitionLikeLeague(event.leagueName)) {
+      add({ id: `league:${event.leagueId ?? slugifyFilter(event.leagueName)}`, label: event.leagueName, count: 1, meta: 'Competition' })
+    }
+    const stage = stageOptionForTitle(event.title)
+    if (stage) add(stage)
+    const kind = kindOptionForEvent(event)
+    if (kind) add(kind)
+  }
+  return [...options.values()].sort((a, b) => b.count - a.count || a.label.localeCompare(b.label))
+}
+
+function filterEventsBySelections(events: LiveEvent[], leagueIds: string[], competitorIds: string[], competitionIds: string[]) {
+  const leagueSet = new Set(leagueIds)
+  const competitorSet = new Set(competitorIds)
+  const competitionSet = new Set(competitionIds)
+  return events.filter((event) => {
+    const leagueOk = leagueSet.size === 0 || (event.leagueId ? leagueSet.has(event.leagueId) : false)
+    const competitorOk = competitorSet.size === 0 || (event.participants ?? []).some((competitor) => competitorSet.has(competitor.id))
+    const competitionOk = competitionSet.size === 0 || competitionKeysForEvent(event).some((key) => competitionSet.has(key))
+    return leagueOk && competitorOk && competitionOk
+  })
+}
+
+function FilterLogo({ option, selected, mode }: { option: FilterOption; selected: boolean; mode: FilterMode }) {
+  if (option.logoUrl) {
+    return (
+      <span className={`relative flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full border text-[10px] font-extrabold ${selected ? 'border-void/30 bg-void/15 text-void' : 'border-primary/15 bg-page/80 text-primary'}`}>
+        {initialsForFilter(option.label)}
+        <img
+          src={option.logoUrl}
+          alt=""
+          loading="lazy"
+          className="absolute inset-0 h-full w-full bg-page object-contain p-0.5"
+          onError={(event) => {
+            event.currentTarget.style.display = 'none'
+          }}
+        />
+      </span>
+    )
+  }
+
+  const Icon = mode === 'competitions' ? Trophy : mode === 'leagues' ? Flag : Users
+  return (
+    <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-[10px] font-extrabold ${selected ? 'border-void/30 bg-void/15 text-void' : 'border-primary/15 bg-primary/8 text-primary'}`}>
+      {mode === 'competitions' ? <Icon size={13} /> : initialsForFilter(option.label)}
+    </span>
+  )
+}
+
+function SportEntityFilters({
+  leagues,
+  events,
+  selectedLeagueIds,
+  selectedCompetitorIds,
+  selectedCompetitionIds,
+  followedLeagueIds,
+  followedCompetitorIds,
+  competitorLabel,
+  competitionLabel,
+  emptyCompetitionsLabel,
+  onToggleLeague,
+  onToggleCompetitor,
+  onToggleCompetition,
+  onToggleLeagueFollow,
+  onToggleCompetitorFollow,
+  onClear,
+}: {
+  leagues: Array<{ id: string; name: string; logoUrl?: string | null }>
+  events: LiveEvent[]
+  selectedLeagueIds: string[]
+  selectedCompetitorIds: string[]
+  selectedCompetitionIds: string[]
+  followedLeagueIds: string[]
+  followedCompetitorIds: string[]
+  competitorLabel: string
+  competitionLabel: string
+  emptyCompetitionsLabel: string
+  onToggleLeague: (id: string) => void
+  onToggleCompetitor: (id: string) => void
+  onToggleCompetition: (id: string) => void
+  onToggleLeagueFollow: (league: { id: string; name: string }) => void
+  onToggleCompetitorFollow: (competitor: { id: string; name: string }) => void
+  onClear: () => void
+}) {
+  const [mode, setMode] = useState<FilterMode>('leagues')
+  const [query, setQuery] = useState('')
+  const leagueOptions = useMemo(() => leagueOptionsWithCounts(leagues, events), [leagues, events])
+  const competitorOptions = useMemo(() => competitorOptionsFromEvents(events), [events])
+  const competitionOptions = useMemo(() => competitionOptionsFromEvents(events), [events])
+  const selectedByMode = { leagues: selectedLeagueIds, competitors: selectedCompetitorIds, competitions: selectedCompetitionIds }
+  const activeIds = selectedByMode[mode]
+  const allSelectedCount = selectedLeagueIds.length + selectedCompetitorIds.length + selectedCompetitionIds.length
+  const followedLeagues = useMemo(() => new Set(followedLeagueIds), [followedLeagueIds])
+  const followedCompetitors = useMemo(() => new Set(followedCompetitorIds), [followedCompetitorIds])
+  const modeOptions = mode === 'leagues' ? leagueOptions : mode === 'competitors' ? competitorOptions : competitionOptions
+  const visibleOptions = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    return q ? modeOptions.filter((option) => option.label.toLowerCase().includes(q) || option.meta?.toLowerCase().includes(q)) : modeOptions
+  }, [modeOptions, query])
+
+  function toggleOption(id: string) {
+    if (mode === 'leagues') onToggleLeague(id)
+    else if (mode === 'competitors') onToggleCompetitor(id)
+    else onToggleCompetition(id)
+  }
+
+  function optionFollowButton(option: FilterOption) {
+    if (mode === 'competitions') return null
+    const followed = mode === 'leagues' ? followedLeagues.has(option.id) : followedCompetitors.has(option.id)
+    return (
+      <button
+        type="button"
+        onClick={(event) => {
+          event.stopPropagation()
+          if (mode === 'leagues') onToggleLeagueFollow({ id: option.id, name: option.label })
+          else onToggleCompetitorFollow({ id: option.id, name: option.label })
+        }}
+        aria-pressed={followed}
+        title={followed ? `Following ${option.label}` : `Follow ${option.label}`}
+        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-colors ${followed ? 'text-primary' : 'text-ink/35 hover:bg-primary/10 hover:text-primary'}`}
+      >
+        <Star size={13} className={followed ? 'fill-primary' : ''} />
+      </button>
+    )
+  }
+
+  return (
+    <Panel className="space-y-3 border-primary/20 bg-surface/80">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="grid grid-cols-3 gap-1 rounded-xl border border-primary/15 bg-page/50 p-1">
+          {FILTER_MODES.map((item) => {
+            const Icon = item.icon
+            const count = selectedByMode[item.id].length
+            const label = item.id === 'competitors' ? competitorLabel : item.id === 'competitions' ? competitionLabel : item.label
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => {
+                  setMode(item.id)
+                  setQuery('')
+                }}
+                className={`flex min-h-10 items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-bold transition-colors ${mode === item.id ? 'bg-primary text-void' : 'text-ink/65 hover:bg-primary/10 hover:text-primary'}`}
+              >
+                <Icon size={14} />
+                <span className="truncate">{label}</span>
+                {count > 0 && <span className="font-mono text-[10px] opacity-75">{count}</span>}
+              </button>
+            )
+          })}
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="flex h-10 min-w-[210px] flex-1 items-center gap-2 rounded-lg border border-primary/20 bg-page/60 px-3 md:flex-none">
+            <Search size={15} className="text-ink/40" />
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder={`Search ${mode === 'leagues' ? 'leagues' : mode === 'competitors' ? competitorLabel.toLowerCase() : 'competitions'}`}
+              className="w-full bg-transparent text-sm outline-none placeholder:text-ink/40"
+            />
+          </label>
+          {allSelectedCount > 0 && (
+            <button
+              type="button"
+              onClick={onClear}
+              className="flex h-10 items-center gap-1.5 rounded-lg border border-primary/20 px-3 text-xs font-bold text-ink/60 transition-colors hover:bg-primary/10 hover:text-primary"
+            >
+              <X size={14} /> Clear
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="silbo-scrollbar flex max-h-36 flex-wrap gap-2 overflow-y-auto pr-1">
+        {visibleOptions.map((option) => {
+          const selected = activeIds.includes(option.id)
+          return (
+            <div
+              key={option.id}
+              role="button"
+              tabIndex={0}
+              onClick={() => toggleOption(option.id)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault()
+                  toggleOption(option.id)
+                }
+              }}
+              aria-pressed={selected}
+              className={`flex min-h-9 max-w-full items-center gap-1.5 rounded-full border py-1 pl-2 pr-3 text-left transition-colors ${selected ? 'border-primary bg-primary text-void' : 'border-primary/25 text-ink/75 hover:bg-primary/10 hover:text-primary'}`}
+            >
+              {optionFollowButton(option)}
+              <FilterLogo option={option} selected={selected} mode={mode} />
+              <span className="max-w-[220px] truncate text-xs font-bold">{option.label}</span>
+              <span className={`font-mono text-[10px] ${selected ? 'text-void/70' : 'text-ink/40'}`}>{option.count}</span>
+              {selected && mode === 'competitors' && (
+                <Link
+                  to={`/teams/${option.id}`}
+                  onClick={(event) => event.stopPropagation()}
+                  title={`Open ${option.label} page`}
+                  className="flex h-6 w-6 items-center justify-center rounded-full text-current/75 hover:text-current"
+                >
+                  <ArrowUpRight size={13} />
+                </Link>
+              )}
+            </div>
+          )
+        })}
+        {visibleOptions.length === 0 && (
+          <p className="px-1 py-2 text-sm text-ink/50">
+            {mode === 'competitions' ? emptyCompetitionsLabel : `No ${mode === 'leagues' ? 'leagues' : competitorLabel.toLowerCase()} match "${query}".`}
+          </p>
+        )}
+      </div>
+    </Panel>
+  )
+}
+
 function LeagueChip({
   label,
   active,
@@ -945,9 +1258,7 @@ function LeagueFollowToggle({
       aria-pressed={active}
       title={active ? `Following ${league.name}` : `Follow ${league.name}`}
       className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border transition-colors ${
-        active
-          ? 'border-primary bg-primary/15 text-primary'
-          : 'border-primary/25 text-ink/60 hover:bg-primary/10 hover:text-primary'
+        active ? 'border-primary bg-primary/15 text-primary' : 'border-primary/25 text-ink/60 hover:bg-primary/10 hover:text-primary'
       }`}
     >
       <Star size={14} className={active ? 'fill-primary' : ''} />
@@ -1215,6 +1526,9 @@ function TeamFilter({
     </div>
   )
 }
+
+void LeagueFilter
+void TeamFilter
 
 // Race weekend grouped from flat session events (F1 etc.). Header capsule + one row per session,
 // each with its local day/time and an add button, plus an "add full weekend" shortcut.

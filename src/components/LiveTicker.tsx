@@ -31,7 +31,7 @@ function TickerItem({ event, timeZone, locale, hour12 }: { event: TickerEvent; t
   return (
     <Link
       to={`/events/${event.id}`}
-      className="group inline-flex shrink-0 items-center gap-2.5 px-5 text-sm"
+      className="group inline-flex shrink-0 items-center gap-2 px-3 text-sm sm:gap-2.5 sm:px-5"
     >
       <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-export shadow-[0_0_6px_var(--mp-export)]" aria-hidden="true" />
       {sport && (
@@ -99,7 +99,7 @@ export function LiveTicker() {
         <span className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-export">This week</span>
       </div>
       <div
-        className={`flex w-max items-center whitespace-nowrap ${reduceMotion ? 'gap-2 overflow-x-auto pl-32' : ''}`}
+        className={`flex w-max items-center whitespace-nowrap pl-32 sm:pl-36 ${reduceMotion ? 'gap-2 overflow-x-auto' : ''}`}
         ref={trackRef}
       >
         {loop.map((event, i) => (

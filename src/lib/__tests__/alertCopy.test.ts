@@ -50,7 +50,7 @@ describe('alert copy', () => {
     expect(email.text).toContain('Manage alerts: https://silbosports.com/settings/alerts')
     expect(email.text).toContain('League: FIFA World Cup')
     expect(email.html).toContain('Silbo Sports')
-    expect(email.html).toContain('Open schedule')
+    expect(email.html).toContain('View event')
     expect(email.html).toContain('BMO Field')
   })
 })

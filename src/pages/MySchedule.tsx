@@ -13,19 +13,18 @@ import {
   Plus,
   Printer,
   RefreshCw,
+  RotateCcw,
+  Search,
   Share2,
   SlidersHorizontal,
   X,
-  Zap,
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { useAppState } from '../app/state-context'
-import { AdSlot } from '../components/AdSlot'
 import { AlertOptInNudge } from '../components/AlertOptInNudge'
 import { CityPicker } from '../components/CityPicker'
-import { MatchCard } from '../components/MatchCard'
 import { Button, EmptyState, Panel, PanelHeading } from '../components/ui'
 import { filterMatchesForTeams, useMatches } from '../data/liveMatches'
 import { useMyEvents } from '../data/liveSport'
@@ -33,10 +32,8 @@ import { allMatches, groupMatches } from '../data/worldcup'
 import type { Match } from '../domain/match'
 import { getSavedMatchKeys } from '../lib/store'
 import { brand, exportFilename } from '../domain/brand'
-import { interleaveAds } from '../lib/ads'
 import { cityLabelFor } from '../lib/cities'
 import { copyToClipboard, downloadBlob } from '../lib/clipboard'
-import { findConflictTiers } from '../lib/sportTiming'
 import { buildExportAdvice, type ExportAdvice, type ExportAdviceMethod } from '../lib/exportAdvice'
 import { createIcsBlob, createMultiSportIcsBlob, sportEmoji } from '../lib/ics'
 import { t } from '../lib/i18n'
@@ -55,6 +52,20 @@ type FlowState = { flowId: GuidedFlowId | null; stepIndex: number; answers: Reco
 type StepOption = { id: string; label: string; description?: string; recommended?: boolean }
 type FlowStep = { id: string; question: string; options?: StepOption[]; final?: boolean }
 type FlowConfig = { title: string; steps: FlowStep[] }
+type ReviewTargetType = 'team' | 'league' | 'competitor'
+type ReviewPick = { targetType: ReviewTargetType; targetId: string; label: string; group: string; count: number }
+type PreviewItem = {
+  id: string
+  title: string
+  subtitle: string
+  startsAt: Date | null
+  venue: string
+  sportKey: string
+  searchable: string
+  match?: Match
+}
+
+const REVIEW_PAGE_SIZE = 8
 
 const ranges: Array<{ key: RangeKey; labelKey: string }> = [
   { key: 'all', labelKey: 'schedule.range.all' },
@@ -202,21 +213,6 @@ function dateRangeLabel(dates: Date[], timeZone: string, locale?: string | null,
   return `${formatLongDate(first, timeZone, options)} - ${formatLongDate(last, timeZone, options)}`
 }
 
-function groupByLocalDate(matches: Match[], timeZone: string, locale?: string | null, hour12?: boolean | null) {
-  const groups = new Map<string, { key: string; label: string; matches: Match[] }>()
-  const options = displayTimeOptions(locale, hour12)
-
-  matches.forEach((match) => {
-    const label = formatLongDate(match.startsAt, timeZone, options)
-    const key = `${match.startsAt.toISOString().slice(0, 10)}-${label}`
-    const group = groups.get(key) ?? { key, label, matches: [] }
-    group.matches.push(match)
-    groups.set(key, group)
-  })
-
-  return Array.from(groups.values())
-}
-
 function optionLabel(step: FlowStep | undefined, answer: string | undefined, fallback: string) {
   return step?.options?.find((option) => option.id === answer)?.label ?? fallback
 }
@@ -227,8 +223,50 @@ function adviceToneClasses(tone: ExportAdvice['tone']) {
   return 'border-sky-300/45 bg-sky-300/10 text-ink'
 }
 
+function reviewKey(target: Pick<ReviewPick, 'targetType' | 'targetId'>) {
+  return `${target.targetType}:${target.targetId}`
+}
+
+function compactPageCount(total: number) {
+  return Math.max(1, Math.ceil(total / REVIEW_PAGE_SIZE))
+}
+
+function CompactScheduleRow({
+  item,
+  timeZone,
+  locale,
+  hour12,
+}: {
+  item: PreviewItem
+  timeZone: string
+  locale?: string
+  hour12?: boolean | null
+}) {
+  const timeOptions = displayTimeOptions(locale, hour12)
+  return (
+    <li className="grid grid-cols-[56px_1fr] gap-3 rounded-lg border border-primary/12 bg-page/55 px-3 py-2 sm:grid-cols-[76px_1fr_auto]">
+      <div className="text-center font-mono uppercase">
+        <p className="text-[10px] font-bold text-primary">
+          {item.startsAt ? formatTime(item.startsAt, timeZone, timeOptions) : 'TBD'}
+        </p>
+        <p className="mt-0.5 text-[9px] tracking-wide text-ink/40">
+          {item.startsAt ? formatLongDate(item.startsAt, timeZone, timeOptions).split(',')[0] : 'Date'}
+        </p>
+      </div>
+      <div className="min-w-0">
+        <p className="truncate text-sm font-extrabold text-ink">{item.title}</p>
+        <p className="mt-0.5 truncate text-xs text-ink/50">{item.subtitle}</p>
+      </div>
+      <div className="hidden min-w-[92px] text-right text-xs text-ink/45 sm:block">
+        <span className="font-mono">{sportEmoji(item.sportKey)}</span>
+        {item.venue && <p className="truncate">{item.venue}</p>}
+      </div>
+    </li>
+  )
+}
+
 export function MySchedulePage() {
-  const { followedTeams, followedLeagueIds, followedCompetitorIds, toggleFollow, prefs } = useAppState()
+  const { followedTeams, followedLeagueIds, followedCompetitorIds, prefs } = useAppState()
   const [range, setRange] = useState<RangeKey>('all')
   const [hidePast, setHidePast] = useState(true)
   // Individually-saved matches (read once on mount; "Add to schedule" elsewhere persists them).
@@ -240,13 +278,31 @@ export function MySchedulePage() {
   )
   const [message, setMessage] = useState('')
   const [reminderSummary, setReminderSummary] = useState('')
+  const [hiddenReviewTargets, setHiddenReviewTargets] = useState<Array<Pick<ReviewPick, 'targetType' | 'targetId' | 'label'>>>([])
+  const [undoTarget, setUndoTarget] = useState<Pick<ReviewPick, 'targetType' | 'targetId' | 'label'> | null>(null)
+  const [previewQuery, setPreviewQuery] = useState('')
+  const [previewPage, setPreviewPage] = useState(1)
+  const [mobilePreviewExpanded, setMobilePreviewExpanded] = useState(false)
 
   const timeZone = prefs.timezone
   const cityLabel = cityLabelFor(prefs.timezone, prefs.city)
   const nowMs = useNow()
   const { matches } = useMatches()
-  const myEvents = useMyEvents(followedLeagueIds, followedCompetitorIds)
-  const hasLiveFollows = followedLeagueIds.length > 0 || followedCompetitorIds.length > 0
+  const hiddenKeys = useMemo(() => new Set(hiddenReviewTargets.map(reviewKey)), [hiddenReviewTargets])
+  const activeFollowedTeams = useMemo(
+    () => followedTeams.filter((team) => !hiddenKeys.has(reviewKey({ targetType: 'team', targetId: team }))),
+    [followedTeams, hiddenKeys],
+  )
+  const activeFollowedLeagueIds = useMemo(
+    () => followedLeagueIds.filter((id) => !hiddenKeys.has(reviewKey({ targetType: 'league', targetId: id }))),
+    [followedLeagueIds, hiddenKeys],
+  )
+  const activeFollowedCompetitorIds = useMemo(
+    () => followedCompetitorIds.filter((id) => !hiddenKeys.has(reviewKey({ targetType: 'competitor', targetId: id }))),
+    [followedCompetitorIds, hiddenKeys],
+  )
+  const myEvents = useMyEvents(activeFollowedLeagueIds, activeFollowedCompetitorIds)
+  const hasLiveFollows = activeFollowedLeagueIds.length > 0 || activeFollowedCompetitorIds.length > 0
 
   useEffect(() => {
     if (!flow.flowId) return
@@ -257,18 +313,24 @@ export function MySchedulePage() {
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [flow.flowId])
 
+  useEffect(() => {
+    if (!undoTarget) return
+    const timeout = window.setTimeout(() => setUndoTarget(null), 3000)
+    return () => window.clearTimeout(timeout)
+  }, [undoTarget])
+
   // Base set = matches for followed teams PLUS individually-saved matches ("Add to schedule"),
   // deduped. So saving a single match surfaces it here without following the whole nation.
   const baseMatches = useMemo(() => {
     const key = (m: Match) => `${m.date}-${m.team1}-${m.team2}`
     // filterMatchesForTeams returns ALL matches when nothing is selected, but My Schedule should
     // only show what the user actually chose — followed nations and individually-saved matches.
-    const followed = followedTeams.length ? filterMatchesForTeams(matches, followedTeams) : []
+    const followed = activeFollowedTeams.length ? filterMatchesForTeams(matches, activeFollowedTeams) : []
     const followedKeys = new Set(followed.map(key))
     const savedSet = new Set(savedMatchKeys)
     const savedOnly = matches.filter((m) => savedSet.has(key(m)) && !followedKeys.has(key(m)))
     return [...followed, ...savedOnly]
-  }, [matches, followedTeams, savedMatchKeys])
+  }, [matches, activeFollowedTeams, savedMatchKeys])
 
   const schedule = useMemo(() => {
     return baseMatches
@@ -303,14 +365,6 @@ export function MySchedulePage() {
     [myEvents.events, range, hidePast, nowMs],
   )
 
-  const conflicts = useMemo(
-    () => findConflictTiers(schedule.map((m) => ({ startsAt: m.startsAt, sportKey: 'soccer' }))),
-    [schedule],
-  )
-  const dateGroups = useMemo(
-    () => groupByLocalDate(schedule, timeZone, prefs.locale, prefs.hour12),
-    [schedule, timeZone, prefs.locale, prefs.hour12],
-  )
   const allVisibleDates = useMemo(
     () => [
       ...schedule.map((match) => match.startsAt),
@@ -327,20 +381,19 @@ export function MySchedulePage() {
     return venues.size
   }, [schedule, liveSchedule])
 
-  const nextWorldCupMatch = schedule[0]
   const totalVisible = schedule.length + liveSchedule.length
-  const followCount = followedTeams.length + followedLeagueIds.length + followedCompetitorIds.length
+  const followCount = activeFollowedTeams.length + activeFollowedLeagueIds.length + activeFollowedCompetitorIds.length
   const tbdSlotCount = allMatches.length - groupMatches.length
   const activeFlow = flow.flowId ? guidedFlows[flow.flowId] : null
   const currentStep = activeFlow?.steps[flow.stepIndex]
   const currentAnswer = currentStep ? flow.answers[currentStep.id] : undefined
 
   const selectedTeamsSummary =
-    followedTeams.length === 0
+    activeFollowedTeams.length === 0
       ? 'No World Cup teams yet'
-      : followedTeams.length <= 4
-        ? followedTeams.join(', ')
-        : `${followedTeams.slice(0, 4).join(', ')} +${followedTeams.length - 4}`
+      : activeFollowedTeams.length <= 4
+        ? activeFollowedTeams.join(', ')
+        : `${activeFollowedTeams.slice(0, 4).join(', ')} +${activeFollowedTeams.length - 4}`
 
   const liveStatus = myEvents.loading
     ? 'Checking live sports data...'
@@ -349,9 +402,107 @@ export function MySchedulePage() {
       : 'World Cup picks stored on this device'
 
   const followCounts = useMemo(
-    () => followedTeams.map((team) => ({ team, count: filterMatchesForTeams(matches, [team]).length })),
-    [matches, followedTeams],
+    () => activeFollowedTeams.map((team) => ({ team, count: filterMatchesForTeams(matches, [team]).length })),
+    [matches, activeFollowedTeams],
   )
+  const reviewPicks = useMemo<ReviewPick[]>(() => {
+    const leagueLabels = new Map<string, { label: string; group: string; count: number }>()
+    const competitorLabels = new Map<string, { label: string; group: string; count: number }>()
+    for (const event of myEvents.events) {
+      const group = event.sportKey ? `${sportEmoji(event.sportKey)} ${event.sportKey.replace(/_/g, ' ')}` : 'Live sports'
+      if (event.leagueId) {
+        const current = leagueLabels.get(event.leagueId)
+        leagueLabels.set(event.leagueId, {
+          label: event.leagueName || current?.label || 'League follow',
+          group,
+          count: (current?.count ?? 0) + 1,
+        })
+      }
+      for (const participant of event.participants ?? []) {
+        const current = competitorLabels.get(participant.id)
+        competitorLabels.set(participant.id, {
+          label: participant.name || current?.label || 'Team/player follow',
+          group,
+          count: (current?.count ?? 0) + 1,
+        })
+      }
+    }
+
+    return [
+      ...followCounts.map(({ team, count }) => ({ targetType: 'team' as const, targetId: team, label: team, group: 'World Cup', count })),
+      ...activeFollowedLeagueIds.map((id) => {
+        const info = leagueLabels.get(id)
+        return { targetType: 'league' as const, targetId: id, label: info?.label ?? 'League follow', group: info?.group ?? 'Live sports', count: info?.count ?? 0 }
+      }),
+      ...activeFollowedCompetitorIds.map((id) => {
+        const info = competitorLabels.get(id)
+        return { targetType: 'competitor' as const, targetId: id, label: info?.label ?? 'Team/player follow', group: info?.group ?? 'Live sports', count: info?.count ?? 0 }
+      }),
+    ]
+  }, [activeFollowedCompetitorIds, activeFollowedLeagueIds, followCounts, myEvents.events])
+
+  const reviewGroups = useMemo(() => {
+    const groups = new Map<string, ReviewPick[]>()
+    for (const pick of reviewPicks) {
+      const group = groups.get(pick.group) ?? []
+      group.push(pick)
+      groups.set(pick.group, group)
+    }
+    return [...groups.entries()]
+  }, [reviewPicks])
+
+  const previewItems = useMemo<PreviewItem[]>(() => {
+    const worldCupItems: PreviewItem[] = schedule.map((match) => ({
+      id: `wc:${match.date}:${match.team1}:${match.team2}`,
+      title: `${match.team1} vs ${match.team2}`,
+      subtitle: ['World Cup', match.group || match.round].filter(Boolean).join(' - '),
+      startsAt: match.startsAt,
+      venue: match.ground,
+      sportKey: 'soccer',
+      searchable: `${match.team1} ${match.team2} ${match.group ?? ''} ${match.round} ${match.ground} World Cup`,
+      match,
+    }))
+    const liveItems: PreviewItem[] = liveSchedule.map((event) => ({
+      id: `live:${event.id}`,
+      title: event.title,
+      subtitle: [event.leagueName, event.sportKey?.replace(/_/g, ' ')].filter(Boolean).join(' - '),
+      startsAt: event.startsAt,
+      venue: event.venue ?? '',
+      sportKey: event.sportKey ?? 'soccer',
+      searchable: `${event.title} ${event.leagueName} ${event.venue ?? ''} ${(event.participants ?? []).map((p) => p.name).join(' ')}`,
+    }))
+    return [...worldCupItems, ...liveItems].sort((a, b) => (a.startsAt?.getTime() ?? Infinity) - (b.startsAt?.getTime() ?? Infinity))
+  }, [liveSchedule, schedule])
+
+  const filteredPreviewItems = useMemo(() => {
+    const query = previewQuery.trim().toLowerCase()
+    return query ? previewItems.filter((item) => item.searchable.toLowerCase().includes(query)) : previewItems
+  }, [previewItems, previewQuery])
+  const previewPageCount = compactPageCount(filteredPreviewItems.length)
+  const activePreviewPage = Math.min(previewPage, previewPageCount)
+  const pagedPreviewItems = useMemo(
+    () => filteredPreviewItems.slice((activePreviewPage - 1) * REVIEW_PAGE_SIZE, activePreviewPage * REVIEW_PAGE_SIZE),
+    [activePreviewPage, filteredPreviewItems],
+  )
+
+  useEffect(() => {
+    queueMicrotask(() => {
+      setPreviewPage(1)
+      setMobilePreviewExpanded(false)
+    })
+  }, [previewQuery, range, hidePast, hiddenReviewTargets.length])
+
+  function removeReviewPick(pick: ReviewPick) {
+    const target = { targetType: pick.targetType, targetId: pick.targetId, label: pick.label }
+    setHiddenReviewTargets((current) => (current.some((item) => reviewKey(item) === reviewKey(target)) ? current : [...current, target]))
+    setUndoTarget(target)
+  }
+
+  function undoRemove() {
+    if (!undoTarget) return
+    setHiddenReviewTargets((current) => current.filter((item) => reviewKey(item) !== reviewKey(undoTarget)))
+    setUndoTarget(null)
+  }
 
   function exportLiveIcs() {
     downloadBlob(
@@ -389,7 +540,7 @@ export function MySchedulePage() {
     for (const pageEvents of exportPages) {
       const canvas = await createScheduleCanvas(
         pageEvents,
-        followedTeams,
+        activeFollowedTeams,
         timeZone,
         cityLabel,
         {
@@ -424,7 +575,7 @@ export function MySchedulePage() {
     for (const pageEvents of exportPages) {
       const canvas = await createScheduleCanvas(
         pageEvents,
-        followedTeams,
+        activeFollowedTeams,
         timeZone,
         cityLabel,
         {
@@ -444,7 +595,7 @@ export function MySchedulePage() {
   }
 
   async function copyNotes(matchesToExport = schedule) {
-    const text = createNotesText(matchesToExport, followedTeams, timeZone, cityLabel, prefs.locale, prefs.hour12)
+    const text = createNotesText(matchesToExport, activeFollowedTeams, timeZone, cityLabel, prefs.locale, prefs.hour12)
     await copyToClipboard(text)
     setMessage(exportCompletionMessage('notes'))
   }
@@ -456,7 +607,7 @@ export function MySchedulePage() {
   }
 
   async function shareSchedule(matchesToExport = schedule) {
-    const text = createNotesText(matchesToExport, followedTeams, timeZone, cityLabel, prefs.locale, prefs.hour12)
+    const text = createNotesText(matchesToExport, activeFollowedTeams, timeZone, cityLabel, prefs.locale, prefs.hour12)
     if (navigator.share) {
       await navigator.share({ title: brand.scheduleTitle, text })
       setMessage(exportCompletionMessage('share'))
@@ -584,7 +735,7 @@ export function MySchedulePage() {
     if (flow.flowId === 'download') return `${matchesForScope(flow.answers.download_scope).length} World Cup matches selected.`
     if (flow.flowId === 'calendar') {
       if ((flow.answers.calendar_update_mode ?? 'live_subscription') === 'live_subscription') {
-        const liveFollowCount = followedLeagueIds.length + followedCompetitorIds.length
+        const liveFollowCount = activeFollowedLeagueIds.length + activeFollowedCompetitorIds.length
         return liveFollowCount
           ? `${liveFollowCount} followed leagues/players included in the live feed.`
           : 'No live league/player follows yet. Use a one-time ICS for World Cup team picks.'
@@ -641,7 +792,7 @@ export function MySchedulePage() {
 
   const currentBestFitAdvice = currentStep?.final ? bestFitAdvice() : null
 
-  if (followedTeams.length === 0 && !hasLiveFollows && savedMatchKeys.length === 0) {
+  if (followedTeams.length === 0 && followedLeagueIds.length === 0 && followedCompetitorIds.length === 0 && savedMatchKeys.length === 0) {
     return (
       <EmptyState
         title={t('schedule.emptyTitle', undefined, prefs.locale)}
@@ -708,55 +859,6 @@ export function MySchedulePage() {
           </p>
         </Panel>
       </div>
-
-      <Panel className="space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <PanelHeading
-            title="Use your schedule"
-            subtitle="Choose one next step. The details open in a focused guide, while your schedule stays here."
-          />
-          {message && <p className="text-sm font-medium text-primary">{message}</p>}
-          {!message && reminderSummary && <p className="text-sm font-medium text-primary">Reminders: {reminderSummary}</p>}
-        </div>
-        <div className="grid gap-2 md:grid-cols-4">
-          <button
-            type="button"
-            onClick={() => openFlow('calendar')}
-            className="rounded-lg border border-primary/20 bg-page/60 px-3 py-3 text-left transition-colors hover:bg-primary/8"
-          >
-            <CalendarCheck size={18} />
-            <span className="mt-2 block text-sm font-bold">Add to calendar</span>
-            <span className="mt-1 block text-xs text-ink/55">Live updates or one-time import.</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => openFlow('download')}
-            className="rounded-lg border border-export/25 bg-page/60 px-3 py-3 text-left transition-colors hover:bg-export/8"
-          >
-            <Download size={18} />
-            <span className="mt-2 block text-sm font-bold">Download</span>
-            <span className="mt-1 block text-xs text-ink/55">PDF, CSV, ICS, or share.</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => openFlow('reminders')}
-            className="rounded-lg border border-primary/20 bg-page/60 px-3 py-3 text-left transition-colors hover:bg-primary/8"
-          >
-            <BellRing size={18} />
-            <span className="mt-2 block text-sm font-bold">Reminders</span>
-            <span className="mt-1 block text-xs text-ink/55">Kickoff and change alerts.</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => openFlow('settings')}
-            className="rounded-lg border border-primary/20 bg-page/60 px-3 py-3 text-left transition-colors hover:bg-primary/8"
-          >
-            <SlidersHorizontal size={18} />
-            <span className="mt-2 block text-sm font-bold">Settings</span>
-            <span className="mt-1 block text-xs text-ink/55">Timezone and display.</span>
-          </button>
-        </div>
-      </Panel>
 
       {activeFlow && currentStep &&
         createPortal(
@@ -1010,52 +1112,13 @@ export function MySchedulePage() {
         document.body,
       )}
 
-      <div className="grid gap-4 lg:grid-cols-[270px_1fr]">
-        <Panel className="hidden h-fit lg:sticky lg:top-20 lg:block">
-          <PanelHeading title="Your picks" subtitle={`${followCount} saved follows`} />
-          <div className="mb-1 flex items-center justify-between rounded-lg bg-primary px-3 py-2 text-void">
-            <span className="text-sm font-bold">World Cup events</span>
-            <span className="font-mono text-xs font-bold">{schedule.length}</span>
-          </div>
-          <ul className="space-y-1">
-            {followCounts.map(({ team, count }) => (
-              <li
-                key={team}
-                className="group flex items-center justify-between gap-2 rounded-lg px-3 py-1.5 text-sm hover:bg-primary/8"
-              >
-                <span className="min-w-0 truncate font-semibold">{team}</span>
-                <span className="flex items-center gap-1.5">
-                  <span className="font-mono text-xs text-ink/55">{count}</span>
-                  <button
-                    type="button"
-                    title={`Unfollow ${team}`}
-                    onClick={() => toggleFollow({ targetType: 'team', targetId: team, intent: 'watch' })}
-                    className="rounded p-0.5 text-ink/30 opacity-0 transition-opacity hover:text-flap-chg group-hover:opacity-100"
-                  >
-                    <X size={13} />
-                  </button>
-                </span>
-              </li>
-            ))}
-          </ul>
-          <Link
-            to="/sports/soccer"
-            className="mt-2 flex items-center gap-2 rounded-lg border border-dashed border-primary/30 px-3 py-2 text-sm font-semibold text-primary hover:bg-primary/8"
-          >
-            <Plus size={14} /> Add a pick
-          </Link>
-        </Panel>
-
-        <div className="min-w-0 space-y-3">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
+        <section className="min-w-0 space-y-3">
           <Panel>
             <div className="flex flex-wrap items-center gap-2">
               <ListFilter size={16} className="text-primary" />
               {ranges.map((item) => (
-                <Button
-                  key={item.key}
-                  variant={range === item.key ? 'solid' : 'ghost'}
-                  onClick={() => setRange(item.key)}
-                >
+                <Button key={item.key} variant={range === item.key ? 'solid' : 'ghost'} onClick={() => setRange(item.key)}>
                   {t(item.labelKey, undefined, prefs.locale)}
                 </Button>
               ))}
@@ -1070,107 +1133,156 @@ export function MySchedulePage() {
             </div>
           </Panel>
 
-          {nextWorldCupMatch && (
-            <Panel className="flex flex-wrap items-center gap-3">
-              <Zap size={18} className="shrink-0 text-primary" />
-              <p className="min-w-0 flex-1 text-sm text-ink/70">
-                <strong className="text-ink">Next World Cup pick:</strong> {nextWorldCupMatch.team1} vs{' '}
-                {nextWorldCupMatch.team2} -{' '}
-                {formatLongDate(nextWorldCupMatch.startsAt, timeZone, {
-                  locale: prefs.locale,
-                  hour12: prefs.hour12 ?? undefined,
-                })}{' '}
-                {formatTime(nextWorldCupMatch.startsAt, timeZone, {
-                  locale: prefs.locale,
-                  hour12: prefs.hour12 ?? undefined,
-                })}
-              </p>
-            </Panel>
-          )}
+          <Panel className="space-y-3">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <PanelHeading title="Review schedule" subtitle={`${filteredPreviewItems.length} events after filters and removed picks`} />
+              <label className="flex h-10 min-w-[240px] items-center gap-2 rounded-lg border border-primary/20 bg-page/60 px-3">
+                <Search size={15} className="text-ink/40" />
+                <input
+                  value={previewQuery}
+                  onChange={(event) => setPreviewQuery(event.target.value)}
+                  placeholder="Search matches, teams, leagues"
+                  className="w-full bg-transparent text-sm outline-none placeholder:text-ink/40"
+                />
+              </label>
+            </div>
 
-          {hasLiveFollows && (
-            <Panel className="space-y-3">
-              <PanelHeading title="Across all sports" subtitle={`${liveSchedule.length} live DB events in this range`} />
-              {myEvents.loading ? (
-                <p className="text-sm text-ink/50">{t('schedule.loadingLive', undefined, prefs.locale)}</p>
-              ) : liveSchedule.length === 0 ? (
-                <p className="text-sm text-ink/50">{t('schedule.noLiveRange', undefined, prefs.locale)}</p>
-              ) : (
-                <ul className="space-y-1.5">
-                  {interleaveAds(liveSchedule.slice(0, 40), (event) => event.id, 8).map((entry) =>
-                    entry.kind === 'ad' ? (
-                      <li key={entry.key}>
-                        <AdSlot format="leaderboard" />
-                      </li>
-                    ) : (
-                      <li key={entry.key} className="flex items-center gap-3 rounded-lg bg-page/60 px-3 py-2">
-                        <span className="text-lg leading-none">{sportEmoji(entry.item.sportKey)}</span>
-                        <span className="min-w-0 flex-1 truncate text-sm font-semibold">{entry.item.title}</span>
-                        {entry.item.leagueName && (
-                          <span className="hidden shrink-0 font-mono text-[10px] uppercase text-ink/40 sm:block">
-                            {entry.item.leagueName}
-                          </span>
-                        )}
-                        <span className="shrink-0 font-mono text-xs text-ink/55">
-                          {entry.item.startsAt
-                            ? `${formatLongDate(entry.item.startsAt, timeZone, {
-                                locale: prefs.locale,
-                                hour12: prefs.hour12 ?? undefined,
-                              })} ${formatTime(entry.item.startsAt, timeZone, {
-                                locale: prefs.locale,
-                                hour12: prefs.hour12 ?? undefined,
-                              })}`
-                            : 'TBD'}
-                        </span>
-                      </li>
-                    ),
-                  )}
-                </ul>
-              )}
-            </Panel>
-          )}
-
-          <Panel className="space-y-4">
-            <PanelHeading title="World Cup schedule" subtitle={`${schedule.length} saved matches in this range`} />
-            {dateGroups.map((group) => (
-              <section key={group.key} className="space-y-2">
-                <div className="flex items-center gap-3">
-                  <h2 className="text-sm font-extrabold text-primary">{group.label}</h2>
-                  <span className="h-px flex-1 bg-primary/15" />
-                  <span className="font-mono text-[10px] uppercase text-ink/40">{group.matches.length} matches</span>
-                </div>
-                {group.matches.map((match) => {
-                  const index = schedule.indexOf(match)
-                  return (
-                    <MatchCard
-                      key={`${match.date}-${match.team1}-${match.team2}`}
-                      match={match}
+            {pagedPreviewItems.length > 0 ? (
+              <>
+                <ul className={`space-y-1.5 md:max-h-none ${mobilePreviewExpanded ? '' : 'max-h-[236px] overflow-hidden'}`}>
+                  {pagedPreviewItems.map((item) => (
+                    <CompactScheduleRow
+                      key={item.id}
+                      item={item}
                       timeZone={timeZone}
-                      conflict={conflicts.get(index) ?? null}
-                      highlightTeams={followedTeams}
                       locale={prefs.locale}
                       hour12={prefs.hour12}
-                      regionCode={prefs.broadcastRegion || prefs.regionCode}
                     />
-                  )
-                })}
-              </section>
-            ))}
-            {schedule.length === 0 && (
+                  ))}
+                </ul>
+                {pagedPreviewItems.length > 3 && (
+                  <button
+                    type="button"
+                    onClick={() => setMobilePreviewExpanded((expanded) => !expanded)}
+                    className="flex w-full items-center justify-center rounded-lg border border-primary/20 px-3 py-2 text-sm font-bold text-primary md:hidden"
+                  >
+                    {mobilePreviewExpanded ? 'Collapse preview' : `Show ${pagedPreviewItems.length - 3} more on this page`}
+                  </button>
+                )}
+              </>
+            ) : (
               <EmptyState
-                title={t('schedule.noRangeTitle', undefined, prefs.locale)}
-                body={t('schedule.noRangeBody', undefined, prefs.locale)}
+                title={previewQuery ? 'No matching events' : t('schedule.noRangeTitle', undefined, prefs.locale)}
+                body={previewQuery ? 'Try a team, league, venue, or competition name from your selected schedule.' : t('schedule.noRangeBody', undefined, prefs.locale)}
               />
             )}
-          </Panel>
 
-          <div className="flex flex-wrap items-center gap-3 rounded-card border border-dashed border-flap-tbd/50 bg-flap-tbd/8 px-4 py-3">
-            <span className="flap flap-tbd shrink-0">{t('schedule.tbdDates', undefined, prefs.locale)}</span>
-            <p className="min-w-0 flex-1 text-sm text-ink/70">
-              {t('schedule.tbdBody', { count: tbdSlotCount }, prefs.locale)}
-            </p>
+            {filteredPreviewItems.length > REVIEW_PAGE_SIZE && (
+              <div className="flex flex-wrap items-center justify-between gap-2 border-t border-primary/10 pt-3">
+                <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink/45">
+                  Page {activePreviewPage} of {previewPageCount}
+                </p>
+                <div className="flex gap-2">
+                  <Button variant="ghost" disabled={activePreviewPage === 1} onClick={() => setPreviewPage((page) => Math.max(1, page - 1))}>
+                    Previous
+                  </Button>
+                  <Button variant="ghost" disabled={activePreviewPage === previewPageCount} onClick={() => setPreviewPage((page) => Math.min(previewPageCount, page + 1))}>
+                    Next
+                  </Button>
+                </div>
+              </div>
+            )}
+          </Panel>
+        </section>
+
+        <Panel className="h-fit space-y-3 xl:sticky xl:top-20">
+          <PanelHeading title="Included picks" subtitle={`${followCount} active follows`} />
+          {undoTarget && (
+            <div className="flex items-center gap-2 rounded-lg border border-primary/25 bg-primary/8 px-3 py-2 text-xs text-ink/70">
+              <span className="min-w-0 flex-1 truncate">Removed {undoTarget.label}.</span>
+              <button type="button" onClick={undoRemove} className="inline-flex items-center gap-1 font-bold text-primary">
+                <RotateCcw size={12} /> Undo remove
+              </button>
+            </div>
+          )}
+          <div className="space-y-3">
+            {reviewGroups.map(([group, picks]) => (
+              <div key={group} className="space-y-1.5">
+                <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink/45">{group}</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {picks.map((pick) => (
+                    <span
+                      key={reviewKey(pick)}
+                      className="group inline-flex max-w-full items-center gap-1.5 rounded-full border border-primary/20 bg-page/70 px-2.5 py-1 text-xs font-bold text-ink/75"
+                    >
+                      <span className="truncate">{pick.label}</span>
+                      <span className="font-mono text-[10px] text-ink/40">{pick.count}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeReviewPick(pick)}
+                        title={`Remove ${pick.label} from this export`}
+                        className="rounded-full text-ink/25 opacity-70 transition-opacity hover:text-flap-chg group-hover:opacity-100"
+                      >
+                        <X size={12} />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
+            {reviewPicks.length === 0 && (
+              <p className="rounded-lg border border-primary/15 bg-page/50 px-3 py-2 text-sm text-ink/55">
+                Everything is temporarily removed. Use undo or add more picks.
+              </p>
+            )}
           </div>
+          <Link
+            to="/sports/soccer"
+            className="flex items-center gap-2 rounded-lg border border-dashed border-primary/30 px-3 py-2 text-sm font-semibold text-primary hover:bg-primary/8"
+          >
+            <Plus size={14} /> Add a pick
+          </Link>
+        </Panel>
+      </div>
+
+      <Panel className="space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <PanelHeading
+            title="Export or sync"
+            subtitle="Final step. Your compact review above is what these actions use."
+          />
+          {message && <p className="text-sm font-medium text-primary">{message}</p>}
+          {!message && reminderSummary && <p className="text-sm font-medium text-primary">Reminders: {reminderSummary}</p>}
         </div>
+        <div className="grid gap-2 md:grid-cols-4">
+          <button type="button" onClick={() => openFlow('calendar')} className="rounded-lg border border-primary/20 bg-page/60 px-3 py-3 text-left transition-colors hover:bg-primary/8">
+            <CalendarCheck size={18} />
+            <span className="mt-2 block text-sm font-bold">Add to calendar</span>
+            <span className="mt-1 block text-xs text-ink/55">Live updates or one-time import.</span>
+          </button>
+          <button type="button" onClick={() => openFlow('download')} className="rounded-lg border border-export/25 bg-page/60 px-3 py-3 text-left transition-colors hover:bg-export/8">
+            <Download size={18} />
+            <span className="mt-2 block text-sm font-bold">Download</span>
+            <span className="mt-1 block text-xs text-ink/55">PDF, CSV, ICS, or share.</span>
+          </button>
+          <button type="button" onClick={() => openFlow('reminders')} className="rounded-lg border border-primary/20 bg-page/60 px-3 py-3 text-left transition-colors hover:bg-primary/8">
+            <BellRing size={18} />
+            <span className="mt-2 block text-sm font-bold">Reminders</span>
+            <span className="mt-1 block text-xs text-ink/55">Kickoff and change alerts.</span>
+          </button>
+          <button type="button" onClick={() => openFlow('settings')} className="rounded-lg border border-primary/20 bg-page/60 px-3 py-3 text-left transition-colors hover:bg-primary/8">
+            <SlidersHorizontal size={18} />
+            <span className="mt-2 block text-sm font-bold">Settings</span>
+            <span className="mt-1 block text-xs text-ink/55">Timezone and display.</span>
+          </button>
+        </div>
+      </Panel>
+
+      <div className="flex flex-wrap items-center gap-3 rounded-card border border-dashed border-flap-tbd/50 bg-flap-tbd/8 px-4 py-3">
+        <span className="flap flap-tbd shrink-0">{t('schedule.tbdDates', undefined, prefs.locale)}</span>
+        <p className="min-w-0 flex-1 text-sm text-ink/70">
+          {t('schedule.tbdBody', { count: tbdSlotCount }, prefs.locale)}
+        </p>
       </div>
     </div>
   )
