@@ -8,12 +8,15 @@ import { AppStateProvider } from './app/state'
 
 function applyRuntimeBrowserFlags() {
   const isFirefox = /\b(Firefox|FxiOS|Focus)\//.test(navigator.userAgent)
+  const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
 
   document.documentElement.dataset.browser = isFirefox ? 'firefox' : 'enhanced'
-  document.documentElement.dataset.visualEffects = isFirefox ? 'reduced' : 'enhanced'
+  document.documentElement.dataset.visualEffects = isFirefox || reduceMotion ? 'reduced' : 'enhanced'
 }
 
 applyRuntimeBrowserFlags()
+
+window.matchMedia?.('(prefers-reduced-motion: reduce)').addEventListener('change', applyRuntimeBrowserFlags)
 
 // PERF: keep the shell small. Page modules load by route; export studio pulls the canvas
 // poster pipeline, sport pages pull banner assets, and Supabase loads only when configured.

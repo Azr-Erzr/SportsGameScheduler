@@ -3158,6 +3158,286 @@
   }
 }
 
+/* Broadcast motion language. Decorative pieces are opt-in and hidden unless the runtime has
+   confirmed a non-Firefox, non-reduced-motion browser. */
+.motion-only {
+  display: none !important;
+}
+
+:root[data-visual-effects='enhanced'] .motion-only {
+  display: block !important;
+}
+
+.broadcast-tune-panel,
+.motion-filter-panel,
+.motion-ticket,
+.event-bumper {
+  position: relative;
+}
+
+:root[data-visual-effects='enhanced'] .broadcast-tune-panel {
+  overflow: hidden;
+}
+
+:root[data-visual-effects='enhanced'] .broadcast-tune-panel::before,
+:root[data-visual-effects='enhanced'] .sport-channel-banner::after,
+:root[data-visual-effects='enhanced'] .event-bumper::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(105deg, transparent 0 28%, color-mix(in srgb, var(--mp-primary) 16%, transparent) 46%, transparent 64% 100%);
+  opacity: 0;
+  transform: translateX(-120%);
+  animation: broadcast-sweep 6.5s ease-in-out infinite;
+}
+
+:root[data-visual-effects='enhanced'] .broadcast-tune-panel::after,
+:root[data-visual-effects='enhanced'] .motion-filter-panel::after,
+:root[data-visual-effects='enhanced'] .event-bumper::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(0deg, color-mix(in srgb, var(--mp-primary) 8%, transparent) 0 1px, transparent 1px 6px),
+    radial-gradient(circle at 20% 10%, color-mix(in srgb, var(--mp-primary) 10%, transparent), transparent 36%);
+  opacity: 0.22;
+  mix-blend-mode: screen;
+}
+
+.broadcast-lock-board {
+  position: absolute;
+  display: none;
+  right: clamp(18px, 3vw, 44px);
+  top: clamp(18px, 3vw, 40px);
+  z-index: 0;
+  width: min(25%, 260px);
+  min-width: 160px;
+  gap: 8px;
+  opacity: 0.46;
+}
+
+:root[data-visual-effects='enhanced'] .broadcast-lock-board {
+  display: grid !important;
+}
+
+.broadcast-lock-line {
+  display: block;
+  width: 100%;
+  height: 7px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--mp-primary) 72%, transparent), transparent);
+  transform-origin: left center;
+  animation: broadcast-lock 2.8s ease-in-out infinite;
+}
+
+.broadcast-lock-line:nth-child(2) {
+  width: 72%;
+  animation-delay: 240ms;
+}
+
+.broadcast-lock-line:nth-child(3) {
+  width: 54%;
+  animation-delay: 520ms;
+}
+
+.broadcast-lock-line:nth-child(4) {
+  width: 86%;
+  animation-delay: 760ms;
+}
+
+:root[data-visual-effects='enhanced'] .motion-filter-panel {
+  overflow: hidden;
+}
+
+:root[data-visual-effects='enhanced'] .motion-filter-tab,
+:root[data-visual-effects='enhanced'] .motion-filter-pill,
+:root[data-visual-effects='enhanced'] .motion-ticket,
+:root[data-visual-effects='enhanced'] .event-bumper-action {
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    background-color 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease;
+}
+
+:root[data-visual-effects='enhanced'] .motion-filter-tab:hover,
+:root[data-visual-effects='enhanced'] .motion-filter-pill:hover,
+:root[data-visual-effects='enhanced'] .event-bumper-action:hover {
+  transform: translateY(-1px);
+}
+
+:root[data-visual-effects='enhanced'] .motion-filter-tab.is-active,
+:root[data-visual-effects='enhanced'] .motion-filter-pill.is-selected {
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--mp-primary) 18%, transparent),
+    0 0 18px color-mix(in srgb, var(--mp-primary) 18%, transparent);
+}
+
+:root[data-visual-effects='enhanced'] .motion-filter-tab.is-active::after,
+:root[data-visual-effects='enhanced'] .motion-filter-pill.is-selected::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  border: 1px solid color-mix(in srgb, var(--mp-primary) 48%, transparent);
+  opacity: 0;
+  animation: channel-light-pulse 2.4s ease-out infinite;
+}
+
+:root[data-visual-effects='enhanced'] .motion-ticket {
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    outline-color 180ms ease;
+}
+
+:root[data-visual-effects='enhanced'] .motion-ticket:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 10px 20px rgba(0, 0, 0, 0.16),
+    0 0 0 1px color-mix(in srgb, var(--mp-primary) 12%, transparent);
+}
+
+:root[data-visual-effects='enhanced'] .motion-ticket.is-expanded {
+  animation: ticket-lock 220ms ease-out;
+}
+
+:root[data-visual-effects='enhanced'] .ticket-added-pulse {
+  animation: ticket-added 700ms ease-out;
+}
+
+.event-bumper {
+  overflow: hidden;
+  border-color: color-mix(in srgb, var(--mp-primary) 28%, transparent) !important;
+  background:
+    radial-gradient(circle at 78% 12%, color-mix(in srgb, var(--mp-primary) 16%, transparent), transparent 34%),
+    linear-gradient(135deg, color-mix(in srgb, var(--mp-primary) 8%, var(--color-surface)), var(--color-surface) 54%);
+}
+
+:root[data-visual-effects='enhanced'] .event-bumper {
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--mp-primary) 16%, transparent),
+    0 20px 42px rgba(0, 0, 0, 0.22),
+    inset 0 0 40px color-mix(in srgb, var(--mp-primary) 8%, transparent);
+}
+
+.event-bumper-grid {
+  position: absolute;
+  inset: auto 18px 16px auto;
+  z-index: 0;
+  width: min(34%, 260px);
+  height: 86px;
+  border: 1px solid color-mix(in srgb, var(--mp-primary) 18%, transparent);
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--mp-primary) 14%, transparent) 1px, transparent 1px),
+    linear-gradient(color-mix(in srgb, var(--mp-primary) 14%, transparent) 1px, transparent 1px);
+  background-size: 24px 18px;
+  opacity: 0.54;
+  animation: signal-grid-drift 7s linear infinite;
+}
+
+.event-bumper > * {
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes broadcast-sweep {
+  0%, 54% {
+    opacity: 0;
+    transform: translateX(-120%);
+  }
+  64% {
+    opacity: 0.9;
+  }
+  78%, 100% {
+    opacity: 0;
+    transform: translateX(120%);
+  }
+}
+
+@keyframes broadcast-lock {
+  0%, 100% {
+    opacity: 0.24;
+    transform: scaleX(0.72);
+  }
+  44% {
+    opacity: 0.78;
+    transform: scaleX(1);
+  }
+}
+
+@keyframes channel-light-pulse {
+  0% {
+    opacity: 0.52;
+    transform: scale(0.98);
+  }
+  70%, 100% {
+    opacity: 0;
+    transform: scale(1.12);
+  }
+}
+
+@keyframes ticket-lock {
+  from {
+    transform: translateY(-2px) scale(0.995);
+  }
+  to {
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes ticket-added {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--mp-primary) 44%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 12px transparent;
+  }
+}
+
+@keyframes signal-grid-drift {
+  from {
+    background-position: 0 0, 0 0;
+  }
+  to {
+    background-position: 48px 0, 0 36px;
+  }
+}
+
+@media (max-width: 720px) {
+  .broadcast-lock-board,
+  .event-bumper-grid {
+    display: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .motion-only {
+    display: none !important;
+  }
+  .broadcast-tune-panel::before,
+  .broadcast-tune-panel::after,
+  .sport-channel-banner::after,
+  .motion-filter-panel::after,
+  .event-bumper::before,
+  .event-bumper::after,
+  .motion-filter-tab.is-active::after,
+  .motion-filter-pill.is-selected::after {
+    display: none !important;
+  }
+  .motion-filter-tab,
+  .motion-filter-pill,
+  .motion-ticket,
+  .event-bumper-action {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+  }
+}
+
 /* Firefox is more sensitive to repeated filter rasterization during scroll and hover.
    Keep the brand colours, but drop decorative filter passes in the main app chrome. */
 :root[data-browser='firefox'] .chrome-text,
@@ -3180,4 +3460,16 @@
 
 :root[data-browser='firefox'] .ticket-paper {
   box-shadow: 0 1px 0 rgba(29, 24, 18, 0.12), 0 4px 9px rgba(0, 0, 0, 0.12);
+}
+
+:root[data-browser='firefox'] .motion-only,
+:root[data-browser='firefox'] .broadcast-tune-panel::before,
+:root[data-browser='firefox'] .broadcast-tune-panel::after,
+:root[data-browser='firefox'] .sport-channel-banner::after,
+:root[data-browser='firefox'] .motion-filter-panel::after,
+:root[data-browser='firefox'] .event-bumper::before,
+:root[data-browser='firefox'] .event-bumper::after,
+:root[data-browser='firefox'] .motion-filter-tab.is-active::after,
+:root[data-browser='firefox'] .motion-filter-pill.is-selected::after {
+  display: none !important;
 }

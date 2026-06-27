@@ -46,7 +46,7 @@ export function MatchCard({
     // PERF: plain article + CSS transitions. Framer `layout` springs on 70+ list items
     // measured the whole list every frame and was the main scroll-jank source.
     <article
-      className="ticket-paper relative overflow-hidden p-0"
+      className={`motion-ticket ticket-paper relative overflow-hidden p-0 ${expanded ? 'is-expanded' : ''}`}
       style={
         tier
           ? { outline: `2px solid ${tier.color}`, outlineOffset: '2px', boxShadow: `0 0 5px ${tier.color}66` }
@@ -109,7 +109,7 @@ export function MatchCard({
               aria-live="polite"
               className={`inline-flex min-w-[116px] items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-bold transition-colors max-sm:flex-1 ${
                 addedToSchedule
-                  ? 'border-ticket-stub bg-ticket-stub text-ticket-stub-text'
+                  ? 'ticket-added-pulse border-ticket-stub bg-ticket-stub text-ticket-stub-text'
                   : 'border-ticket-stub/30 text-paper-ink hover:bg-ticket-stub/10'
               }`}
             >

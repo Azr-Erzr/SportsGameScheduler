@@ -99,7 +99,7 @@ export function LiveTicker() {
         <span className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-export">This week</span>
       </div>
       <div
-        className={`flex w-max items-center whitespace-nowrap pl-32 sm:pl-36 ${reduceMotion ? 'gap-2 overflow-x-auto' : ''}`}
+        className={`flex w-max items-center whitespace-nowrap pl-40 sm:pl-44 ${reduceMotion ? 'gap-2 overflow-x-auto' : ''}`}
         ref={trackRef}
       >
         {loop.map((event, i) => (

@@ -1126,7 +1126,7 @@ function SportEntityFilters({
   }
 
   return (
-    <Panel className="space-y-3 border-primary/20 bg-surface/80">
+    <Panel className="motion-filter-panel space-y-3 border-primary/20 bg-surface/80">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="grid grid-cols-3 gap-1 rounded-xl border border-primary/15 bg-page/50 p-1">
           {FILTER_MODES.map((item) => {
@@ -1141,7 +1141,7 @@ function SportEntityFilters({
                   setMode(item.id)
                   setQuery('')
                 }}
-                className={`flex min-h-10 items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-bold transition-colors ${mode === item.id ? 'bg-primary text-void' : 'text-ink/65 hover:bg-primary/10 hover:text-primary'}`}
+                className={`motion-filter-tab relative flex min-h-10 items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-bold transition-colors ${mode === item.id ? 'is-active bg-primary text-void' : 'text-ink/65 hover:bg-primary/10 hover:text-primary'}`}
               >
                 <Icon size={14} />
                 <span className="truncate">{label}</span>
@@ -1188,7 +1188,7 @@ function SportEntityFilters({
                 }
               }}
               aria-pressed={selected}
-              className={`flex min-h-9 max-w-full items-center gap-1.5 rounded-full border py-1 pl-2 pr-3 text-left transition-colors ${selected ? 'border-primary bg-primary text-void' : 'border-primary/25 text-ink/75 hover:bg-primary/10 hover:text-primary'}`}
+              className={`motion-filter-pill relative flex min-h-9 max-w-full items-center gap-1.5 rounded-full border py-1 pl-2 pr-3 text-left transition-colors ${selected ? 'is-selected border-primary bg-primary text-void' : 'border-primary/25 text-ink/75 hover:bg-primary/10 hover:text-primary'}`}
             >
               {optionFollowButton(option)}
               <FilterLogo option={option} selected={selected} mode={mode} />
@@ -1559,7 +1559,7 @@ function RaceWeekendCard({
   const allAdded = weekend.sessions.every((s) => addedIds.includes(s.event.id))
 
   return (
-    <article className="overflow-hidden rounded-card border border-primary/20 bg-surface">
+    <article className="motion-ticket overflow-hidden rounded-card border border-primary/20 bg-surface">
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-primary/12 bg-page/40 px-4 py-3">
         <div className="min-w-0">
           <h3 className="flex items-center gap-2 truncate text-base font-bold text-primary">
@@ -1577,7 +1577,7 @@ function RaceWeekendCard({
           type="button"
           onClick={onAddWeekend}
           className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-bold transition-colors ${
-            allAdded ? 'border-primary bg-primary/15 text-primary' : 'border-primary/30 text-ink/75 hover:bg-primary/10'
+            allAdded ? 'ticket-added-pulse border-primary bg-primary/15 text-primary' : 'border-primary/30 text-ink/75 hover:bg-primary/10'
           }`}
         >
           <Download size={13} /> {allAdded ? 'Weekend added' : 'Add weekend'}
@@ -1615,7 +1615,7 @@ function RaceWeekendCard({
                 onClick={() => onAddSession(event)}
                 aria-label={`Add ${session.label} to schedule`}
                 className={`shrink-0 rounded-lg border p-2 transition-colors ${
-                  added ? 'border-primary bg-primary/15 text-primary' : 'border-primary/25 text-ink/60 hover:bg-primary/10'
+                  added ? 'ticket-added-pulse border-primary bg-primary/15 text-primary' : 'border-primary/25 text-ink/60 hover:bg-primary/10'
                 }`}
               >
                 {added ? <Check size={14} /> : <Download size={14} />}
@@ -1653,8 +1653,8 @@ function EventTicket({
 
   return (
     <article
-      className={`ticket-paper group flex w-full items-stretch overflow-hidden max-sm:flex-col ${
-        expanded ? 'ring-2 ring-primary/25' : ''
+      className={`motion-ticket ticket-paper group flex w-full items-stretch overflow-hidden max-sm:flex-col ${
+        expanded ? 'is-expanded ring-2 ring-primary/25' : ''
       } ${isFightCard ? 'min-h-[104px]' : ''}`}
     >
       <button
@@ -1713,7 +1713,7 @@ function EventTicket({
           aria-live="polite"
           className={`inline-flex min-w-[116px] items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-bold transition-colors max-sm:flex-1 ${
             added
-              ? 'border-ticket-stub bg-ticket-stub text-ticket-stub-text'
+              ? 'ticket-added-pulse border-ticket-stub bg-ticket-stub text-ticket-stub-text'
               : 'border-ticket-stub/30 text-paper-ink hover:bg-ticket-stub/10'
           }`}
         >

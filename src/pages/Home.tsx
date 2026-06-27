@@ -107,8 +107,14 @@ export function HomePage() {
   return (
     <div className="space-y-6">
       <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_390px]">
-        <div className="rounded-card border border-primary/15 bg-surface p-5 shadow-sm sm:p-7">
-          <div className="max-w-4xl">
+        <div className="broadcast-tune-panel rounded-card border border-primary/15 bg-surface p-5 shadow-sm sm:p-7">
+          <div className="motion-only broadcast-lock-board" aria-hidden="true">
+            <span className="broadcast-lock-line" />
+            <span className="broadcast-lock-line" />
+            <span className="broadcast-lock-line" />
+            <span className="broadcast-lock-line" />
+          </div>
+          <div className="relative z-[1] max-w-4xl">
             <div>
               <p className="board-label mb-4 flex items-center gap-2 text-neon-magenta">
                 <Sparkles size={13} /> {t('home.kicker', undefined, prefs.locale)}

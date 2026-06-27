@@ -99,7 +99,8 @@ export function EventDetailPage() {
         <ArrowLeft size={15} /> {t('event.backSchedule', undefined, prefs.locale)}
       </Link>
 
-      <Panel className="space-y-3">
+      <Panel className="event-bumper space-y-3">
+        <div className="motion-only event-bumper-grid" aria-hidden="true" />
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="font-mono text-[11px] uppercase tracking-wide text-ink/50">
@@ -145,6 +146,7 @@ export function EventDetailPage() {
           {event.leagueId && (
             <Button
               variant={leagueFollowed ? 'subtle' : 'solid'}
+              className="event-bumper-action"
               onClick={() => toggleFollow({ targetType: 'league', targetId: event.leagueId!, intent: 'watch' })}
             >
               <Star size={15} className={leagueFollowed ? 'fill-current' : ''} />
@@ -154,13 +156,13 @@ export function EventDetailPage() {
           <button
             type="button"
             onClick={exportIcs}
-            className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-primary/25 px-3 py-2 text-xs font-bold text-ink transition-colors hover:bg-primary/10"
+            className="event-bumper-action inline-flex items-center justify-center gap-1.5 rounded-lg border border-primary/25 px-3 py-2 text-xs font-bold text-ink transition-colors hover:bg-primary/10"
           >
             <Download size={15} /> {t('event.addCalendar', undefined, prefs.locale)}
           </button>
           <Link
             to="/settings/alerts"
-            className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-primary/25 px-3 py-2 text-xs font-bold text-ink transition-colors hover:bg-primary/10"
+            className="event-bumper-action inline-flex items-center justify-center gap-1.5 rounded-lg border border-primary/25 px-3 py-2 text-xs font-bold text-ink transition-colors hover:bg-primary/10"
           >
             <Bell size={15} /> {t('event.getReminders', undefined, prefs.locale)}
           </Link>
