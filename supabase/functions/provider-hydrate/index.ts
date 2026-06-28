@@ -76,6 +76,8 @@ function makeApi(counters: Counters) {
 
 type RawEvent = Record<string, string | null>
 
+type CompetitorSeed = { id: string; name: string; badge?: string | null; country?: string | null; kind?: 'team' | 'person' }
+
 function normalizeStatus(raw: string | null | undefined): string {
   const s = (raw ?? '').toLowerCase()
   if (/finish|full time|\bft\b|\baet\b|ended|final/.test(s)) return 'finished'
@@ -180,12 +182,12 @@ async function loadCtx(target: Target): Promise<Ctx | null> {
   return { sportId: league.sport_id, sportKey: target.sport_key, leagueId: league.id, leagueName: league.name, targetId: target.id }
 }
 
-async function ensureCompetitors(ctx: Ctx, rows: Array<{ id: string; name: string; badge?: string | null; country?: string | null }>) {
+async function ensureCompetitors(ctx: Ctx, rows: CompetitorSeed[]) {
   if (!rows.length) return new Map<string, string>()
   const payload = rows.map((r) => ({
     sport_id: ctx.sportId,
     league_id: ctx.leagueId,
-    kind: 'team',
+    kind: r.kind ?? (ctx.sportKey === 'combat_sports' ? 'person' : 'team'),
     name: r.name,
     logo_url: r.badge ?? null,
     country: r.country ?? null,
@@ -206,6 +208,30 @@ async function ensureCompetitors(ctx: Ctx, rows: Array<{ id: string; name: strin
   return map
 }
 
+function slug(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+}
+
+function cleanCombatName(value: string) {
+  return value
+    .replace(/^(?:ufc|pfl|oktagon|bellator|zuffa boxing|mvpw|boxing)\s*(?:fight night)?\s*\d*\s*/i, '')
+    .replace(/\s+\d+$/g, '')
+    .trim()
+}
+
+function inferCombatSeeds(ev: RawEvent): Array<CompetitorSeed & { corner: 'red' | 'blue' }> {
+  const title = ev.strEvent ?? ''
+  const match = title.match(/\b(.+?)\s+vs\.?\s+(.+)$/i)
+  if (!match) return []
+  const red = cleanCombatName(match[1])
+  const blue = cleanCombatName(match[2])
+  if (!red || !blue || red.length > 80 || blue.length > 80) return []
+  return [
+    { id: `title:${slug(red)}`, name: red, kind: 'person', corner: 'red' },
+    { id: `title:${slug(blue)}`, name: blue, kind: 'person', corner: 'blue' },
+  ]
+}
+
 async function ensureVenues(names: string[]): Promise<Map<string, string>> {
   const unique = [...new Set(names.filter(Boolean))]
   const map = new Map<string, string>()
@@ -221,10 +247,18 @@ async function ensureVenues(names: string[]): Promise<Map<string, string>> {
 async function upsertEvents(ctx: Ctx, raw: RawEvent[], counters: Counters) {
   if (!raw.length) return
 
-  const teamRows = new Map<string, { id: string; name: string }>()
+  const teamRows = new Map<string, CompetitorSeed>()
+  const inferredCombatByEvent = new Map<string, Array<CompetitorSeed & { corner: 'red' | 'blue' }>>()
   for (const ev of raw) {
     if (ev.idHomeTeam && ev.strHomeTeam) teamRows.set(ev.idHomeTeam, { id: ev.idHomeTeam, name: ev.strHomeTeam })
     if (ev.idAwayTeam && ev.strAwayTeam) teamRows.set(ev.idAwayTeam, { id: ev.idAwayTeam, name: ev.strAwayTeam })
+    if (ctx.sportKey === 'combat_sports' && ev.idEvent) {
+      const seeds = inferCombatSeeds(ev)
+      if (seeds.length === 2) {
+        inferredCombatByEvent.set(ev.idEvent, seeds)
+        for (const seed of seeds) teamRows.set(seed.id, seed)
+      }
+    }
   }
   const competitorMap = await ensureCompetitors(ctx, [...teamRows.values()])
   const venueMap = await ensureVenues(raw.map((ev) => ev.strVenue ?? '').filter(Boolean) as string[])
@@ -247,14 +281,40 @@ async function upsertEvents(ctx: Ctx, raw: RawEvent[], counters: Counters) {
   const toInsert: Array<Record<string, unknown>> = []
   const inserts: Array<{ pid: string; home?: string; away?: string }> = []
 
+  async function replaceParticipants(eventId: string, home?: string, away?: string) {
+    await supabase.from('event_competitors').delete().eq('event_id', eventId)
+    const links: Array<Record<string, unknown>> = []
+    if (home) links.push({ event_id: eventId, competitor_id: home, role: ctx.sportKey === 'combat_sports' ? 'participant' : 'home', position: 1 })
+    if (away) links.push({ event_id: eventId, competitor_id: away, role: ctx.sportKey === 'combat_sports' ? 'participant' : 'away', position: 2 })
+    if (links.length) await supabase.from('event_competitors').insert(links)
+  }
+
+  async function replaceTitleInferredBout(eventId: string, red?: string, blue?: string) {
+    if (ctx.sportKey !== 'combat_sports' || !red || !blue) return
+    await supabase
+      .from('event_bouts')
+      .delete()
+      .eq('event_id', eventId)
+      .contains('metadata', { source: 'title_inference' })
+    await supabase.from('event_bouts').insert({
+      event_id: eventId,
+      red_corner_competitor_id: red,
+      blue_corner_competitor_id: blue,
+      bout_order: 1,
+      status: 'scheduled',
+      metadata: { source: 'title_inference', completeness: 'main_event_only' },
+    })
+  }
+
   for (const ev of raw) {
     if (!ev.idEvent) continue
     const { iso, tbd } = startsAtFor(ev)
     const status = normalizeStatus(ev.strStatus ?? ev.strPostponed)
     const title = ev.strEvent ?? `${ev.strHomeTeam ?? ''} vs ${ev.strAwayTeam ?? ''}`.trim()
     const prior = existing.get(ev.idEvent)
-    const homeId = ev.idHomeTeam ? competitorMap.get(ev.idHomeTeam) : undefined
-    const awayId = ev.idAwayTeam ? competitorMap.get(ev.idAwayTeam) : undefined
+    const inferred = inferredCombatByEvent.get(ev.idEvent)
+    const homeId = ev.idHomeTeam ? competitorMap.get(ev.idHomeTeam) : inferred?.[0] ? competitorMap.get(inferred[0].id) : undefined
+    const awayId = ev.idAwayTeam ? competitorMap.get(ev.idAwayTeam) : inferred?.[1] ? competitorMap.get(inferred[1].id) : undefined
     const metadata = { round: ev.intRound ?? null, season: ev.strSeason ?? null, source: 'thesportsdb' }
     const checkedAt = new Date().toISOString()
     const hash = await payloadHash({
@@ -294,6 +354,8 @@ async function upsertEvents(ctx: Ctx, raw: RawEvent[], counters: Counters) {
     } else {
       if (prior.payload_hash === hash) {
         await supabase.from('events').update({ last_checked_at: checkedAt }).eq('id', prior.id)
+        await replaceParticipants(prior.id, homeId, awayId)
+        await replaceTitleInferredBout(prior.id, homeId, awayId)
         continue
       }
       const visibleChange = prior.title !== title || prior.status !== status || prior.starts_at !== iso
@@ -307,6 +369,8 @@ async function upsertEvents(ctx: Ctx, raw: RawEvent[], counters: Counters) {
             venue_id: ev.strVenue ? venueMap.get(ev.strVenue) ?? null : null,
           })
           .eq('id', prior.id)
+        await replaceParticipants(prior.id, homeId, awayId)
+        await replaceTitleInferredBout(prior.id, homeId, awayId)
         continue
       }
       const timingChange = prior.starts_at !== iso || prior.status !== status
@@ -336,6 +400,8 @@ async function upsertEvents(ctx: Ctx, raw: RawEvent[], counters: Counters) {
           source: 'thesportsdb',
         })
       }
+      await replaceParticipants(prior.id, homeId, awayId)
+      await replaceTitleInferredBout(prior.id, homeId, awayId)
       counters.changed += 1
     }
   }
@@ -350,11 +416,16 @@ async function upsertEvents(ctx: Ctx, raw: RawEvent[], counters: Counters) {
     for (const ins of inserts) {
       const eventId = idByPid.get(ins.pid)
       if (!eventId) continue
-      if (ins.home) links.push({ event_id: eventId, competitor_id: ins.home, role: 'home' })
-      if (ins.away) links.push({ event_id: eventId, competitor_id: ins.away, role: 'away' })
+      const role = ctx.sportKey === 'combat_sports' ? 'participant' : null
+      if (ins.home) links.push({ event_id: eventId, competitor_id: ins.home, role: role ?? 'home', position: 1 })
+      if (ins.away) links.push({ event_id: eventId, competitor_id: ins.away, role: role ?? 'away', position: 2 })
     }
     for (let j = 0; j < links.length; j += 500) {
       await supabase.from('event_competitors').insert(links.slice(j, j + 500))
+    }
+    for (const ins of inserts) {
+      const eventId = idByPid.get(ins.pid)
+      if (eventId) await replaceTitleInferredBout(eventId, ins.home, ins.away)
     }
   }
 }

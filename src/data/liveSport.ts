@@ -1,3 +1,4 @@
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { useEffect, useState } from 'react'
 import { getSupabaseClient } from '../lib/supabase'
 import { readCache, retryRead, writeCache } from '../lib/resilience'
@@ -99,6 +100,31 @@ function fromCachedEvent(e: CachedEvent): LiveEvent {
   return { ...e, startsAt: e.startsAt ? new Date(e.startsAt) : null }
 }
 
+async function loadEventParticipants(supabase: SupabaseClient, eventIds: string[]) {
+  const eventCompetitors = new Map<string, EventParticipant[]>()
+  if (!eventIds.length) return eventCompetitors
+  const competitorRows = (await retryRead(() =>
+    supabase
+      .from('event_competitors')
+      .select('event_id, role, competitors(id, name, country, kind, logo_url)')
+      .in('event_id', eventIds),
+  )) as unknown as EventCompetitorRow[] | null
+  for (const row of competitorRows ?? []) {
+    if (!row.competitors) continue
+    const current = eventCompetitors.get(row.event_id) ?? []
+    current.push({
+      id: row.competitors.id,
+      name: row.competitors.name,
+      country: row.competitors.country,
+      kind: row.competitors.kind,
+      role: row.role,
+      logoUrl: row.competitors.logo_url,
+    })
+    eventCompetitors.set(row.event_id, current)
+  }
+  return eventCompetitors
+}
+
 export function useSportSchedule(canonicalSportKey: string): SportSchedule {
   // Store the key the data was loaded for; derive `loading` instead of setting state
   // synchronously in the effect (which triggers cascading renders).
@@ -178,26 +204,7 @@ export function useSportSchedule(canonicalSportKey: string): SportSchedule {
       let eventCompetitors = new Map<string, EventParticipant[]>()
       if (eventIds.length) {
         try {
-          const competitorRows = (await retryRead(() =>
-            supabase
-              .from('event_competitors')
-              .select('event_id, role, competitors(id, name, country, kind, logo_url)')
-              .in('event_id', eventIds),
-          )) as unknown as EventCompetitorRow[] | null
-          eventCompetitors = (competitorRows ?? []).reduce((map, row) => {
-            if (!row.competitors) return map
-            const current = map.get(row.event_id) ?? []
-            current.push({
-              id: row.competitors.id,
-              name: row.competitors.name,
-              country: row.competitors.country,
-              kind: row.competitors.kind,
-              role: row.role,
-              logoUrl: row.competitors.logo_url,
-            })
-            map.set(row.event_id, current)
-            return map
-          }, new Map<string, EventParticipant[]>())
+          eventCompetitors = await loadEventParticipants(supabase, eventIds)
         } catch {
           eventCompetitors = new Map()
         }
@@ -264,6 +271,8 @@ type MyEventRow = {
   starts_at: string | null
   starts_at_tbd: boolean
   status: string
+  kind: string | null
+  metadata: Record<string, unknown> | null
   league_id: string | null
   venues: { name: string } | null
   sports: { key: string } | null
@@ -271,7 +280,7 @@ type MyEventRow = {
 }
 
 const MY_EVENT_SELECT =
-  'id, title, starts_at, starts_at_tbd, status, league_id, venues(name), sports(key), leagues(name)'
+  'id, title, starts_at, starts_at_tbd, status, kind, metadata, league_id, venues(name), sports(key), leagues(name)'
 
 function mapMyEvent(row: MyEventRow): LiveEvent {
   return {
@@ -280,8 +289,8 @@ function mapMyEvent(row: MyEventRow): LiveEvent {
     startsAt: row.starts_at ? new Date(row.starts_at) : null,
     startsAtTbd: row.starts_at_tbd,
     status: row.status,
-    kind: null,
-    metadata: {},
+    kind: row.kind,
+    metadata: row.metadata ?? {},
     leagueId: row.league_id,
     leagueName: publicLeagueName(row.leagues?.name),
     sportKey: row.sports?.key ?? null,
@@ -363,6 +372,17 @@ export function useMyEvents(
         return
       }
 
+      if (cancelled) return
+      try {
+        const eventIds = [...byId.keys()]
+        const participants = await loadEventParticipants(supabase, eventIds)
+        for (const [eventId, eventParticipants] of participants) {
+          const event = byId.get(eventId)
+          if (event) byId.set(eventId, { ...event, participants: eventParticipants })
+        }
+      } catch {
+        // Participant context is additive; followed schedules should still render without it.
+      }
       if (cancelled) return
       const events = [...byId.values()].sort(
         (a, b) => (a.startsAt?.getTime() ?? Infinity) - (b.startsAt?.getTime() ?? Infinity),

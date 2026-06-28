@@ -1,6 +1,7 @@
 import { AlertTriangle, Bell, ChevronDown, Download, MapPin, RadioTower, Tv } from 'lucide-react'
 import { useState } from 'react'
 import type { Match } from '../domain/match'
+import { flagPaletteForTeam } from '../data/flagColors'
 import type { OverlapTier } from '../lib/sportTiming'
 import { formatDate, formatLongDate, formatTime } from '../lib/time'
 import { WatchOptionsPanel } from './WatchOptionsPanel'
@@ -27,16 +28,27 @@ function teamInitials(name: string) {
 }
 
 function TeamMark({ name, highlighted }: { name: string; highlighted: boolean }) {
+  const palette = flagPaletteForTeam(name)
+  const stripe = palette
+    ? `linear-gradient(135deg, ${palette.colors
+        .flatMap((stop) => Array.from({ length: Math.max(1, stop.weight ?? 1) }, () => stop.color))
+        .map((color, index, colors) => {
+          const step = 100 / colors.length
+          return `${color} ${Math.round(index * step * 100) / 100}% ${Math.round((index + 1) * step * 100) / 100}%`
+        })
+        .join(', ')})`
+    : undefined
   return (
     <span
       title={name}
-      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-[9px] font-black leading-none ${
+      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border leading-none ${
         highlighted
           ? 'border-ticket-stub bg-ticket-stub text-ticket-stub-text shadow-[0_0_0_2px_rgba(22,163,74,0.12)]'
           : 'border-paper-ink/15 bg-paper-ink/5 text-paper-ink/70'
-      }`}
+      } ${palette ? 'shadow-inner' : 'text-[9px] font-black'}`}
+      style={stripe ? { background: stripe } : undefined}
     >
-      {teamInitials(name)}
+      {palette ? <span className="h-2 w-2 rounded-full bg-white/45 shadow-[0_0_0_1px_rgba(0,0,0,0.12)]" /> : teamInitials(name)}
     </span>
   )
 }

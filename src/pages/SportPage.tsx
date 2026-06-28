@@ -9,7 +9,7 @@ import { WatchOptionsPanel } from '../components/WatchOptionsPanel'
 import { Badge, Button, EmptyState, Panel, PanelHeading } from '../components/ui'
 import { deriveTeams, filterMatchesForTeams, filterUpcomingMatches, useMatches } from '../data/liveMatches'
 import { useEvent, useSportRoster, useSportSchedule, type LeagueTeam, type LiveEvent } from '../data/liveSport'
-import { flagPoleGradient } from '../data/flagColors'
+import { flagPaletteForTeam, flagPoleGradient } from '../data/flagColors'
 import { allMatches, featuredTeams } from '../data/worldcup'
 import { exportFilename } from '../domain/brand'
 import type { Match } from '../domain/match'
@@ -1105,6 +1105,55 @@ function FilterLogo({ option, selected, mode }: { option: FilterOption; selected
   )
 }
 
+function ParticipantBadge({
+  name,
+  country,
+  logoUrl,
+  className = 'h-7 w-7 text-[9px]',
+}: {
+  name: string
+  country?: string | null
+  logoUrl?: string | null
+  className?: string
+}) {
+  const palette = flagPaletteForTeam(country ?? '') ?? flagPaletteForTeam(name)
+  const stripe = palette
+    ? `linear-gradient(135deg, ${palette.colors
+        .flatMap((stop) => Array.from({ length: Math.max(1, stop.weight ?? 1) }, () => stop.color))
+        .map((color, index, colors) => {
+          const step = 100 / colors.length
+          return `${color} ${Math.round(index * step * 100) / 100}% ${Math.round((index + 1) * step * 100) / 100}%`
+        })
+        .join(', ')})`
+    : undefined
+  return (
+    <span
+      title={name}
+      className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-paper-ink/10 bg-page font-extrabold text-primary shadow-sm ${className} ${
+        palette && !logoUrl ? 'shadow-inner' : ''
+      }`}
+      style={!logoUrl && stripe ? { background: stripe } : undefined}
+    >
+      {palette && !logoUrl ? (
+        <span className="h-1.5 w-1.5 rounded-full bg-white/45 shadow-[0_0_0_1px_rgba(0,0,0,0.12)]" />
+      ) : (
+        initialsForFilter(name)
+      )}
+      {logoUrl && (
+        <img
+          src={logoUrl}
+          alt=""
+          loading="lazy"
+          className="absolute inset-0 h-full w-full bg-page object-contain p-0.5"
+          onError={(event) => {
+            event.currentTarget.style.display = 'none'
+          }}
+        />
+      )}
+    </span>
+  )
+}
+
 function ParticipantMarks({ participants }: { participants?: LiveEvent['participants'] }) {
   const shown = (participants ?? []).slice(0, 3)
   if (!shown.length) return null
@@ -1112,24 +1161,12 @@ function ParticipantMarks({ participants }: { participants?: LiveEvent['particip
     <div className="mt-2 flex items-center gap-1.5">
       <div className="flex -space-x-1.5">
         {shown.map((participant) => (
-          <span
+          <ParticipantBadge
             key={participant.id}
-            title={participant.name}
-            className="relative flex h-7 w-7 items-center justify-center overflow-hidden rounded-full border border-paper-ink/10 bg-page text-[9px] font-extrabold text-primary shadow-sm"
-          >
-            {initialsForFilter(participant.name)}
-            {participant.logoUrl && (
-              <img
-                src={participant.logoUrl}
-                alt=""
-                loading="lazy"
-                className="absolute inset-0 h-full w-full bg-page object-contain p-0.5"
-                onError={(event) => {
-                  event.currentTarget.style.display = 'none'
-                }}
-              />
-            )}
-          </span>
+            name={participant.name}
+            country={participant.country}
+            logoUrl={participant.logoUrl}
+          />
         ))}
       </div>
       <span className="truncate text-xs font-semibold text-paper-ink/55">
@@ -1876,7 +1913,7 @@ function EventTicket({
           <ParticipantMarks participants={event.participants} />
           {isFightCard && (
             <p className="mt-2 text-xs font-semibold text-paper-ink/60">
-              Open for card order, estimated bout times, and individual fight picks.
+              Open for main-event detail. Full bout order appears when the provider supplies it.
             </p>
           )}
         </div>
@@ -1946,6 +1983,7 @@ function EventQuickDetails({ eventId }: { eventId: string }) {
   const leagueFollowed = detail.leagueId ? followedLeagueIds.includes(detail.leagueId) : false
   const selectedBout = detail.bouts.find((bout) => bout.id === selectedBoutId) ?? detail.bouts[0] ?? null
   const selectedBoutIndex = selectedBout ? detail.bouts.findIndex((bout) => bout.id === selectedBout.id) : -1
+  const titleInferredBouts = detail.bouts.some((bout) => bout.metadata.source === 'title_inference')
   const facts = [
     ['When', when],
     venue ? ['Venue', venue] : null,
@@ -2004,20 +2042,12 @@ function EventQuickDetails({ eventId }: { eventId: string }) {
         <div className="flex flex-wrap gap-2">
           {event.competitors.map((competitor) => (
             <span key={competitor.id} className="inline-flex items-center gap-1.5 rounded-full border border-primary/15 px-2 py-1 text-xs font-semibold text-ink/75">
-              <span className="relative flex h-5 w-5 items-center justify-center overflow-hidden rounded-full bg-primary/8 text-[8px] font-extrabold text-primary">
-                {initialsForFilter(competitor.name)}
-                {competitor.logoUrl && (
-                  <img
-                    src={competitor.logoUrl}
-                    alt=""
-                    loading="lazy"
-                    className="absolute inset-0 h-full w-full bg-page object-contain p-0.5"
-                    onError={(event) => {
-                      event.currentTarget.style.display = 'none'
-                    }}
-                  />
-                )}
-              </span>
+              <ParticipantBadge
+                name={competitor.name}
+                country={competitor.country}
+                logoUrl={competitor.logoUrl}
+                className="h-5 w-5 border-primary/15 text-[8px]"
+              />
               {competitor.name}
             </span>
           ))}
@@ -2027,7 +2057,9 @@ function EventQuickDetails({ eventId }: { eventId: string }) {
       {event.bouts.length > 0 && (
         <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_260px]">
           <div className="space-y-1.5">
-            <p className="font-mono text-[10px] uppercase tracking-wide text-ink/45">Fight card estimates</p>
+            <p className="font-mono text-[10px] uppercase tracking-wide text-ink/45">
+              {titleInferredBouts ? 'Main-event estimate' : 'Fight card estimates'}
+            </p>
             {event.bouts.map((bout, index) => {
               const active = selectedBout?.id === bout.id
               const estimatedStart = bout.estimatedStartAt ?? estimateBoutStart(event.startsAt, index)
@@ -2075,12 +2107,17 @@ function EventQuickDetails({ eventId }: { eventId: string }) {
               </dl>
             </div>
           )}
+          {titleInferredBouts && (
+            <p className="lg:col-span-2 rounded-lg border border-primary/15 bg-page/45 px-3 py-2 text-xs font-semibold text-ink/55">
+              Main event inferred from the provider title. Full undercard order is still pending a structured source.
+            </p>
+          )}
         </div>
       )}
 
       {event.sportKey === 'combat_sports' && event.bouts.length === 0 && (
         <div className="rounded-lg border border-primary/15 bg-page/45 px-3 py-2 text-sm text-ink/55">
-          Bout-level card order has not hydrated for this event yet. When it does, this panel becomes a selectable fight list.
+          This event has no structured bout list yet. If the provider exposes a headliner or full card, it will appear here as a selectable fight list.
         </div>
       )}
 

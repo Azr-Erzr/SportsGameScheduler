@@ -1,0 +1,217 @@
+{
+  "updated_at": "2026-06-27",
+  "purpose": "Truth ledger for public official or official-partner schedule calendars that Silbo can review for periodic ICS/ECAL ingestion. checked=true means the source was visited or verified during this pass; it does not mean ingestion is approved under source terms.",
+  "rules": [
+    "Prefer official league, club, federation, or official-partner calendar pages.",
+    "Do not ingest third-party fan calendars unless rights and redistribution are reviewed.",
+    "Store landing pages first. Capture direct webcal/ics URLs only after terms and refresh behavior are reviewed.",
+    "For individual sports, a player follow only becomes exact when the source exposes per-event player fields, draws, bout cards, or start lists."
+  ],
+  "known_follow_reliability_by_sport": [
+    {
+      "sport": "american_football",
+      "status": "reliable_for_team_follows",
+      "current_db": "88 upcoming events, 88 with participant links"
+    },
+    {
+      "sport": "baseball",
+      "status": "reliable_for_team_follows",
+      "current_db": "1651 upcoming events, 1651 with participant links"
+    },
+    {
+      "sport": "basketball",
+      "status": "reliable_for_team_follows",
+      "current_db": "193 upcoming events, 193 with participant links"
+    },
+    {
+      "sport": "hockey",
+      "status": "reliable_for_team_follows",
+      "current_db": "20 upcoming events, 20 with participant links"
+    },
+    {
+      "sport": "soccer",
+      "status": "mostly_reliable_for_team_follows",
+      "current_db": "1002 upcoming events, 970 with participant links"
+    },
+    {
+      "sport": "combat_sports",
+      "status": "partial_after_2026-06-27_backfill",
+      "current_db": "23 upcoming events; title-inferred main-event participants/bouts added for 15 clear X vs Y cards; full undercards need a structured source"
+    },
+    {
+      "sport": "golf",
+      "status": "not_reliable_for_player_follows_yet",
+      "current_db": "88 upcoming tournament shells, 0 with player field links"
+    },
+    {
+      "sport": "cycling",
+      "status": "not_reliable_for_rider_follows_yet",
+      "current_db": "54 upcoming race shells, 0 with participant links"
+    },
+    {
+      "sport": "motorsport",
+      "status": "event_or_series_follow_only_for_now",
+      "current_db": "182 upcoming sessions/races, 0 driver/team participant links"
+    },
+    {
+      "sport": "snooker",
+      "status": "not_reliable_for_player_follows_yet",
+      "current_db": "56 upcoming event shells, 0 with participant links"
+    },
+    {
+      "sport": "darts",
+      "status": "not_reliable_for_player_follows_yet",
+      "current_db": "5 upcoming event shells, 0 with participant links"
+    }
+  ],
+  "checked_sources": [
+    {
+      "sport": "soccer",
+      "league_or_scope": "English Premier League",
+      "team_scope": "all clubs or selected club",
+      "calendar_type": "official ECAL landing page",
+      "url": "https://pl.ecal.com/",
+      "checked": true,
+      "ingestion_status": "candidate",
+      "notes": "Premier League says users can sync all fixtures or favourite club calendars and that updates flow through the synced calendar."
+    },
+    {
+      "sport": "soccer",
+      "league_or_scope": "Arsenal",
+      "team_scope": "men, women, academy",
+      "calendar_type": "official club calendar landing page",
+      "url": "https://www.arsenal.com/calendar",
+      "checked": true,
+      "ingestion_status": "candidate",
+      "notes": "Official club page exposes calendar imports for multiple Arsenal fixture lists."
+    },
+    {
+      "sport": "soccer",
+      "league_or_scope": "Liverpool FC",
+      "team_scope": "men, women, academy",
+      "calendar_type": "official club ECAL landing page",
+      "url": "https://liverpoolfc.ecal.com/",
+      "checked": true,
+      "ingestion_status": "candidate",
+      "notes": "Official LFC help/news points users to Add Fixtures to Calendar on the fixtures page."
+    },
+    {
+      "sport": "basketball",
+      "league_or_scope": "NBA",
+      "team_scope": "league and teams",
+      "calendar_type": "official ECAL landing page",
+      "url": "https://nba.ecal.com/",
+      "checked": true,
+      "ingestion_status": "candidate",
+      "notes": "NBA.com schedule also exposes Add Games to Calendar; team pages such as Celtics expose schedule download flows."
+    },
+    {
+      "sport": "basketball",
+      "league_or_scope": "Boston Celtics",
+      "team_scope": "team",
+      "calendar_type": "official team calendar flow",
+      "url": "https://www.nba.com/celtics/schedule/download",
+      "checked": true,
+      "ingestion_status": "candidate",
+      "notes": "Official NBA team page supports calendar sync/import."
+    },
+    {
+      "sport": "baseball",
+      "league_or_scope": "MLB",
+      "team_scope": "all teams",
+      "calendar_type": "official ECAL landing page",
+      "url": "https://mlb.ecal.com/",
+      "checked": true,
+      "ingestion_status": "candidate",
+      "notes": "Official MLB ECAL page supports favourite-team calendar sync."
+    },
+    {
+      "sport": "baseball",
+      "league_or_scope": "MLB team-by-team schedules",
+      "team_scope": "all MLB teams",
+      "calendar_type": "official team schedule index",
+      "url": "https://www.mlb.com/schedule/team-by-team",
+      "checked": true,
+      "ingestion_status": "candidate",
+      "notes": "MLB team pages expose Sync Schedules / Downloadable Schedule; CSV is static and should not be preferred over sync."
+    },
+    {
+      "sport": "american_football",
+      "league_or_scope": "NFL",
+      "team_scope": "team pages",
+      "calendar_type": "official team calendar page pattern",
+      "url": "https://www.patriots.com/schedule/schedule-sync",
+      "checked": true,
+      "ingestion_status": "candidate",
+      "notes": "Verified Patriots official team schedule-sync page. Need enumerate each hosted NFL team page pattern."
+    },
+    {
+      "sport": "hockey",
+      "league_or_scope": "NHL",
+      "team_scope": "league and teams",
+      "calendar_type": "official ECAL landing page",
+      "url": "https://nhl.ecal.com/",
+      "checked": true,
+      "ingestion_status": "candidate",
+      "notes": "Official NHL ECAL page supports selecting team schedules."
+    },
+    {
+      "sport": "hockey",
+      "league_or_scope": "NHL team schedule pages",
+      "team_scope": "team",
+      "calendar_type": "official team page pattern",
+      "url": "https://www.nhl.com/devils/team/schedule/download-print-sync",
+      "checked": true,
+      "ingestion_status": "candidate",
+      "notes": "Verified one NHL team page with Add to Calendar; enumerate hosted NHL teams next."
+    },
+    {
+      "sport": "motorsport",
+      "league_or_scope": "Formula 1",
+      "team_scope": "series sessions",
+      "calendar_type": "official F1 calendar",
+      "url": "https://calendar.formula1.com/",
+      "checked": true,
+      "ingestion_status": "candidate",
+      "notes": "Official F1 calendar covers practice, qualifying, sprints, and races. Series/session follow is a better model than team follow."
+    }
+  ],
+  "unchecked_or_needs_source_review": [
+    {
+      "sport": "soccer",
+      "scope": "La Liga, Bundesliga, Serie A, Ligue 1, MLS, NWSL, UCL, Europa League",
+      "status": "unchecked",
+      "next_action": "Find official league/club calendar pages first; FotMob/fixtur.es are fallback candidates only after terms review."
+    },
+    {
+      "sport": "combat_sports",
+      "scope": "UFC, Boxing, Oktagon, TKO MMA",
+      "status": "source_gap",
+      "next_action": "Current provider has event shells. Need official event-card endpoint, licensed combat provider, or reviewed manual curation for full undercards."
+    },
+    {
+      "sport": "golf",
+      "scope": "PGA Tour, European Tour, Challenge Tour, Australasia",
+      "status": "source_gap",
+      "next_action": "Find official tournament calendar feeds and separate player field/start-list source; schedule shell alone cannot prove a player is playing."
+    },
+    {
+      "sport": "tennis",
+      "scope": "ATP, WTA, Laver Cup, United Cup",
+      "status": "source_gap",
+      "next_action": "Find official tournament calendars plus draw/order-of-play source for player follows."
+    },
+    {
+      "sport": "athletics",
+      "scope": "World Athletics, Commonwealth, European Athletics",
+      "status": "source_gap",
+      "next_action": "Find official meeting calendar feed and start-list source for athlete follows."
+    },
+    {
+      "sport": "rugby",
+      "scope": "Rugby World Cup, Six Nations",
+      "status": "partial",
+      "next_action": "Participant links are present for about half of current rugby events; find official team/competition calendar sync pages."
+    }
+  ]
+}
