@@ -213,13 +213,10 @@ export function useSportSchedule(canonicalSportKey: string): SportSchedule {
           participants: eventCompetitors.get(row.id) ?? [],
         }))
 
-      // Only surface leagues that actually have upcoming fixtures — no more "9 leagues, 0 events"
-      // clutter where every chip dead-ends in an empty schedule. Fall back to the full list only if
-      // the whole sport is between seasons (so the page still shows its league context).
-      const leagueIdsWithEvents = new Set(events.map((e) => e.leagueId).filter(Boolean))
-      const leaguesWithEvents = allLeagues.filter((l) => leagueIdsWithEvents.has(l.id))
-      const leagues = leaguesWithEvents.length ? leaguesWithEvents : allLeagues
+      const leagues = allLeagues
 
+      // Keep the full public league catalogue visible. The UI separates leagues with fixtures
+      // from supported leagues whose next schedule has not landed yet.
       // Freshness: the most recent change we ingested for this sport.
       let lastUpdated: Date | null = null
       for (const row of rows) {

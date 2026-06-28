@@ -908,6 +908,7 @@ type FilterOption = {
   count: number
   meta?: string
   logoUrl?: string | null
+  source?: 'schedule' | 'supported'
 }
 
 const FILTER_MODES: Array<{ id: FilterMode; label: string; icon: typeof Trophy }> = [
@@ -944,7 +945,17 @@ function leagueOptionsWithCounts(leagues: Array<{ id: string; name: string; logo
   for (const event of events) {
     if (event.leagueId) counts.set(event.leagueId, (counts.get(event.leagueId) ?? 0) + 1)
   }
-  return leagues.map((league) => ({ id: league.id, label: league.name, count: counts.get(league.id) ?? 0, logoUrl: league.logoUrl }))
+  return leagues.map((league) => {
+    const count = counts.get(league.id) ?? 0
+    return {
+      id: league.id,
+      label: league.name,
+      count,
+      meta: count ? 'Scheduled now' : 'No current schedule',
+      logoUrl: league.logoUrl,
+      source: count ? 'schedule' : 'supported',
+    }
+  })
 }
 
 function competitorOptionsFromEvents(events: LiveEvent[]): FilterOption[] {
@@ -992,15 +1003,42 @@ function competitionKeysForEvent(event: LiveEvent) {
   return keys
 }
 
-function competitionOptionsFromEvents(events: LiveEvent[]): FilterOption[] {
+function competitionOptionsFromEvents(
+  events: LiveEvent[],
+  leagues: Array<{ id: string; name: string; logoUrl?: string | null }>,
+): FilterOption[] {
   const options = new Map<string, FilterOption>()
   function add(option: FilterOption) {
     const current = options.get(option.id)
-    options.set(option.id, { ...option, count: (current?.count ?? 0) + option.count })
+    const count = (current?.count ?? 0) + option.count
+    options.set(option.id, {
+      ...option,
+      count,
+      logoUrl: option.logoUrl ?? current?.logoUrl,
+      source: count ? 'schedule' : option.source ?? current?.source,
+    })
+  }
+  for (const league of leagues) {
+    if (isCompetitionLikeLeague(league.name)) {
+      add({
+        id: `league:${league.id}`,
+        label: league.name,
+        count: 0,
+        meta: 'No current schedule',
+        logoUrl: league.logoUrl,
+        source: 'supported',
+      })
+    }
   }
   for (const event of events) {
     if (event.leagueName && isCompetitionLikeLeague(event.leagueName)) {
-      add({ id: `league:${event.leagueId ?? slugifyFilter(event.leagueName)}`, label: event.leagueName, count: 1, meta: 'Competition' })
+      add({
+        id: `league:${event.leagueId ?? slugifyFilter(event.leagueName)}`,
+        label: event.leagueName,
+        count: 1,
+        meta: 'Competition',
+        source: 'schedule',
+      })
     }
     const stage = stageOptionForTitle(event.title)
     if (stage) add(stage)
@@ -1048,6 +1086,40 @@ function FilterLogo({ option, selected, mode }: { option: FilterOption; selected
   )
 }
 
+function ParticipantMarks({ participants }: { participants?: LiveEvent['participants'] }) {
+  const shown = (participants ?? []).slice(0, 3)
+  if (!shown.length) return null
+  return (
+    <div className="mt-2 flex items-center gap-1.5">
+      <div className="flex -space-x-1.5">
+        {shown.map((participant) => (
+          <span
+            key={participant.id}
+            title={participant.name}
+            className="relative flex h-7 w-7 items-center justify-center overflow-hidden rounded-full border border-paper-ink/10 bg-page text-[9px] font-extrabold text-primary shadow-sm"
+          >
+            {initialsForFilter(participant.name)}
+            {participant.logoUrl && (
+              <img
+                src={participant.logoUrl}
+                alt=""
+                loading="lazy"
+                className="absolute inset-0 h-full w-full bg-page object-contain p-0.5"
+                onError={(event) => {
+                  event.currentTarget.style.display = 'none'
+                }}
+              />
+            )}
+          </span>
+        ))}
+      </div>
+      <span className="truncate text-xs font-semibold text-paper-ink/55">
+        {shown.map((participant) => participant.name).join(' / ')}
+      </span>
+    </div>
+  )
+}
+
 function SportEntityFilters({
   leagues,
   events,
@@ -1087,7 +1159,7 @@ function SportEntityFilters({
   const [query, setQuery] = useState('')
   const leagueOptions = useMemo(() => leagueOptionsWithCounts(leagues, events), [leagues, events])
   const competitorOptions = useMemo(() => competitorOptionsFromEvents(events), [events])
-  const competitionOptions = useMemo(() => competitionOptionsFromEvents(events), [events])
+  const competitionOptions = useMemo(() => competitionOptionsFromEvents(events, leagues), [events, leagues])
   const selectedByMode = { leagues: selectedLeagueIds, competitors: selectedCompetitorIds, competitions: selectedCompetitionIds }
   const activeIds = selectedByMode[mode]
   const allSelectedCount = selectedLeagueIds.length + selectedCompetitorIds.length + selectedCompetitionIds.length
@@ -1098,6 +1170,10 @@ function SportEntityFilters({
     const q = query.trim().toLowerCase()
     return q ? modeOptions.filter((option) => option.label.toLowerCase().includes(q) || option.meta?.toLowerCase().includes(q)) : modeOptions
   }, [modeOptions, query])
+  const groupedVisibleOptions = useMemo(() => ({
+    scheduled: visibleOptions.filter((option) => option.count > 0),
+    supported: visibleOptions.filter((option) => option.count === 0),
+  }), [visibleOptions])
 
   function toggleOption(id: string) {
     if (mode === 'leagues') onToggleLeague(id)
@@ -1144,7 +1220,8 @@ function SportEntityFilters({
                 className={`motion-filter-tab relative flex min-h-10 items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-bold transition-colors ${mode === item.id ? 'is-active bg-primary text-void' : 'text-ink/65 hover:bg-primary/10 hover:text-primary'}`}
               >
                 <Icon size={14} />
-                <span className="truncate">{label}</span>
+                <span className="hidden truncate sm:inline">{label}</span>
+                <span className="truncate sm:hidden">{item.id === 'competitions' ? 'Cups' : label}</span>
                 {count > 0 && <span className="font-mono text-[10px] opacity-75">{count}</span>}
               </button>
             )
@@ -1173,7 +1250,7 @@ function SportEntityFilters({
       </div>
 
       <div className="silbo-scrollbar flex max-h-36 flex-wrap gap-2 overflow-y-auto pr-1">
-        {visibleOptions.map((option) => {
+        {groupedVisibleOptions.scheduled.map((option) => {
           const selected = activeIds.includes(option.id)
           return (
             <div
@@ -1194,6 +1271,53 @@ function SportEntityFilters({
               <FilterLogo option={option} selected={selected} mode={mode} />
               <span className="max-w-[220px] truncate text-xs font-bold">{option.label}</span>
               <span className={`font-mono text-[10px] ${selected ? 'text-void/70' : 'text-ink/40'}`}>{option.count}</span>
+              {selected && mode === 'competitors' && (
+                <Link
+                  to={`/teams/${option.id}`}
+                  onClick={(event) => event.stopPropagation()}
+                  title={`Open ${option.label} page`}
+                  className="flex h-6 w-6 items-center justify-center rounded-full text-current/75 hover:text-current"
+                >
+                  <ArrowUpRight size={13} />
+                </Link>
+              )}
+            </div>
+          )
+        })}
+        {groupedVisibleOptions.supported.length > 0 && (
+          <div className="flex basis-full items-center gap-2 pt-1">
+            <span className="h-px flex-1 bg-primary/10" />
+            <span className="font-mono text-[9px] uppercase tracking-[0.16em] text-ink/35">
+              No current schedule
+            </span>
+            <span className="h-px flex-1 bg-primary/10" />
+          </div>
+        )}
+        {groupedVisibleOptions.supported.map((option) => {
+          const selected = activeIds.includes(option.id)
+          return (
+            <div
+              key={option.id}
+              role="button"
+              tabIndex={0}
+              onClick={() => toggleOption(option.id)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault()
+                  toggleOption(option.id)
+                }
+              }}
+              aria-pressed={selected}
+              className={`motion-filter-pill relative flex min-h-9 max-w-full items-center gap-1.5 rounded-full border py-1 pl-2 pr-3 text-left transition-colors ${
+                selected
+                  ? 'is-selected border-primary bg-primary/80 text-void'
+                  : 'border-primary/15 bg-page/35 text-ink/45 hover:bg-primary/8 hover:text-ink/70'
+              }`}
+            >
+              {optionFollowButton(option)}
+              <FilterLogo option={option} selected={selected} mode={mode} />
+              <span className="max-w-[220px] truncate text-xs font-bold">{option.label}</span>
+              <span className={`font-mono text-[9px] uppercase ${selected ? 'text-void/70' : 'text-ink/35'}`}>Soon</span>
               {selected && mode === 'competitors' && (
                 <Link
                   to={`/teams/${option.id}`}
@@ -1699,6 +1823,7 @@ function EventTicket({
             {event.venue && <span>{event.venue}</span>}
             {event.startsAt && !event.startsAtTbd && <span>{formatLongDate(event.startsAt, timeZone, opts)}</span>}
           </p>
+          <ParticipantMarks participants={event.participants} />
           {isFightCard && (
             <p className="mt-2 text-xs font-semibold text-paper-ink/60">
               Open for card order, estimated bout times, and individual fight picks.
@@ -1828,7 +1953,21 @@ function EventQuickDetails({ eventId }: { eventId: string }) {
       {event.competitors.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {event.competitors.map((competitor) => (
-            <span key={competitor.id} className="rounded-full border border-primary/15 px-2.5 py-1 text-xs font-semibold text-ink/75">
+            <span key={competitor.id} className="inline-flex items-center gap-1.5 rounded-full border border-primary/15 px-2 py-1 text-xs font-semibold text-ink/75">
+              <span className="relative flex h-5 w-5 items-center justify-center overflow-hidden rounded-full bg-primary/8 text-[8px] font-extrabold text-primary">
+                {initialsForFilter(competitor.name)}
+                {competitor.logoUrl && (
+                  <img
+                    src={competitor.logoUrl}
+                    alt=""
+                    loading="lazy"
+                    className="absolute inset-0 h-full w-full bg-page object-contain p-0.5"
+                    onError={(event) => {
+                      event.currentTarget.style.display = 'none'
+                    }}
+                  />
+                )}
+              </span>
               {competitor.name}
             </span>
           ))}

@@ -12,7 +12,6 @@ import {
   ListFilter,
   Plus,
   Printer,
-  RefreshCw,
   RotateCcw,
   Search,
   Share2,
@@ -831,35 +830,6 @@ export function MySchedulePage() {
 
       <AlertOptInNudge />
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <Panel className="min-w-0">
-          <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink/45">Saved schedule</p>
-          <div className="mt-2 flex items-center gap-2">
-            <CalendarDays size={18} className="shrink-0 text-primary" />
-            <span className="text-lg font-extrabold">{totalVisible}</span>
-            <span className="text-sm text-ink/55">visible events</span>
-          </div>
-        </Panel>
-        <Panel className="min-w-0">
-          <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink/45">Date range</p>
-          <p className="mt-2 truncate text-sm font-semibold">
-            {dateRangeLabel(allVisibleDates, timeZone, prefs.locale, prefs.hour12)}
-          </p>
-        </Panel>
-        <Panel className="min-w-0">
-          <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink/45">Teams & venues</p>
-          <p className="mt-2 truncate text-sm font-semibold">
-            {selectedTeamsSummary} / {venueCount} venues
-          </p>
-        </Panel>
-        <Panel className="min-w-0">
-          <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink/45">Sync status</p>
-          <p className="mt-2 flex items-center gap-2 truncate text-sm font-semibold">
-            <RefreshCw size={15} className="shrink-0 text-primary" /> {liveStatus}
-          </p>
-        </Panel>
-      </div>
-
       {activeFlow && currentStep &&
         createPortal(
         <div className="fixed inset-0 z-50 bg-void/70">
@@ -1192,6 +1162,13 @@ export function MySchedulePage() {
                 </div>
               </div>
             )}
+
+            <div className="flex flex-wrap gap-x-3 gap-y-1 border-t border-primary/10 pt-3 text-xs font-semibold text-ink/50">
+              <span>{totalVisible} visible {totalVisible === 1 ? 'event' : 'events'}</span>
+              <span>{dateRangeLabel(allVisibleDates, timeZone, prefs.locale, prefs.hour12)}</span>
+              <span>{selectedTeamsSummary} / {venueCount} {venueCount === 1 ? 'venue' : 'venues'}</span>
+              <span>{liveStatus}</span>
+            </div>
           </Panel>
         </section>
 
