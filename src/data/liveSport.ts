@@ -14,6 +14,8 @@ export type LiveEvent = {
   startsAt: Date | null
   startsAtTbd: boolean
   status: string
+  kind?: string | null
+  metadata?: Record<string, unknown>
   leagueId: string | null
   leagueName: string
   sportKey: string | null
@@ -46,6 +48,8 @@ type EventRow = {
   starts_at: string | null
   starts_at_tbd: boolean
   status: string
+  kind: string | null
+  metadata: Record<string, unknown> | null
   league_id: string | null
   updated_at: string | null
   venues: { name: string } | null
@@ -144,7 +148,7 @@ export function useSportSchedule(canonicalSportKey: string): SportSchedule {
           retryRead(() =>
             supabase
               .from('events')
-              .select('id, title, starts_at, starts_at_tbd, status, league_id, updated_at, venues(name), sports!inner(key)')
+              .select('id, title, starts_at, starts_at_tbd, status, kind, metadata, league_id, updated_at, venues(name), sports!inner(key)')
               .eq('sports.key', canonicalSportKey)
               .eq('visibility', 'public')
               .gte('starts_at', nowIso)
@@ -206,6 +210,8 @@ export function useSportSchedule(canonicalSportKey: string): SportSchedule {
           startsAt: row.starts_at ? new Date(row.starts_at) : null,
           startsAtTbd: row.starts_at_tbd,
           status: row.status,
+          kind: row.kind,
+          metadata: row.metadata ?? {},
           leagueId: row.league_id,
           leagueName: (row.league_id && leagueNames.get(row.league_id)) || '',
           sportKey: canonicalSportKey,
@@ -274,6 +280,8 @@ function mapMyEvent(row: MyEventRow): LiveEvent {
     startsAt: row.starts_at ? new Date(row.starts_at) : null,
     startsAtTbd: row.starts_at_tbd,
     status: row.status,
+    kind: null,
+    metadata: {},
     leagueId: row.league_id,
     leagueName: publicLeagueName(row.leagues?.name),
     sportKey: row.sports?.key ?? null,
@@ -529,14 +537,14 @@ export function useEvent(eventId: string | undefined): { event: EventDetail | nu
           startsAt: r.starts_at ? new Date(r.starts_at) : null,
           startsAtTbd: r.starts_at_tbd,
           status: r.status,
+          kind: r.kind,
+          metadata: r.metadata ?? {},
           leagueId: r.league_id,
           leagueName: publicLeagueName(r.leagues?.name),
           sportKey: r.sports?.key ?? null,
           venue: r.venues?.name ?? null,
           venueCity: r.venues?.city ?? null,
           venueCountry: r.venues?.country ?? null,
-          kind: r.kind,
-          metadata: r.metadata ?? {},
           competitors,
           bouts,
           broadcasts,

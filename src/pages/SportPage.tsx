@@ -22,7 +22,7 @@ import { useDocumentMeta } from '../lib/seo'
 import { findConflictTiers, type OverlapTier } from '../lib/sportTiming'
 import { createMultiSportIcsBlob } from '../lib/ics'
 import { getSavedMatchKeys, toggleSavedMatch } from '../lib/store'
-import { groupRaceWeekends, RACE_SESSION_LABELS, type RaceWeekend } from '../lib/raceWeekends'
+import { groupRaceWeekends, parseRaceWeekendTitle, RACE_SESSION_LABELS, type RaceWeekend } from '../lib/raceWeekends'
 import { formatDate, formatLongDate, formatTime, relativeTimeFromNow } from '../lib/time'
 
 const INDIVIDUAL_SPORTS = ['tennis', 'golf', 'athletics', 'combat_sports']
@@ -639,9 +639,12 @@ function LiveSportPage({ sport }: { sport: SportInfo }) {
             selectedCompetitionIds={selectedCompetitionIds}
             followedLeagueIds={followedLeagueIds}
             followedCompetitorIds={followedCompetitorIds}
-            competitorLabel={isIndividual ? 'Players' : isMotorsport ? 'Drivers / Constructors' : 'Teams'}
+            competitorLabel={isIndividual ? 'Players' : 'Teams'}
             competitionLabel={isMotorsport ? 'Sessions / GPs' : isIndividual ? 'Tournaments' : 'Cups / Competitions'}
-            emptyCompetitionsLabel={`${sport.label} competition filters appear when the current schedule has cups, playoffs, tournaments, or session types.`}
+            emptyCompetitionsLabel={isMotorsport
+              ? 'Session and Grand Prix filters appear when race weekends are in the current schedule.'
+              : `${sport.label} competition filters appear when the current schedule has cups, playoffs, tournaments, or session types.`}
+            showCompetitors={!isMotorsport}
             onToggleLeague={(id) => setSelectedLeagueIds((current) => toggleId(current, id))}
             onToggleCompetitor={(id) => setSelectedCompetitorIds((current) => toggleId(current, id))}
             onToggleCompetition={(id) => setSelectedCompetitionIds((current) => toggleId(current, id))}
@@ -980,14 +983,14 @@ function isCompetitionLikeLeague(name: string) {
 }
 
 function stageOptionForTitle(title: string): FilterOption | null {
-  const match = /\b(final|semifinal|semi-final|quarterfinal|quarter-final|playoff|play-off|qualifying|qualification|sprint|practice|heat|main card|prelims?)\b/.exec(title.toLowerCase())
+  const match = /\b(final|semifinal|semi-final|quarterfinal|quarter-final|playoff|play-off|qualifying|qualification|sprint|practice|race|heat|main card|prelims?)\b/.exec(title.toLowerCase())
   if (!match) return null
   const label = readableSportFact(match[1].replace('-', '_'))
   return { id: `stage:${slugifyFilter(label)}`, label, count: 1, meta: 'Stage' }
 }
 
 function kindOptionForEvent(event: LiveEvent): FilterOption | null {
-  const raw = (event as LiveEvent & { kind?: string | null }).kind
+  const raw = event.kind
   if (!raw) return null
   const label = readableSportFact(raw)
   return { id: `kind:${slugifyFilter(raw)}`, label, count: 1, meta: 'Format' }
@@ -996,6 +999,10 @@ function kindOptionForEvent(event: LiveEvent): FilterOption | null {
 function competitionKeysForEvent(event: LiveEvent) {
   const keys: string[] = []
   if (event.leagueName && isCompetitionLikeLeague(event.leagueName)) keys.push(`league:${event.leagueId ?? slugifyFilter(event.leagueName)}`)
+  if (event.sportKey === 'motorsport') {
+    const { weekend } = parseRaceWeekendTitle(event.title)
+    if (weekend) keys.push(`weekend:${slugifyFilter(weekend)}`)
+  }
   const stage = stageOptionForTitle(event.title)
   if (stage) keys.push(stage.id)
   const kind = kindOptionForEvent(event)
@@ -1031,6 +1038,18 @@ function competitionOptionsFromEvents(
     }
   }
   for (const event of events) {
+    if (event.sportKey === 'motorsport') {
+      const { weekend } = parseRaceWeekendTitle(event.title)
+      if (weekend) {
+        add({
+          id: `weekend:${slugifyFilter(weekend)}`,
+          label: weekend,
+          count: 1,
+          meta: event.venue ?? event.leagueName,
+          source: 'schedule',
+        })
+      }
+    }
     if (event.leagueName && isCompetitionLikeLeague(event.leagueName)) {
       add({
         id: `league:${event.leagueId ?? slugifyFilter(event.leagueName)}`,
@@ -1120,6 +1139,15 @@ function ParticipantMarks({ participants }: { participants?: LiveEvent['particip
   )
 }
 
+function eventProviderImage(event: LiveEvent): string | null {
+  const circuit = event.metadata?.circuit
+  if (circuit && typeof circuit === 'object' && 'image' in circuit) {
+    const image = (circuit as { image?: unknown }).image
+    return typeof image === 'string' && image ? image : null
+  }
+  return null
+}
+
 function SportEntityFilters({
   leagues,
   events,
@@ -1137,6 +1165,7 @@ function SportEntityFilters({
   onToggleLeagueFollow,
   onToggleCompetitorFollow,
   onClear,
+  showCompetitors = true,
 }: {
   leagues: Array<{ id: string; name: string; logoUrl?: string | null }>
   events: LiveEvent[]
@@ -1154,18 +1183,24 @@ function SportEntityFilters({
   onToggleLeagueFollow: (league: { id: string; name: string }) => void
   onToggleCompetitorFollow: (competitor: { id: string; name: string }) => void
   onClear: () => void
+  showCompetitors?: boolean
 }) {
   const [mode, setMode] = useState<FilterMode>('leagues')
   const [query, setQuery] = useState('')
+  const filterModes = useMemo(
+    () => FILTER_MODES.filter((item) => showCompetitors || item.id !== 'competitors'),
+    [showCompetitors],
+  )
+  const activeMode = filterModes.some((item) => item.id === mode) ? mode : filterModes[0]?.id ?? 'leagues'
   const leagueOptions = useMemo(() => leagueOptionsWithCounts(leagues, events), [leagues, events])
   const competitorOptions = useMemo(() => competitorOptionsFromEvents(events), [events])
   const competitionOptions = useMemo(() => competitionOptionsFromEvents(events, leagues), [events, leagues])
   const selectedByMode = { leagues: selectedLeagueIds, competitors: selectedCompetitorIds, competitions: selectedCompetitionIds }
-  const activeIds = selectedByMode[mode]
+  const activeIds = selectedByMode[activeMode]
   const allSelectedCount = selectedLeagueIds.length + selectedCompetitorIds.length + selectedCompetitionIds.length
   const followedLeagues = useMemo(() => new Set(followedLeagueIds), [followedLeagueIds])
   const followedCompetitors = useMemo(() => new Set(followedCompetitorIds), [followedCompetitorIds])
-  const modeOptions = mode === 'leagues' ? leagueOptions : mode === 'competitors' ? competitorOptions : competitionOptions
+  const modeOptions = activeMode === 'leagues' ? leagueOptions : activeMode === 'competitors' ? competitorOptions : competitionOptions
   const visibleOptions = useMemo(() => {
     const q = query.trim().toLowerCase()
     return q ? modeOptions.filter((option) => option.label.toLowerCase().includes(q) || option.meta?.toLowerCase().includes(q)) : modeOptions
@@ -1176,20 +1211,20 @@ function SportEntityFilters({
   }), [visibleOptions])
 
   function toggleOption(id: string) {
-    if (mode === 'leagues') onToggleLeague(id)
-    else if (mode === 'competitors') onToggleCompetitor(id)
+    if (activeMode === 'leagues') onToggleLeague(id)
+    else if (activeMode === 'competitors') onToggleCompetitor(id)
     else onToggleCompetition(id)
   }
 
   function optionFollowButton(option: FilterOption) {
-    if (mode === 'competitions') return null
-    const followed = mode === 'leagues' ? followedLeagues.has(option.id) : followedCompetitors.has(option.id)
+    if (activeMode === 'competitions') return null
+    const followed = activeMode === 'leagues' ? followedLeagues.has(option.id) : followedCompetitors.has(option.id)
     return (
       <button
         type="button"
         onClick={(event) => {
           event.stopPropagation()
-          if (mode === 'leagues') onToggleLeagueFollow({ id: option.id, name: option.label })
+          if (activeMode === 'leagues') onToggleLeagueFollow({ id: option.id, name: option.label })
           else onToggleCompetitorFollow({ id: option.id, name: option.label })
         }}
         aria-pressed={followed}
@@ -1204,8 +1239,8 @@ function SportEntityFilters({
   return (
     <Panel className="motion-filter-panel space-y-3 border-primary/20 bg-surface/80">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div className="grid grid-cols-3 gap-1 rounded-xl border border-primary/15 bg-page/50 p-1">
-          {FILTER_MODES.map((item) => {
+        <div className={`grid gap-1 rounded-xl border border-primary/15 bg-page/50 p-1 ${filterModes.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+          {filterModes.map((item) => {
             const Icon = item.icon
             const count = selectedByMode[item.id].length
             const label = item.id === 'competitors' ? competitorLabel : item.id === 'competitions' ? competitionLabel : item.label
@@ -1217,7 +1252,7 @@ function SportEntityFilters({
                   setMode(item.id)
                   setQuery('')
                 }}
-                className={`motion-filter-tab relative flex min-h-10 items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-bold transition-colors ${mode === item.id ? 'is-active bg-primary text-void' : 'text-ink/65 hover:bg-primary/10 hover:text-primary'}`}
+                className={`motion-filter-tab relative flex min-h-10 items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-bold transition-colors ${activeMode === item.id ? 'is-active bg-primary text-void' : 'text-ink/65 hover:bg-primary/10 hover:text-primary'}`}
               >
                 <Icon size={14} />
                 <span className="hidden truncate sm:inline">{label}</span>
@@ -1233,7 +1268,7 @@ function SportEntityFilters({
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder={`Search ${mode === 'leagues' ? 'leagues' : mode === 'competitors' ? competitorLabel.toLowerCase() : 'competitions'}`}
+              placeholder={`Search ${activeMode === 'leagues' ? 'leagues' : activeMode === 'competitors' ? competitorLabel.toLowerCase() : competitionLabel.toLowerCase()}`}
               className="w-full bg-transparent text-sm outline-none placeholder:text-ink/40"
             />
           </label>
@@ -1268,10 +1303,10 @@ function SportEntityFilters({
               className={`motion-filter-pill relative flex min-h-9 max-w-full items-center gap-1.5 rounded-full border py-1 pl-2 pr-3 text-left transition-colors ${selected ? 'is-selected border-primary bg-primary text-void' : 'border-primary/25 text-ink/75 hover:bg-primary/10 hover:text-primary'}`}
             >
               {optionFollowButton(option)}
-              <FilterLogo option={option} selected={selected} mode={mode} />
+              <FilterLogo option={option} selected={selected} mode={activeMode} />
               <span className="max-w-[220px] truncate text-xs font-bold">{option.label}</span>
               <span className={`font-mono text-[10px] ${selected ? 'text-void/70' : 'text-ink/40'}`}>{option.count}</span>
-              {selected && mode === 'competitors' && (
+              {selected && activeMode === 'competitors' && (
                 <Link
                   to={`/teams/${option.id}`}
                   onClick={(event) => event.stopPropagation()}
@@ -1315,10 +1350,10 @@ function SportEntityFilters({
               }`}
             >
               {optionFollowButton(option)}
-              <FilterLogo option={option} selected={selected} mode={mode} />
+              <FilterLogo option={option} selected={selected} mode={activeMode} />
               <span className="max-w-[220px] truncate text-xs font-bold">{option.label}</span>
               <span className={`font-mono text-[9px] uppercase ${selected ? 'text-void/70' : 'text-ink/35'}`}>Soon</span>
-              {selected && mode === 'competitors' && (
+              {selected && activeMode === 'competitors' && (
                 <Link
                   to={`/teams/${option.id}`}
                   onClick={(event) => event.stopPropagation()}
@@ -1681,21 +1716,36 @@ function RaceWeekendCard({
         : `${formatDate(weekend.start, timeZone, opts)} – ${formatLongDate(weekend.end, timeZone, opts)}`
       : 'Dates to be confirmed'
   const allAdded = weekend.sessions.every((s) => addedIds.includes(s.event.id))
+  const weekendImage = weekend.sessions.map((session) => eventProviderImage(session.event)).find(Boolean)
 
   return (
     <article className="motion-ticket overflow-hidden rounded-card border border-primary/20 bg-surface">
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-primary/12 bg-page/40 px-4 py-3">
-        <div className="min-w-0">
-          <h3 className="flex items-center gap-2 truncate text-base font-bold text-primary">
-            <Flag size={15} className="shrink-0" /> {weekend.name}
-          </h3>
-          <p className="mt-0.5 flex flex-wrap gap-x-3 font-mono text-[11px] uppercase tracking-wide text-ink/50">
-            <span>{dateRange}</span>
-            {weekend.venue && <span>{weekend.venue}</span>}
-            <span>
-              {weekend.sessions.length} {weekend.sessions.length === 1 ? 'session' : 'sessions'}
-            </span>
-          </p>
+      <header className="flex flex-wrap items-stretch justify-between gap-3 border-b border-primary/12 bg-page/40 px-4 py-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="relative flex h-14 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-primary/15 bg-primary/8 text-primary">
+            <Flag size={18} />
+            {weekendImage && (
+              <img
+                src={weekendImage}
+                alt=""
+                loading="lazy"
+                className="absolute inset-0 h-full w-full object-cover opacity-85"
+                onError={(event) => {
+                  event.currentTarget.style.display = 'none'
+                }}
+              />
+            )}
+          </span>
+          <div className="min-w-0">
+            <h3 className="truncate text-base font-bold text-primary">{weekend.name}</h3>
+            <p className="mt-0.5 flex flex-wrap gap-x-3 font-mono text-[11px] uppercase tracking-wide text-ink/50">
+              <span>{dateRange}</span>
+              {weekend.venue && <span>{weekend.venue}</span>}
+              <span>
+                {weekend.sessions.length} {weekend.sessions.length === 1 ? 'session' : 'sessions'}
+              </span>
+            </p>
+          </div>
         </div>
         <button
           type="button"
