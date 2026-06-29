@@ -40,6 +40,20 @@ type EventForAlert = {
 
 class SkipDelivery extends Error {}
 
+// Some feeds (e.g. the openfootball World Cup dataset) carry knockout fixtures as slot-code
+// placeholders that never resolve to real teams — "1E vs 3A/B/C/D/F", "1C vs 2F", "W49 vs W50".
+// An alert built from one of these is the "scrambled matchup" users complained about, so we skip
+// sending rather than mail a placeholder. Conservative: BOTH sides of "vs" must be pure slot codes
+// (group rank like 1E/3A with optional alternates "/B/C", or Winner/Loser match refs Wn/Ln), so a
+// real name that happens to contain a digit or letter — "Bayer 04", "Real Madrid" — never trips it.
+const SLOT_CODE = /^(?:[1-4][A-L](?:\/[A-L])*|[WL]\d{1,3})$/i
+function isUnresolvedPlaceholderTitle(title: string | null | undefined): boolean {
+  if (!title) return false
+  const sides = title.split(/\s+vs\.?\s+/i)
+  if (sides.length !== 2) return false
+  return sides.every((side) => SLOT_CODE.test(side.trim()))
+}
+
 function normalizeAppUrl(value: string) {
   try {
     return new URL(value).toString().replace(/\/$/, '')
@@ -168,6 +182,12 @@ async function sendReminderEmail(delivery: Delivery) {
   if (!event) throw new SkipDelivery('Missing event for delivery')
 
   const row = event as EventForAlert
+  // Never mail an unresolved slot-code placeholder (e.g. "1E vs 3A/B/C/D/F"). The event is read
+  // fresh here, so a resolved fixture always renders correctly; this only guards the never-resolving
+  // skeleton rows. Skipped (not failed) so it doesn't churn retries.
+  if (isUnresolvedPlaceholderTitle(row.title)) {
+    throw new SkipDelivery(`Unresolved placeholder fixture title: ${row.title}`)
+  }
   const prefs = (profile ?? {}) as { default_timezone: string | null; locale: string | null; hour12: boolean | null }
   const region = regionFromLocale(prefs.locale)
   const manageUrl = `${APP_URL}/settings/alerts`

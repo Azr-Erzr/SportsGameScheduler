@@ -2,26 +2,12 @@
 -- Requires the pg_cron + pg_net extensions; replace <project-ref> and the service key
 -- secret before running. Times are UTC.
 
--- Sync the World Cup demo dataset every 6 hours.
-select cron.schedule(
-  'sync-worldcup-json',
-  '0 */6 * * *',
-  $$
-  select net.http_post(
-    url := 'https://<project-ref>.supabase.co/functions/v1/provider-sync',
-    headers := jsonb_build_object(
-      'Content-Type', 'application/json',
-      'Authorization', 'Bearer ' || current_setting('app.settings.service_role_key')
-    ),
-    body := jsonb_build_object(
-      'providerKey', 'worldcup_json',
-      'sportKey', 'soccer',
-      'from', to_char(now() - interval '1 day', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'),
-      'to', to_char(now() + interval '60 days', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
-    )
-  );
-  $$
-);
+-- RETIRED: the worldcup_json demo/fallback sync. The openfootball dataset it ingested carries
+-- knockout fixtures as slot-code placeholders ("1E vs 3A/B/C/D/F") that never resolve to real
+-- teams, which duplicated the live TheSportsDB "FIFA World Cup" league (resolved teams) and caused
+-- scrambled-looking schedule-alert emails. TheSportsDB is now the single World Cup source; the
+-- skeleton league was hidden (is_public=false) and its events deleted in prod. Do not re-add this
+-- job. (The adapter still exists at provider-sync/providers/worldcup-json.ts for local demos only.)
 
 -- Paced TheSportsDB hydration every 15 minutes. The function is internally rate-limited and
 -- checkpointed: each tick spends a bounded call budget and resumes via provider_targets
