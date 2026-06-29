@@ -1,11 +1,54 @@
-import { ArrowLeft, ArrowRight, Star } from 'lucide-react'
+import { ArrowLeft, ArrowRight, CalendarPlus, Star } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
 import { useAppState } from '../app/state-context'
 import { Button, EmptyState, Panel } from '../components/ui'
 import { useCompetitor, useLeague, type LiveEvent } from '../data/liveSport'
+import { getSportGuide } from '../content/sportGuides'
+import { sportRoutes } from '../domain/sports'
 import { sportEmoji } from '../lib/ics'
 import { useDocumentMeta } from '../lib/seo'
 import { formatLongDate, formatTime } from '../lib/time'
+
+// Route segment for a sport hub from its canonical key, so an entity page can link "up" to its sport.
+function sportRouteFor(sportKey: string | null): string | null {
+  if (!sportKey) return null
+  return sportRoutes.find((s) => s.canonicalSportKey === sportKey)?.key ?? null
+}
+
+// Evergreen context shown beneath the fixtures on a league/team page. Gives the page real, useful,
+// non-duplicated content (how Silbo tracks it, a sport explainer, internal links) so it is never a
+// bare name + list — even between seasons. Pages with no upcoming fixtures are noindexed anyway, but
+// this keeps them genuinely useful for anyone who lands on one.
+function EntityContext({ name, noun, sportKey }: { name: string; noun: string; sportKey: string | null }) {
+  const guide = getSportGuide(sportKey)
+  const sportRoute = sportRouteFor(sportKey)
+  const sportLabel = sportRoutes.find((s) => s.canonicalSportKey === sportKey)?.label ?? null
+
+  return (
+    <Panel className="space-y-4 text-sm leading-relaxed text-ink/75">
+      <div className="space-y-2">
+        <h2 className="font-display text-lg tracking-wide text-ink">Following {name} on Silbo Sports</h2>
+        <p>
+          Silbo Sports tracks {name}&apos;s upcoming {noun}s and converts every start time to the time zone on your
+          device, so you always see when the next one begins where you are. Follow {name} to keep its schedule in one
+          place, add any fixture to your calendar, get a reminder before it starts, and check where to watch in your
+          region.
+        </p>
+        {guide ? <p>{guide.intro[0]}</p> : null}
+      </div>
+      <div className="flex flex-wrap items-center gap-3 border-t border-primary/12 pt-3">
+        {sportRoute ? (
+          <Link to={`/sports/${sportRoute}`} className="inline-flex items-center gap-1 text-sm font-bold text-primary">
+            All {sportLabel ?? 'sport'} schedules <ArrowRight size={14} />
+          </Link>
+        ) : null}
+        <Link to="/calendar" className="inline-flex items-center gap-1 text-sm font-semibold text-ink/65 hover:text-primary">
+          <CalendarPlus size={14} /> Sync to your calendar
+        </Link>
+      </div>
+    </Panel>
+  )
+}
 
 // Shared upcoming-events list for league + team pages. Each row links to the event detail page.
 function UpcomingEvents({ events, sportKey }: { events: LiveEvent[]; sportKey: string | null }) {
@@ -85,6 +128,7 @@ export function LeaguePage() {
         </Button>
       </Panel>
       <UpcomingEvents events={events} sportKey={league.sportKey} />
+      <EntityContext name={league.name} noun="fixture" sportKey={league.sportKey} />
     </div>
   )
 }
@@ -138,6 +182,11 @@ export function TeamPage() {
         </Button>
       </Panel>
       <UpcomingEvents events={events} sportKey={competitor.sportKey} />
+      <EntityContext
+        name={competitor.name}
+        noun={competitor.kind === 'person' ? 'event' : 'fixture'}
+        sportKey={competitor.sportKey}
+      />
     </div>
   )
 }

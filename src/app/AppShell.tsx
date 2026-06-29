@@ -39,6 +39,9 @@ const footerLinks = [
   { to: '/custom-leagues', label: 'Create League' },
   { to: '/settings/alerts', label: 'Alerts' },
   { to: '/account', label: 'Account' },
+  { to: '/about', label: 'About' },
+  { to: '/how-it-works', label: 'How it works' },
+  { to: '/faq', label: 'FAQ' },
   { to: '/privacy', label: 'Privacy' },
   { to: '/terms', label: 'Terms' },
 ]

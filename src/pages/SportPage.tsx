@@ -3,13 +3,13 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useAppState } from '../app/state-context'
 import { CityPicker } from '../components/CityPicker'
+import { CountryFlagMark } from '../components/CountryFlagMark'
 import { MatchCard } from '../components/MatchCard'
 import { SportChannelBanner } from '../components/SportChannelBanner'
 import { WatchOptionsPanel } from '../components/WatchOptionsPanel'
 import { Badge, Button, EmptyState, Panel, PanelHeading } from '../components/ui'
 import { deriveTeams, filterMatchesForTeams, filterUpcomingMatches, useMatches } from '../data/liveMatches'
 import { useEvent, useSportRoster, useSportSchedule, type LeagueTeam, type LiveEvent } from '../data/liveSport'
-import { flagPaletteForTeam, flagPoleGradient } from '../data/flagColors'
 import { allMatches, featuredTeams } from '../data/worldcup'
 import { exportFilename } from '../domain/brand'
 import type { Match } from '../domain/match'
@@ -18,7 +18,8 @@ import type { CanonicalSportKey } from '../domain/types'
 import { AdSlot } from '../components/AdSlot'
 import { interleaveAds } from '../lib/ads'
 import { downloadBlob } from '../lib/clipboard'
-import { useDocumentMeta } from '../lib/seo'
+import { useDocumentMeta, useJsonLd } from '../lib/seo'
+import { getSportGuide } from '../content/sportGuides'
 import { findConflictTiers, type OverlapTier } from '../lib/sportTiming'
 import { createMultiSportIcsBlob } from '../lib/ics'
 import { getSavedMatchKeys, toggleSavedMatch } from '../lib/store'
@@ -180,11 +181,70 @@ export function SportPage() {
   }
 
   // Soccer keeps the polished World Cup planner, but other soccer leagues are selectable too.
-  if (sport.canonicalSportKey === 'soccer') {
-    return <SoccerPage />
-  }
+  const page = sport.canonicalSportKey === 'soccer' ? <SoccerPage /> : <LiveSportPage sport={sport} />
 
-  return <LiveSportPage sport={sport} />
+  return (
+    <>
+      {page}
+      <SportGuideSection canonicalKey={sport.canonicalSportKey} sportLabel={sport.label} />
+    </>
+  )
+}
+
+// Visible, original editorial copy + FAQ rendered below every sport hub's live schedule. This is the
+// substance a reader (and an AdSense reviewer) gets beyond the fixture list, and the FAQ doubles as
+// FAQPage structured data. Renders nothing for sports without an authored guide.
+function SportGuideSection({ canonicalKey, sportLabel }: { canonicalKey: string; sportLabel: string }) {
+  const guide = getSportGuide(canonicalKey)
+  useJsonLd(
+    'sport-faq',
+    guide
+      ? {
+          '@context': 'https://schema.org',
+          '@type': 'FAQPage',
+          mainEntity: guide.faqs.map((f) => ({
+            '@type': 'Question',
+            name: f.q,
+            acceptedAnswer: { '@type': 'Answer', text: f.a },
+          })),
+        }
+      : null,
+  )
+  if (!guide) return null
+
+  return (
+    <section aria-labelledby="sport-guide-heading" className="mt-6 space-y-6 border-t border-primary/15 pt-8">
+      <div className="mx-auto max-w-3xl space-y-8 text-sm leading-relaxed text-ink/80">
+        <div className="space-y-3">
+          <h2 id="sport-guide-heading" className="font-display text-2xl tracking-wide text-ink">
+            {guide.heading}
+          </h2>
+          {guide.intro.map((paragraph, i) => (
+            <p key={i}>{paragraph}</p>
+          ))}
+        </div>
+
+        <div className="space-y-3">
+          <h3 className="font-display text-lg tracking-wide text-ink">
+            How to follow {sportLabel.toLowerCase()} in your time zone
+          </h3>
+          <p>{guide.howToWatch}</p>
+        </div>
+
+        <div className="space-y-3">
+          <h3 className="font-display text-lg tracking-wide text-ink">Frequently asked questions</h3>
+          <dl className="space-y-4">
+            {guide.faqs.map((faq) => (
+              <div key={faq.q} className="border-b border-primary/10 pb-4 last:border-0">
+                <dt className="font-semibold text-ink">{faq.q}</dt>
+                <dd className="mt-1.5 text-ink/75">{faq.a}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      </div>
+    </section>
+  )
 }
 
 // Soccer: World Cup planner by default, with pills to switch to other live soccer leagues
@@ -396,7 +456,7 @@ function WorldCupPlanner() {
         title="World Cup '26"
         kicker={source === 'live' ? 'Channel 01 / Live tournament capsule' : 'Channel 01 / Tournament capsule'}
         sportKey="soccer"
-        body={`Follow your nations and every kickoff lands in ${timeZone}. Group stage to final, whistle to whistle.`}
+        body={`Follow your nations and every kickoff lands in ${timeZone} — group stage to final, whistle to whistle, with no offset math to do.`}
         ctaLabel="Sync schedule"
         ctaTo="/calendar"
         stats={[
@@ -497,18 +557,20 @@ function WorldCupPlanner() {
                     selected ? 'bg-primary text-void' : 'hover:bg-primary/5'
                   }`}
                 >
-                  <span
-                    className="h-7 w-1.5 shrink-0 rounded-full"
-                    style={{ background: flagPoleGradient(team) }}
-                    aria-hidden="true"
+                  <CountryFlagMark
+                    name={team}
+                    selected={selected}
+                    size="md"
+                    fallback={
+                      <span
+                        className={`flex h-7 w-8 items-center justify-center rounded-md text-[11px] font-extrabold ${
+                          selected ? 'bg-void/25 text-void' : 'bg-primary/10 text-primary'
+                        }`}
+                      >
+                        {team.slice(0, 2).toUpperCase()}
+                      </span>
+                    }
                   />
-                  <span
-                    className={`flex h-7 w-7 items-center justify-center rounded-md text-[11px] font-extrabold ${
-                      selected ? 'bg-void/25 text-void' : 'bg-primary/10 text-primary'
-                    }`}
-                  >
-                    {team.slice(0, 2).toUpperCase()}
-                  </span>
                   <span className="flex-1">{team}</span>
                   {selected && <Check size={15} />}
                 </button>
@@ -618,7 +680,7 @@ function LiveSportPage({ sport }: { sport: SportInfo }) {
       <SportChannelBanner
         kicker={`Channel · ${sport.flagshipLeague}`}
         sportKey={sport.key}
-        body={`${sport.tagline}. Every start time in ${prefs.timezone}, synced and ready to export.`}
+        body={`${getSportGuide(sport.canonicalSportKey)?.banner ?? `${sport.tagline}.`} Every start time in ${prefs.timezone} — ready to sync, export, or remind you.`}
         ctaLabel="Sync schedule"
         ctaTo="/calendar"
         stats={stats}
@@ -1098,10 +1160,25 @@ function FilterLogo({ option, selected, mode }: { option: FilterOption; selected
   }
 
   const Icon = mode === 'competitions' ? Trophy : mode === 'leagues' ? Flag : Users
-  return (
+  const fallback = (
     <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-[10px] font-extrabold ${selected ? 'border-void/30 bg-void/15 text-void' : 'border-primary/15 bg-primary/8 text-primary'}`}>
       {mode === 'competitions' ? <Icon size={13} /> : initialsForFilter(option.label)}
     </span>
+  )
+  if (mode === 'competitors') {
+    return (
+      <CountryFlagMark
+        name={option.label}
+        country={option.meta}
+        selected={selected}
+        size="md"
+        className={selected ? 'border-void/35' : 'border-primary/15'}
+        fallback={fallback}
+      />
+    )
+  }
+  return (
+    fallback
   )
 }
 
@@ -1109,37 +1186,30 @@ function ParticipantBadge({
   name,
   country,
   logoUrl,
-  className = 'h-7 w-7 text-[9px]',
+  size = 'md',
 }: {
   name: string
   country?: string | null
   logoUrl?: string | null
-  className?: string
+  size?: 'sm' | 'md'
 }) {
-  const palette = flagPaletteForTeam(country ?? '') ?? flagPaletteForTeam(name)
-  const stripe = palette
-    ? `linear-gradient(135deg, ${palette.colors
-        .flatMap((stop) => Array.from({ length: Math.max(1, stop.weight ?? 1) }, () => stop.color))
-        .map((color, index, colors) => {
-          const step = 100 / colors.length
-          return `${color} ${Math.round(index * step * 100) / 100}% ${Math.round((index + 1) * step * 100) / 100}%`
-        })
-        .join(', ')})`
-    : undefined
-  return (
+  const logoSize = size === 'sm' ? 'h-5 w-5 text-[8px]' : 'h-7 w-7 text-[9px]'
+  const fallback = (
     <span
       title={name}
-      className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-paper-ink/10 bg-page font-extrabold text-primary shadow-sm ${className} ${
-        palette && !logoUrl ? 'shadow-inner' : ''
-      }`}
-      style={!logoUrl && stripe ? { background: stripe } : undefined}
+      className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-paper-ink/10 bg-page font-extrabold text-primary shadow-sm ${logoSize}`}
     >
-      {palette && !logoUrl ? (
-        <span className="h-1.5 w-1.5 rounded-full bg-white/45 shadow-[0_0_0_1px_rgba(0,0,0,0.12)]" />
-      ) : (
-        initialsForFilter(name)
-      )}
-      {logoUrl && (
+      {initialsForFilter(name)}
+    </span>
+  )
+
+  if (logoUrl) {
+    return (
+      <span
+        title={name}
+        className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-paper-ink/10 bg-page font-extrabold text-primary shadow-sm ${logoSize}`}
+      >
+        {initialsForFilter(name)}
         <img
           src={logoUrl}
           alt=""
@@ -1149,9 +1219,11 @@ function ParticipantBadge({
             event.currentTarget.style.display = 'none'
           }}
         />
-      )}
-    </span>
-  )
+      </span>
+    )
+  }
+
+  return <CountryFlagMark name={name} country={country} size={size} fallback={fallback} />
 }
 
 function ParticipantMarks({ participants }: { participants?: LiveEvent['participants'] }) {
@@ -1159,7 +1231,7 @@ function ParticipantMarks({ participants }: { participants?: LiveEvent['particip
   if (!shown.length) return null
   return (
     <div className="mt-2 flex items-center gap-1.5">
-      <div className="flex -space-x-1.5">
+      <div className="flex items-center gap-1">
         {shown.map((participant) => (
           <ParticipantBadge
             key={participant.id}
@@ -2046,7 +2118,7 @@ function EventQuickDetails({ eventId }: { eventId: string }) {
                 name={competitor.name}
                 country={competitor.country}
                 logoUrl={competitor.logoUrl}
-                className="h-5 w-5 border-primary/15 text-[8px]"
+                size="sm"
               />
               {competitor.name}
             </span>

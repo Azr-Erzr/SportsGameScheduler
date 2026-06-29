@@ -21,6 +21,7 @@ import { filterMatchesForTeams, filterUpcomingMatches, useMatches } from '../dat
 import { featuredTeams } from '../data/worldcup'
 import { dedupeSpotlightBySport, useSpotlightEvents, type SpotlightEvent } from '../data/spotlight'
 import { brand } from '../domain/brand'
+import { aboutContent, faqContent, howItWorksContent } from '../content/siteContent'
 import { associationFootballLabel, t } from '../lib/i18n'
 import { formatLongDate, formatTime } from '../lib/time'
 import { getTheme, withSurfaceMode } from '../theme/themes'
@@ -289,6 +290,60 @@ export function HomePage() {
       </section>
 
       <PosterFeatureStrip />
+
+      <HomeExplainer />
     </div>
+  )
+}
+
+// Visible, original prose on the homepage so a first-time visitor (and an AdSense reviewer) lands on
+// real content explaining what the product is and how it works — not just the scheduling tool. Copy
+// lives in src/content/siteContent.ts; deeper detail is on /about, /how-it-works and /faq.
+function HomeExplainer() {
+  return (
+    <section aria-labelledby="home-explainer-heading" className="mt-2 border-t border-primary/15 pt-8">
+      <div className="mx-auto max-w-3xl space-y-8">
+        <div className="space-y-3 text-sm leading-relaxed text-ink/80">
+          <h2 id="home-explainer-heading" className="font-display text-2xl tracking-wide text-ink">
+            What is Silbo Sports?
+          </h2>
+          <p>{aboutContent.intro}</p>
+          <p>{aboutContent.sections[0].paragraphs[0]}</p>
+          <Link to="/about" className="inline-flex items-center gap-1 text-sm font-bold text-primary">
+            More about Silbo Sports <ChevronRight size={15} />
+          </Link>
+        </div>
+
+        <div className="space-y-3">
+          <h3 className="font-display text-lg tracking-wide text-ink">How it works</h3>
+          <div className="grid gap-3 sm:grid-cols-3">
+            {howItWorksContent.steps.map((step) => (
+              <div key={step.heading} className="rounded-xl border border-primary/15 bg-page/60 p-4">
+                <h4 className="font-bold text-primary">{step.heading}</h4>
+                <p className="mt-1.5 text-sm leading-relaxed text-ink/65">{step.paragraphs[0]}</p>
+              </div>
+            ))}
+          </div>
+          <Link to="/how-it-works" className="inline-flex items-center gap-1 text-sm font-bold text-primary">
+            Read the full guide <ChevronRight size={15} />
+          </Link>
+        </div>
+
+        <div className="space-y-3 text-sm leading-relaxed text-ink/80">
+          <h3 className="font-display text-lg tracking-wide text-ink">Common questions</h3>
+          <dl className="space-y-4">
+            {faqContent.faqs.slice(0, 4).map((faq) => (
+              <div key={faq.q} className="border-b border-primary/10 pb-4 last:border-0">
+                <dt className="font-semibold text-ink">{faq.q}</dt>
+                <dd className="mt-1.5 text-ink/75">{faq.a}</dd>
+              </div>
+            ))}
+          </dl>
+          <Link to="/faq" className="inline-flex items-center gap-1 text-sm font-bold text-primary">
+            See all FAQs <ChevronRight size={15} />
+          </Link>
+        </div>
+      </div>
+    </section>
   )
 }

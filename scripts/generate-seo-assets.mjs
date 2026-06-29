@@ -44,6 +44,30 @@ const staticRoutes = [
     priority: '0.5',
     changefreq: 'monthly',
   },
+  {
+    path: '/about',
+    title: 'About Silbo Sports - one schedule for every sport you follow',
+    description:
+      'What Silbo Sports is, why we built it, which sports it covers, and how a free multi-sport schedule that converts every start time to your local zone works.',
+    priority: '0.6',
+    changefreq: 'monthly',
+  },
+  {
+    path: '/how-it-works',
+    title: 'How Silbo Sports works - follow, convert, sync',
+    description:
+      'Follow the teams and leagues you care about, see every start time in your local zone, then sync to your calendar, export, or get reminders.',
+    priority: '0.6',
+    changefreq: 'monthly',
+  },
+  {
+    path: '/faq',
+    title: 'Silbo Sports FAQ - schedules, sync, accounts, and data',
+    description:
+      'Answers about Silbo Sports: whether it is free, which sports it covers, how start times are converted, how calendar sync and reminders work, and how your data is handled.',
+    priority: '0.6',
+    changefreq: 'monthly',
+  },
 ]
 
 const sportRoutes = [

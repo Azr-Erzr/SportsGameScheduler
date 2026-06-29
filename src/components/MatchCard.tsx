@@ -1,7 +1,7 @@
 import { AlertTriangle, Bell, ChevronDown, Download, MapPin, RadioTower, Tv } from 'lucide-react'
 import { useState } from 'react'
+import { CountryFlagMark } from './CountryFlagMark'
 import type { Match } from '../domain/match'
-import { flagPaletteForTeam } from '../data/flagColors'
 import type { OverlapTier } from '../lib/sportTiming'
 import { formatDate, formatLongDate, formatTime } from '../lib/time'
 import { WatchOptionsPanel } from './WatchOptionsPanel'
@@ -28,27 +28,28 @@ function teamInitials(name: string) {
 }
 
 function TeamMark({ name, highlighted }: { name: string; highlighted: boolean }) {
-  const palette = flagPaletteForTeam(name)
-  const stripe = palette
-    ? `linear-gradient(135deg, ${palette.colors
-        .flatMap((stop) => Array.from({ length: Math.max(1, stop.weight ?? 1) }, () => stop.color))
-        .map((color, index, colors) => {
-          const step = 100 / colors.length
-          return `${color} ${Math.round(index * step * 100) / 100}% ${Math.round((index + 1) * step * 100) / 100}%`
-        })
-        .join(', ')})`
-    : undefined
-  return (
+  const fallback = (
     <span
       title={name}
       className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border leading-none ${
         highlighted
           ? 'border-ticket-stub bg-ticket-stub text-ticket-stub-text shadow-[0_0_0_2px_rgba(22,163,74,0.12)]'
           : 'border-paper-ink/15 bg-paper-ink/5 text-paper-ink/70'
-      } ${palette ? 'shadow-inner' : 'text-[9px] font-black'}`}
-      style={stripe ? { background: stripe } : undefined}
+      } text-[9px] font-black`}
     >
-      {palette ? <span className="h-2 w-2 rounded-full bg-white/45 shadow-[0_0_0_1px_rgba(0,0,0,0.12)]" /> : teamInitials(name)}
+      {teamInitials(name)}
+    </span>
+  )
+  return <CountryFlagMark name={name} selected={highlighted} size="lg" fallback={fallback} />
+}
+
+function TeamLabel({ name, highlighted }: { name: string; highlighted: boolean }) {
+  return (
+    <span className="inline-flex min-w-0 items-center gap-1.5">
+      <span aria-hidden="true">
+        <TeamMark name={name} highlighted={highlighted} />
+      </span>
+      <span className={highlighted ? 'underline decoration-2 underline-offset-4' : ''}>{name}</span>
     </span>
   )
 }
@@ -122,23 +123,11 @@ export function MatchCard({
 
           <div className="min-w-0 flex-1 px-4 py-3">
             <div className="flex min-w-0 items-start gap-3">
-              <div className="mt-0.5 flex shrink-0 -space-x-1.5" aria-hidden="true">
-                <TeamMark name={match.team1} highlighted={highlightTeams.includes(match.team1)} />
-                <TeamMark name={match.team2} highlighted={highlightTeams.includes(match.team2)} />
-              </div>
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-x-2 text-base font-bold text-paper-ink">
-                  <span
-                    className={highlightTeams.includes(match.team1) ? 'underline decoration-2 underline-offset-4' : ''}
-                  >
-                    {match.team1}
-                  </span>
+                  <TeamLabel name={match.team1} highlighted={highlightTeams.includes(match.team1)} />
                   <em className="font-mono text-[10px] font-semibold not-italic text-paper-ink/40">VS</em>
-                  <span
-                    className={highlightTeams.includes(match.team2) ? 'underline decoration-2 underline-offset-4' : ''}
-                  >
-                    {match.team2}
-                  </span>
+                  <TeamLabel name={match.team2} highlighted={highlightTeams.includes(match.team2)} />
                 </div>
                 <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 font-mono text-[11px] uppercase tracking-wide text-paper-ink/55">
                   {match.group && <span>{match.group}</span>}

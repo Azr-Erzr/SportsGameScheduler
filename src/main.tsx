@@ -1,7 +1,7 @@
 /* eslint-disable react-refresh/only-export-components -- entry file, not hot-reloaded */
 import { lazy, StrictMode, Suspense } from 'react'
 import { createRoot } from 'react-dom/client'
-import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom'
+import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import './styles/tailwind.css'
 import { AppShell } from './app/AppShell'
 import { AppStateProvider } from './app/state'
@@ -40,6 +40,10 @@ const AdminPage = lazy(() => import('./pages/AdminPage').then((m) => ({ default:
 const AccountPage = lazy(() => import('./pages/Account').then((m) => ({ default: m.AccountPage })))
 const PrivacyPage = lazy(() => import('./pages/Legal').then((m) => ({ default: m.PrivacyPage })))
 const TermsPage = lazy(() => import('./pages/Legal').then((m) => ({ default: m.TermsPage })))
+const AboutPage = lazy(() => import('./pages/Content').then((m) => ({ default: m.AboutPage })))
+const HowItWorksPage = lazy(() => import('./pages/Content').then((m) => ({ default: m.HowItWorksPage })))
+const FaqPage = lazy(() => import('./pages/Content').then((m) => ({ default: m.FaqPage })))
+const NotFoundPage = lazy(() => import('./pages/Content').then((m) => ({ default: m.NotFoundPage })))
 
 function lazyRoute(element: React.ReactNode) {
   return (
@@ -75,10 +79,13 @@ const router = createBrowserRouter([
       { path: '/account', element: lazyRoute(<AccountPage />) },
       { path: '/privacy', element: lazyRoute(<PrivacyPage />) },
       { path: '/terms', element: lazyRoute(<TermsPage />) },
+      { path: '/about', element: lazyRoute(<AboutPage />) },
+      { path: '/how-it-works', element: lazyRoute(<HowItWorksPage />) },
+      { path: '/faq', element: lazyRoute(<FaqPage />) },
       { path: '/custom-leagues', element: lazyRoute(<CustomLeaguesPage />) },
       { path: '/custom-leagues/:leagueId/admin', element: lazyRoute(<CustomLeagueAdminPage />) },
       { path: '/s/:token', element: lazyRoute(<SharePage />) },
-      { path: '*', element: <Navigate to="/my-schedule" replace /> },
+      { path: '*', element: lazyRoute(<NotFoundPage />) },
     ],
   },
 ])
