@@ -301,9 +301,11 @@ export function HomePage() {
 // lives in src/content/siteContent.ts; deeper detail is on /about, /how-it-works and /faq.
 function HomeExplainer() {
   return (
-    <section aria-labelledby="home-explainer-heading" className="mt-2 border-t border-primary/15 pt-8">
-      <div className="mx-auto max-w-3xl space-y-8">
-        <div className="space-y-3 text-sm leading-relaxed text-ink/80">
+    <section aria-labelledby="home-explainer-heading" className="mt-2 space-y-6 border-t border-primary/15 pt-6">
+      {/* Intro and the how-it-works steps sit side by side on desktop so the section fills the page
+          width like the rest of the home page and stays short. Text stays readable via max-w caps. */}
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)] lg:items-start">
+        <div className="max-w-2xl space-y-3 text-sm leading-relaxed text-ink/80">
           <h2 id="home-explainer-heading" className="font-display text-2xl tracking-wide text-ink">
             What is Silbo Sports?
           </h2>
@@ -328,21 +330,21 @@ function HomeExplainer() {
             Read the full guide <ChevronRight size={15} />
           </Link>
         </div>
+      </div>
 
-        <div className="space-y-3 text-sm leading-relaxed text-ink/80">
-          <h3 className="font-display text-lg tracking-wide text-ink">Common questions</h3>
-          <dl className="space-y-4">
-            {faqContent.faqs.slice(0, 4).map((faq) => (
-              <div key={faq.q} className="border-b border-primary/10 pb-4 last:border-0">
-                <dt className="font-semibold text-ink">{faq.q}</dt>
-                <dd className="mt-1.5 text-ink/75">{faq.a}</dd>
-              </div>
-            ))}
-          </dl>
-          <Link to="/faq" className="inline-flex items-center gap-1 text-sm font-bold text-primary">
-            See all FAQs <ChevronRight size={15} />
-          </Link>
-        </div>
+      <div className="space-y-3 text-sm leading-relaxed text-ink/80">
+        <h3 className="font-display text-lg tracking-wide text-ink">Common questions</h3>
+        <dl className="grid gap-x-10 gap-y-4 sm:grid-cols-2">
+          {faqContent.faqs.slice(0, 4).map((faq) => (
+            <div key={faq.q} className="border-b border-primary/10 pb-4">
+              <dt className="font-semibold text-ink">{faq.q}</dt>
+              <dd className="mt-1.5 text-ink/75">{faq.a}</dd>
+            </div>
+          ))}
+        </dl>
+        <Link to="/faq" className="inline-flex items-center gap-1 text-sm font-bold text-primary">
+          See all FAQs <ChevronRight size={15} />
+        </Link>
       </div>
     </section>
   )
