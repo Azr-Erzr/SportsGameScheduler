@@ -139,6 +139,8 @@ export function AppShell() {
   // First-run onboarding: only for a brand-new visitor (no prior pass, nothing followed yet).
   // Decided once at mount from the synchronously-loaded follows/flag — no effect needed.
   const [showOnboarding, setShowOnboarding] = useState(() => !hasOnboarded() && follows.length === 0)
+  const onboardingEligible =
+    location.pathname === '/' || location.pathname === '/explore' || location.pathname === '/my-schedule'
   const baseTheme = getTheme(
     location.pathname === '/'
       ? 'neutral'
@@ -216,7 +218,7 @@ export function AppShell() {
 
         <MobileNav locale={prefs.locale} />
         <ConsentBanner />
-        {showOnboarding && <Onboarding onClose={() => setShowOnboarding(false)} />}
+        {showOnboarding && onboardingEligible && <Onboarding onClose={() => setShowOnboarding(false)} />}
       </div>
     </SportThemeProvider>
   )
