@@ -296,8 +296,12 @@ async function eventMeta(env: Env, id: string): Promise<Meta | null> {
     : `${row.title}${leaguePart}${wherePart}. Start time, where to watch, and add to your calendar in your local timezone with Silbo Sports.`
 
   const summaryHtml =
+    // Lead with the literal question + answer ("What time is X? X starts …") so the crawlable copy
+    // matches "what time is {event}" searches; the React page renders the same Q&A visibly.
     `<p>${escapeHtml(
-      when ? `${row.title} kicks off ${when}${wherePart}.` : `${row.title}${wherePart}. Start time to be confirmed.`,
+      when
+        ? `What time is ${row.title}? ${row.title} starts ${when}${wherePart}.`
+        : `When is ${row.title}? The start time is still to be confirmed${wherePart}.`,
     )}</p>` +
     (league && row.league_id
       ? `<p>Competition: <a href="/leagues/${escapeHtml(row.league_id)}">${escapeHtml(league)}</a></p>`

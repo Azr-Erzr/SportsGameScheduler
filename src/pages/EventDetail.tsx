@@ -182,6 +182,20 @@ export function EventDetailPage() {
         </div>
       </Panel>
 
+      {/* Plain-language Q&A. People search the literal question ("what time is the netherlands
+          game", "what time is the grey cup 2026"); Google ranks/snippets from VISIBLE on-page text,
+          not just the meta tag, so we answer it in words right here. */}
+      <Panel>
+        <h2 className="text-lg font-extrabold text-primary">What time is {event.title}?</h2>
+        <p className="mt-2 text-sm leading-relaxed text-ink/75">
+          {event.startsAt
+            ? `${event.title} starts at ${when} (${prefs.timezone})${venue ? ` at ${venue}` : ''}${
+                event.leagueName ? `, part of ${event.leagueName}` : ''
+              }. Silbo Sports shows the start time in your own timezone — add it to your calendar or turn on a reminder so you don't miss kickoff.`
+            : `${event.title}'s start time is still to be confirmed${venue ? ` at ${venue}` : ''}. Follow it on Silbo Sports and the time will appear here in your local timezone as soon as it's set.`}
+        </p>
+      </Panel>
+
       {event.bouts.length > 0 && <FightCardPanel event={event} locale={prefs.locale} hour12={prefs.hour12} timeZone={prefs.timezone} />}
 
       <EventNotes event={event} />

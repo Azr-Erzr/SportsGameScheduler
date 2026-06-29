@@ -68,6 +68,14 @@ const staticRoutes = [
     priority: '0.6',
     changefreq: 'monthly',
   },
+  {
+    path: '/blog',
+    title: 'Silbo Sports blog - schedules, where to watch, and what is coming up',
+    description:
+      'News and explainers on the leagues, teams, and events you follow, each linking to the local-time schedule and where to watch on Silbo Sports.',
+    priority: '0.6',
+    changefreq: 'daily',
+  },
 ]
 
 const sportRoutes = [
@@ -349,7 +357,23 @@ async function fetchDbRoutes() {
       ),
     }))
 
-  return { routes: [...leagueRoutes, ...eventRoutes, ...teamRoutes], sportBodies }
+  // Published blog posts. Same-domain articles that link back to schedule pages — list them so they
+  // get crawled. Best-effort: skipped silently if the table isn't present yet.
+  const { data: blogData } = await supabase
+    .from('blog_posts')
+    .select('slug, seo_description, dek, updated_at')
+    .eq('status', 'published')
+    .order('published_at', { ascending: false })
+    .limit(500)
+  const blogRoutes = (blogData ?? []).map((post) => ({
+    path: `/blog/${post.slug}`,
+    title: `Silbo Sports blog`,
+    description: post.seo_description ?? post.dek ?? 'A Silbo Sports article.',
+    priority: '0.6',
+    changefreq: 'monthly',
+  }))
+
+  return { routes: [...leagueRoutes, ...eventRoutes, ...teamRoutes, ...blogRoutes], sportBodies }
 }
 
 async function writeSitemap(routes) {

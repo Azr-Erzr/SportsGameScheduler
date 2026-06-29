@@ -44,6 +44,8 @@ const AboutPage = lazy(() => import('./pages/Content').then((m) => ({ default: m
 const HowItWorksPage = lazy(() => import('./pages/Content').then((m) => ({ default: m.HowItWorksPage })))
 const FaqPage = lazy(() => import('./pages/Content').then((m) => ({ default: m.FaqPage })))
 const NotFoundPage = lazy(() => import('./pages/Content').then((m) => ({ default: m.NotFoundPage })))
+const BlogIndexPage = lazy(() => import('./pages/Blog').then((m) => ({ default: m.BlogIndexPage })))
+const BlogPostPage = lazy(() => import('./pages/Blog').then((m) => ({ default: m.BlogPostPage })))
 
 function lazyRoute(element: React.ReactNode) {
   return (
@@ -82,6 +84,8 @@ const router = createBrowserRouter([
       { path: '/about', element: lazyRoute(<AboutPage />) },
       { path: '/how-it-works', element: lazyRoute(<HowItWorksPage />) },
       { path: '/faq', element: lazyRoute(<FaqPage />) },
+      { path: '/blog', element: lazyRoute(<BlogIndexPage />) },
+      { path: '/blog/:slug', element: lazyRoute(<BlogPostPage />) },
       { path: '/custom-leagues', element: lazyRoute(<CustomLeaguesPage />) },
       { path: '/custom-leagues/:leagueId/admin', element: lazyRoute(<CustomLeagueAdminPage />) },
       { path: '/s/:token', element: lazyRoute(<SharePage />) },
