@@ -140,6 +140,7 @@ async function fetchWatchOptions(
     league_id: string | null
     url: string | null
     watch_providers: { name: string | null; direct_url: string | null } | null
+    provider_key: string | null
   }>) {
     const inScope =
       (row.event_id && row.event_id === eventId) ||
@@ -154,7 +155,7 @@ async function fetchWatchOptions(
     const dedupe = `${name}:${url}`
     if (seen.has(dedupe)) continue
     seen.add(dedupe)
-    out.push({ name, url })
+    out.push({ name, url, providerKey: row.provider_key })
     if (out.length >= 3) break
   }
   return out

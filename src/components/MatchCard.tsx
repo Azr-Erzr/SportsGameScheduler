@@ -5,6 +5,7 @@ import type { Match } from '../domain/match'
 import type { OverlapTier } from '../lib/sportTiming'
 import { formatDate, formatLongDate, formatTime } from '../lib/time'
 import { WatchOptionsPanel } from './WatchOptionsPanel'
+import { WatchProviderBadges } from './WatchProviderBadges'
 
 // Schedule events render as TICKETS (Channel S rule): cream paper on the broadcast void,
 // deep sport-specific time stub with perforated edge, ink type. The on-screen card, the
@@ -139,7 +140,14 @@ export function MatchCard({
           </div>
         </button>
 
-        <div className="flex shrink-0 items-center gap-2 border-l border-paper-ink/10 px-3 max-sm:border-l-0 max-sm:border-t max-sm:px-4 max-sm:py-3">
+        <div className="flex shrink-0 items-center gap-2 border-l border-paper-ink/10 px-3 max-sm:flex-wrap max-sm:border-l-0 max-sm:border-t max-sm:px-4 max-sm:py-3">
+          <WatchProviderBadges
+            leagueName="FIFA World Cup 2026"
+            sportKey="soccer"
+            regionCode={regionCode}
+            maxVisible={2}
+            className="max-sm:order-first max-sm:w-full"
+          />
           {onAddToSchedule && (
             <button
               type="button"

@@ -45,6 +45,8 @@ type WatchQuery = {
   limit?: number
 }
 
+let watchLinkRowsPromise: Promise<WatchLinkRow[]> | null = null
+
 type CatalogRule = {
   ruleKey: string
   providerKey: string
@@ -301,6 +303,34 @@ function mapRows(rows: WatchLinkRow[], query: WatchQuery): WatchOption[] {
     })
 }
 
+async function loadWatchLinkRows(): Promise<{ rows: WatchLinkRow[]; configured: boolean }> {
+  const supabase = await getSupabaseClient()
+  if (!supabase) return { rows: [], configured: false }
+
+  if (!watchLinkRowsPromise) {
+    watchLinkRowsPromise = Promise.resolve(
+      supabase
+        .from('watch_links')
+        .select(
+          'provider_key, label, event_id, league_id, country_codes, sport_keys, link_kind, url, affiliate_url, priority, watch_providers(key, name, network, affiliate_status, direct_url, affiliate_url, priority)',
+        )
+        .eq('is_active', true)
+        .order('priority', { ascending: true })
+        .limit(100),
+    ).then(({ data, error }) => {
+      if (error) throw error
+      return (data ?? []) as unknown as WatchLinkRow[]
+    })
+  }
+
+  try {
+    return { rows: await watchLinkRowsPromise, configured: true }
+  } catch {
+    watchLinkRowsPromise = null
+    return { rows: [], configured: true }
+  }
+}
+
 export function useWatchOptions(query: WatchQuery): { links: WatchOption[]; loading: boolean; configured: boolean } {
   const limit = query.limit ?? 5
   const fallback = fallbackWatchOptions(query.regionCode, query.sportKey, limit, query.leagueName)
@@ -320,29 +350,10 @@ export function useWatchOptions(query: WatchQuery): { links: WatchOption[]; load
 
   useEffect(() => {
     let cancelled = false
-    getSupabaseClient().then(async (supabase) => {
-      if (!supabase) {
-        if (!cancelled) setState({ key, links: fallback, configured: false })
-        return
-      }
-
-      const { data, error } = await supabase
-        .from('watch_links')
-        .select(
-          'provider_key, label, event_id, league_id, country_codes, sport_keys, link_kind, url, affiliate_url, priority, watch_providers(key, name, network, affiliate_status, direct_url, affiliate_url, priority)',
-        )
-        .eq('is_active', true)
-        .order('priority', { ascending: true })
-        .limit(100)
-
+    loadWatchLinkRows().then(({ rows, configured }) => {
       if (cancelled) return
-      if (error) {
-        setState({ key, links: fallback, configured: true })
-        return
-      }
-
-      const links = mapRows((data ?? []) as unknown as WatchLinkRow[], query).slice(0, limit)
-      setState({ key, links: links.length ? links : fallback, configured: true })
+      const links = mapRows(rows, query).slice(0, limit)
+      setState({ key, links: links.length ? links : fallback, configured })
     })
     return () => {
       cancelled = true

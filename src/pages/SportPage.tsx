@@ -7,6 +7,7 @@ import { CountryFlagMark } from '../components/CountryFlagMark'
 import { MatchCard } from '../components/MatchCard'
 import { SportChannelBanner } from '../components/SportChannelBanner'
 import { WatchOptionsPanel } from '../components/WatchOptionsPanel'
+import { WatchProviderBadges } from '../components/WatchProviderBadges'
 import { Badge, Button, EmptyState, Panel, PanelHeading } from '../components/ui'
 import { deriveTeams, filterMatchesForTeams, filterUpcomingMatches, useMatches } from '../data/liveMatches'
 import { useEvent, useSportRoster, useSportSchedule, type LeagueTeam, type LiveEvent } from '../data/liveSport'
@@ -341,6 +342,7 @@ function SoccerPage() {
                       locale={prefs.locale}
                       hour12={prefs.hour12}
                       timeZone={prefs.timezone}
+                      regionCode={prefs.broadcastRegion || prefs.regionCode}
                       expanded={expandedEventId === entry.item.id}
                       onToggle={() => setExpandedEventId((current) => (current === entry.item.id ? null : entry.item.id))}
                       added={addedEventIds.includes(entry.item.id)}
@@ -474,7 +476,7 @@ function WorldCupPlanner() {
         <WatchOptionsPanel
           leagueName="FIFA World Cup 2026"
           sportKey="soccer"
-          regionCode={prefs.regionCode}
+          regionCode={prefs.broadcastRegion || prefs.regionCode}
           locale={prefs.locale}
           limit={4}
           compact
@@ -733,6 +735,7 @@ function LiveSportPage({ sport }: { sport: SportInfo }) {
                       locale={prefs.locale}
                       hour12={prefs.hour12}
                       timeZone={prefs.timezone}
+                      regionCode={prefs.broadcastRegion || prefs.regionCode}
                       addedIds={addedEventIds}
                       onAddSession={addEventToSchedule}
                       onAddWeekend={() => addWeekendToSchedule(weekend)}
@@ -753,6 +756,7 @@ function LiveSportPage({ sport }: { sport: SportInfo }) {
                           locale={prefs.locale}
                           hour12={prefs.hour12}
                           timeZone={prefs.timezone}
+                          regionCode={prefs.broadcastRegion || prefs.regionCode}
                           expanded={expandedEventId === entry.item.id}
                           onToggle={() => setExpandedEventId((current) => (current === entry.item.id ? null : entry.item.id))}
                           added={addedEventIds.includes(entry.item.id)}
@@ -1805,6 +1809,7 @@ function RaceWeekendCard({
   locale,
   hour12,
   timeZone,
+  regionCode,
   addedIds,
   onAddSession,
   onAddWeekend,
@@ -1813,6 +1818,7 @@ function RaceWeekendCard({
   locale?: string
   hour12?: boolean | null
   timeZone: string
+  regionCode?: string | null
   addedIds: string[]
   onAddSession: (event: LiveEvent) => void
   onAddWeekend: () => void
@@ -1856,15 +1862,26 @@ function RaceWeekendCard({
             </p>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={onAddWeekend}
-          className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-bold transition-colors ${
-            allAdded ? 'ticket-added-pulse border-primary bg-primary/15 text-primary' : 'border-primary/30 text-ink/75 hover:bg-primary/10'
-          }`}
-        >
-          <Download size={13} /> {allAdded ? 'Weekend added' : 'Add weekend'}
-        </button>
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+          <WatchProviderBadges
+            eventId={weekend.sessions[0]?.event.id}
+            leagueId={weekend.sessions[0]?.event.leagueId}
+            leagueName={weekend.sessions[0]?.event.leagueName ?? weekend.name}
+            sportKey={weekend.sessions[0]?.event.sportKey ?? 'motorsport'}
+            regionCode={regionCode}
+            variant="dark"
+            maxVisible={2}
+          />
+          <button
+            type="button"
+            onClick={onAddWeekend}
+            className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-bold transition-colors ${
+              allAdded ? 'ticket-added-pulse border-primary bg-primary/15 text-primary' : 'border-primary/30 text-ink/75 hover:bg-primary/10'
+            }`}
+          >
+            <Download size={13} /> {allAdded ? 'Weekend added' : 'Add weekend'}
+          </button>
+        </div>
       </header>
       <ul className="divide-y divide-primary/8">
         {weekend.sessions.map((session) => {
@@ -1916,6 +1933,7 @@ function EventTicket({
   locale,
   hour12,
   timeZone,
+  regionCode,
   expanded,
   onToggle,
   added,
@@ -1925,6 +1943,7 @@ function EventTicket({
   locale?: string
   hour12?: boolean | null
   timeZone: string
+  regionCode?: string | null
   expanded: boolean
   onToggle: () => void
   added: boolean
@@ -1990,7 +2009,16 @@ function EventTicket({
           )}
         </div>
       </button>
-      <div className="flex shrink-0 items-center gap-2 border-l border-paper-ink/10 px-3 max-sm:border-l-0 max-sm:border-t max-sm:px-4 max-sm:py-3">
+      <div className="flex shrink-0 items-center gap-2 border-l border-paper-ink/10 px-3 max-sm:flex-wrap max-sm:border-l-0 max-sm:border-t max-sm:px-4 max-sm:py-3">
+        <WatchProviderBadges
+          eventId={event.id}
+          leagueId={event.leagueId}
+          leagueName={event.leagueName}
+          sportKey={event.sportKey}
+          regionCode={regionCode}
+          maxVisible={2}
+          className="max-sm:order-first max-sm:w-full"
+        />
         <button
           type="button"
           onClick={onAdd}
@@ -2109,7 +2137,7 @@ function EventQuickDetails({ eventId }: { eventId: string }) {
           leagueId={detail.leagueId}
           leagueName={detail.leagueName}
           sportKey={detail.sportKey}
-          regionCode={prefs.regionCode}
+          regionCode={prefs.broadcastRegion || prefs.regionCode}
           locale={prefs.locale}
           compact
         />
