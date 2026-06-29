@@ -3324,22 +3324,27 @@
     inset 0 0 40px color-mix(in srgb, var(--mp-primary) 8%, transparent);
 }
 
+/* Full-bleed signal-grid backdrop for the event header. Covers the whole panel and fades in from
+   the left so the title/copy stay clean while the grid reads as an intentional broadcast texture
+   behind the right side (where the radial highlight sits) — not a stray box in one corner. */
 .event-bumper-grid {
   position: absolute;
-  inset: auto 18px 16px auto;
+  inset: 0;
   z-index: 0;
-  width: min(34%, 260px);
-  height: 86px;
-  border: 1px solid color-mix(in srgb, var(--mp-primary) 18%, transparent);
   background:
-    linear-gradient(90deg, color-mix(in srgb, var(--mp-primary) 14%, transparent) 1px, transparent 1px),
-    linear-gradient(color-mix(in srgb, var(--mp-primary) 14%, transparent) 1px, transparent 1px);
-  background-size: 24px 18px;
-  opacity: 0.54;
+    linear-gradient(90deg, color-mix(in srgb, var(--mp-primary) 12%, transparent) 1px, transparent 1px),
+    linear-gradient(color-mix(in srgb, var(--mp-primary) 12%, transparent) 1px, transparent 1px);
+  background-size: 26px 20px;
+  opacity: 0.5;
+  -webkit-mask-image: linear-gradient(105deg, transparent 0%, transparent 44%, rgba(0, 0, 0, 0.9) 100%);
+  mask-image: linear-gradient(105deg, transparent 0%, transparent 44%, rgba(0, 0, 0, 0.9) 100%);
   animation: signal-grid-drift 7s linear infinite;
 }
 
-.event-bumper > * {
+/* Lift the real content above the grid backdrop — but exclude the grid itself, or this later,
+   equal-specificity rule would override its `position: absolute` and collapse it in-flow (which is
+   what made the grid render as a stray in-flow box instead of a full-panel backdrop). */
+.event-bumper > *:not(.event-bumper-grid) {
   position: relative;
   z-index: 1;
 }

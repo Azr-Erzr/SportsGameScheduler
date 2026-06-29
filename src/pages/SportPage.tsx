@@ -2004,6 +2004,14 @@ function EventTicket({
           <Download size={13} />
           {added ? 'Added!' : 'Add to schedule'}
         </button>
+        <Link
+          to={`/events/${event.id}`}
+          title="Open event page"
+          aria-label={`Open the event page for ${event.title}`}
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-paper-ink/8 text-paper-ink/70 transition-colors hover:bg-primary hover:text-void focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        >
+          <ArrowUpRight size={16} />
+        </Link>
         <button
           type="button"
           onClick={onToggle}
@@ -2194,6 +2202,12 @@ function EventQuickDetails({ eventId }: { eventId: string }) {
       )}
 
       <div className="flex flex-wrap gap-2">
+        <Link
+          to={`/events/${detail.id}`}
+          className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 text-xs font-bold text-primary transition-colors hover:bg-primary/15"
+        >
+          Open event page <ArrowUpRight size={14} />
+        </Link>
         {event.leagueId && (
           <FollowButton
             active={leagueFollowed}

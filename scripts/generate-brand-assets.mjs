@@ -163,6 +163,26 @@ export function createOgCoverSvgWithText(logoPath, text) {
 `
 }
 
+// Wrap a PNG in a single-image ICO container (PNG-in-ICO is supported by all modern browsers and by
+// Google's favicon fetcher). Avoids pulling in an ICO-encoder dependency.
+function pngToIco(png, size) {
+  const dim = size >= 256 ? 0 : size
+  const header = Buffer.alloc(6)
+  header.writeUInt16LE(0, 0) // reserved
+  header.writeUInt16LE(1, 2) // type: 1 = icon
+  header.writeUInt16LE(1, 4) // image count
+  const entry = Buffer.alloc(16)
+  entry.writeUInt8(dim, 0) // width
+  entry.writeUInt8(dim, 1) // height
+  entry.writeUInt8(0, 2) // palette colors
+  entry.writeUInt8(0, 3) // reserved
+  entry.writeUInt16LE(1, 4) // color planes
+  entry.writeUInt16LE(32, 6) // bits per pixel
+  entry.writeUInt32LE(png.length, 8) // image data size
+  entry.writeUInt32LE(6 + 16, 12) // offset to image data
+  return Buffer.concat([header, entry, png])
+}
+
 export async function writeBrandAssets(targetDir, { rootDir = defaultRoot } = {}) {
   await fs.mkdir(targetDir, { recursive: true })
   const logoPath = await readLogoPath(rootDir)
@@ -173,6 +193,15 @@ export async function writeBrandAssets(targetDir, { rootDir = defaultRoot } = {}
   await fs.writeFile(path.join(targetDir, 'favicon.svg'), faviconSvg)
   await sharp(Buffer.from(ogSvg)).png().toFile(path.join(targetDir, 'og-cover.png'))
   await sharp(Buffer.from(faviconSvg)).resize(180, 180).png().toFile(path.join(targetDir, 'apple-touch-icon.png'))
+
+  // Raster favicons. The browser tab uses favicon.svg, but Google Search (and other engines) use
+  // favicon.ico / the PNG rel=icon links — so these MUST be regenerated from the current mark too,
+  // or search results keep showing the old logo. (This is exactly that bug: they were stale.)
+  for (const px of [16, 32, 48, 96]) {
+    await sharp(Buffer.from(faviconSvg)).resize(px, px).png().toFile(path.join(targetDir, `favicon-${px}x${px}.png`))
+  }
+  const icoPng = await sharp(Buffer.from(faviconSvg)).resize(48, 48).png().toBuffer()
+  await fs.writeFile(path.join(targetDir, 'favicon.ico'), pngToIco(icoPng, 48))
 }
 
 const isDirectRun = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
