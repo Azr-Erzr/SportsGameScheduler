@@ -237,18 +237,32 @@ async function fetchDbRoutes() {
       .eq('is_public', true)
       .order('display_rank', { ascending: true })
       .limit(100),
-    // Durable, evergreen team pages ("Arsenal schedule"). Listed even between fixtures — the Worker
-    // renders their live schedule, and they are not noindexed, so they earn standing query rankings.
+    // Teams are emitted ONLY when they have an upcoming fixture (filtered below). A page that
+    // renders "no upcoming events" is thin content at scale — AdSense flagged exactly this — and the
+    // Worker now noindexes those anyway, so listing them in the sitemap just wastes crawl budget.
     supabase
       .from('competitors')
       .select('id, name, leagues!inner(name, is_public)')
       .eq('kind', 'team')
       .eq('leagues.is_public', true)
       .order('name')
-      .limit(1000),
+      .limit(2000),
   ])
 
   const events = eventsRes.data ?? []
+
+  // Competitor ids that appear in an upcoming public fixture → the only team pages worth indexing.
+  const eventIds = events.map((e) => e.id).filter(Boolean)
+  const teamsWithUpcoming = new Set()
+  for (let i = 0; i < eventIds.length; i += 200) {
+    const linkRes = await supabase
+      .from('event_competitors')
+      .select('competitor_id')
+      .in('event_id', eventIds.slice(i, i + 200))
+    for (const link of linkRes.data ?? []) {
+      if (link.competitor_id) teamsWithUpcoming.add(link.competitor_id)
+    }
+  }
   // Group fixtures by sport (for the static /sports body) and by league (for the static /leagues body).
   const bySport = new Map()
   const byLeague = new Map()
@@ -280,20 +294,23 @@ async function fetchDbRoutes() {
     changefreq: 'daily',
   }))
 
-  const leagueRoutes = (leaguesRes.data ?? []).map((league) => ({
-    path: `/leagues/${league.id}`,
-    title: `${league.name} schedule & fixtures - Silbo Sports`,
-    description: `${league.name} upcoming fixtures in your local time. Follow the league and sync it to your calendar.`,
-    priority: '0.6',
-    changefreq: 'daily',
-    bodyHtml: ssrSection(
-      `${league.name} schedule & fixtures`,
-      fixtureListHtml(byLeague.get(league.id) ?? []) + `<p>${escapeXml(LOCAL_TIME_NOTE)}</p>`,
-    ),
-  }))
+  // Only leagues with at least one upcoming fixture are indexable (the Worker noindexes empty ones).
+  const leagueRoutes = (leaguesRes.data ?? [])
+    .filter((league) => (byLeague.get(league.id)?.length ?? 0) > 0)
+    .map((league) => ({
+      path: `/leagues/${league.id}`,
+      title: `${league.name} schedule & fixtures - Silbo Sports`,
+      description: `${league.name} upcoming fixtures in your local time. Follow the league and sync it to your calendar.`,
+      priority: '0.6',
+      changefreq: 'daily',
+      bodyHtml: ssrSection(
+        `${league.name} schedule & fixtures`,
+        fixtureListHtml(byLeague.get(league.id) ?? []) + `<p>${escapeXml(LOCAL_TIME_NOTE)}</p>`,
+      ),
+    }))
 
   const teamRoutes = (teamsRes.data ?? [])
-    .filter((team) => team?.name)
+    .filter((team) => team?.name && teamsWithUpcoming.has(team.id))
     .map((team) => ({
       path: `/teams/${team.id}`,
       title: `${team.name} schedule & fixtures - Silbo Sports`,

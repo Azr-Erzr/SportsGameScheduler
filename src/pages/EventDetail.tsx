@@ -12,6 +12,15 @@ import { t } from '../lib/i18n'
 import { SEO_ORIGIN, useDocumentMeta, useJsonLd } from '../lib/seo'
 import { formatLongDate, formatTime } from '../lib/time'
 
+// A fixture is perishable once finished, or once its start is comfortably past (covers events whose
+// status never flips). 6h grace matches the Worker's window for long formats.
+function isPerishableEvent(status: string | null, startsAt: Date | null): boolean {
+  if (status === 'finished') return true
+  if (!startsAt) return false
+  const t = startsAt.getTime()
+  return Number.isFinite(t) && t < Date.now() - 6 * 3600_000
+}
+
 const STATUS_TONE: Record<string, 'secondary' | 'muted' | 'warning'> = {
   scheduled: 'secondary',
   live: 'secondary',
@@ -31,6 +40,10 @@ export function EventDetailPage() {
       ? `${event.title}${event.leagueName ? ` · ${event.leagueName}` : ''} — start time in your local timezone, where to watch, and add to your schedule.`
       : undefined,
     canonicalPath: eventId ? `/events/${eventId}` : undefined,
+    // A finished/past fixture is perishable: noindex,follow so dead fixtures don't rot in the index
+    // while humans deep-linking from a calendar entry still see the page. Mirrors the Worker's
+    // isPerishable so JS-rendering crawlers get the same directive on hydration.
+    robots: !loading && (!event || isPerishableEvent(event.status, event.startsAt)) ? 'noindex, follow' : undefined,
   })
   useJsonLd(
     'event',

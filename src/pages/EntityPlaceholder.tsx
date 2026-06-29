@@ -47,6 +47,9 @@ export function LeaguePage() {
       ? `${league.name} upcoming fixtures in your local time. Follow the league, sync to your calendar, and never miss a game.`
       : undefined,
     canonicalPath: leagueId ? `/leagues/${leagueId}` : undefined,
+    // Thin/empty (off-season, unknown id) → keep out of the index until fixtures return. Mirrors
+    // the Worker's leagueMeta noindex so JS-rendering crawlers see the same directive.
+    robots: !loading && (!league || events.length === 0) ? 'noindex, follow' : undefined,
   })
 
   if (loading) return <p className="board-label py-10 text-center text-ink/50">Loading league…</p>
@@ -97,6 +100,8 @@ export function TeamPage() {
       ? `${competitor.name} upcoming events in your local time. Follow them, sync to your calendar, and get reminders.`
       : undefined,
     canonicalPath: teamId ? `/teams/${teamId}` : undefined,
+    // No upcoming fixtures or unknown id → thin; noindex,follow until the next event syncs in.
+    robots: !loading && (!competitor || events.length === 0) ? 'noindex, follow' : undefined,
   })
 
   if (loading) return <p className="board-label py-10 text-center text-ink/50">Loading…</p>

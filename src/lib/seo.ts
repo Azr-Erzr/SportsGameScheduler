@@ -27,17 +27,31 @@ function upsertCanonical(href: string) {
 }
 
 const BASE_TITLE = 'Silbo Sports — every game, in your calendar'
+const DEFAULT_ROBOTS = 'index, follow, max-image-preview:large'
 
-export function useDocumentMeta(opts: { title?: string; description?: string; canonicalPath?: string }) {
-  const { title, description, canonicalPath } = opts
+export function useDocumentMeta(opts: {
+  title?: string
+  description?: string
+  canonicalPath?: string
+  /**
+   * Override the page's robots directive (e.g. 'noindex, follow' for an empty/finished entity).
+   * JS-rendering crawlers run React, which overwrites the Worker-set <head>, so a thin route must
+   * re-assert noindex here or the Worker's directive is lost on hydration. Restored to the default
+   * on unmount so the next route is indexable again.
+   */
+  robots?: string
+}) {
+  const { title, description, canonicalPath, robots } = opts
   useEffect(() => {
     if (title) document.title = title
     if (description) upsertMetaByName('description', description)
     if (canonicalPath) upsertCanonical(`${SEO_ORIGIN}${canonicalPath}`)
+    if (robots) upsertMetaByName('robots', robots)
     return () => {
       document.title = BASE_TITLE
+      if (robots) upsertMetaByName('robots', DEFAULT_ROBOTS)
     }
-  }, [title, description, canonicalPath])
+  }, [title, description, canonicalPath, robots])
 }
 
 // Inject a JSON-LD block for the lifetime of the component (e.g. a SportsEvent on /events/:id).

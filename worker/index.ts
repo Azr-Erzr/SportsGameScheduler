@@ -100,6 +100,11 @@ export default {
         try {
           const rewritten = await renderMeta(request, env, entity)
           if (rewritten) return rewritten
+          // Entity route but no matching public record (deleted id, private league, bad slug). The
+          // SPA still renders a "not found" shell — keep that URL out of the index so unknown ids
+          // don't accrue thin pages, while staying a 200 so humans who deep-link aren't broken.
+          const noindexed = await renderNoindexShell(request, env)
+          if (noindexed) return noindexed
         } catch {
           // fall through to the unmodified asset response below
         }
@@ -157,6 +162,20 @@ async function renderMeta(request: Request, env: Env, entity: Entity): Promise<R
   }
 
   return rewriter.transform(new Response(assetResponse.body, { status: 200, headers }))
+}
+
+// Fetch the static shell and force robots=noindex,follow without touching anything else. Used for
+// entity routes whose id resolves to no public record, so the SPA's "not found" view never earns
+// an index entry. A short edge cache keeps scraper bursts off Supabase.
+async function renderNoindexShell(request: Request, env: Env): Promise<Response | null> {
+  const assetResponse = await env.ASSETS.fetch(new Request(`${ORIGIN}/`, { headers: request.headers }))
+  const contentType = assetResponse.headers.get('content-type') ?? ''
+  if (!contentType.includes('text/html')) return null
+  const headers = new Headers(assetResponse.headers)
+  headers.set('cache-control', 'public, max-age=120, s-maxage=300')
+  return new HTMLRewriter()
+    .on('meta[name="robots"]', new AttrSetter('content', 'noindex, follow'))
+    .transform(new Response(assetResponse.body, { status: 200, headers }))
 }
 
 class TextSetter {
@@ -325,6 +344,9 @@ async function leagueMeta(env: Env, id: string): Promise<Meta | null> {
     canonical: `${ORIGIN}/leagues/${id}`,
     heading: `${row.name} schedule & fixtures`,
     summaryHtml,
+    // A league with no upcoming fixtures (off-season, between rounds) is thin — keep it out of the
+    // index but follow internal links so it re-enters naturally once fixtures land.
+    noindex: events.length === 0,
   }
 }
 
@@ -369,6 +391,9 @@ async function teamMeta(env: Env, id: string): Promise<Meta | null> {
     canonical: `${ORIGIN}/teams/${id}`,
     heading: `${row.name} schedule`,
     summaryHtml,
+    // No upcoming fixtures for this team/player → thin between seasons. Noindex,follow until the
+    // next fixture syncs in (mirrors leagueMeta).
+    noindex: events.length === 0,
   }
 }
 
