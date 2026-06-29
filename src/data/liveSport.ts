@@ -54,6 +54,7 @@ type EventRow = {
   league_id: string | null
   updated_at: string | null
   venues: { name: string } | null
+  leagues: { name: string; logo_url: string | null } | null
 }
 
 type EventCompetitorRow = {
@@ -100,6 +101,16 @@ function fromCachedEvent(e: CachedEvent): LiveEvent {
   return { ...e, startsAt: e.startsAt ? new Date(e.startsAt) : null }
 }
 
+function cachedScheduleToState(canonicalSportKey: string, cached: CachedSchedule): ScheduleState {
+  return {
+    forKey: canonicalSportKey,
+    leagues: cached.leagues,
+    events: cached.events.map(fromCachedEvent),
+    configured: true,
+    lastUpdated: cached.lastUpdated ? new Date(cached.lastUpdated) : null,
+  }
+}
+
 async function loadEventParticipants(supabase: SupabaseClient, eventIds: string[]) {
   const eventCompetitors = new Map<string, EventParticipant[]>()
   if (!eventIds.length) return eventCompetitors
@@ -140,13 +151,7 @@ export function useSportSchedule(canonicalSportKey: string): SportSchedule {
     if (cached) {
       queueMicrotask(() => {
         if (cancelled) return
-        setState({
-          forKey: canonicalSportKey,
-          leagues: cached.leagues,
-          events: cached.events.map(fromCachedEvent),
-          configured: true,
-          lastUpdated: cached.lastUpdated ? new Date(cached.lastUpdated) : null,
-        })
+        setState(cachedScheduleToState(canonicalSportKey, cached))
       })
     }
 
@@ -157,49 +162,63 @@ export function useSportSchedule(canonicalSportKey: string): SportSchedule {
       }
 
       const nowIso = new Date(Date.now() - 3 * 3600_000).toISOString()
-      let leaguesData: Array<{ id: string; name: string; logo_url: string | null }> | null
-      let eventRows: EventRow[] | null
+      let leaguesData: Array<{ id: string; name: string; logo_url: string | null }> | null = null
+      let eventRows: EventRow[] | null = null
+      let leaguesReadFailed = false
+      let eventsReadFailed = false
       try {
-        ;[leaguesData, eventRows] = await Promise.all([
-          retryRead(() =>
-            supabase
-              .from('leagues')
-              .select('id, name, logo_url, sports!inner(key)')
-              .eq('sports.key', canonicalSportKey)
-              .eq('is_public', true)
-              // Viewership/importance order (F1 before MotoGP, EPL before smaller leagues, …).
-              .order('display_rank', { ascending: true })
-              .order('name'),
-          ) as Promise<Array<{ id: string; name: string; logo_url: string | null }> | null>,
-          retryRead(() =>
-            supabase
-              .from('events')
-              .select('id, title, starts_at, starts_at_tbd, status, kind, metadata, league_id, updated_at, venues(name), sports!inner(key)')
-              .eq('sports.key', canonicalSportKey)
-              .eq('visibility', 'public')
-              .gte('starts_at', nowIso)
-              .order('starts_at', { ascending: true })
-              .limit(250),
-          ) as Promise<EventRow[] | null>,
-        ])
+        leaguesData = (await retryRead(() =>
+          supabase
+            .from('leagues')
+            .select('id, name, logo_url, sports!inner(key)')
+            .eq('sports.key', canonicalSportKey)
+            .eq('is_public', true)
+            .order('display_rank', { ascending: true })
+            .order('name'),
+        )) as Array<{ id: string; name: string; logo_url: string | null }> | null
       } catch {
-        // Every retry failed. Keep whatever is on screen (cache/previous) rather than wiping it;
-        // only fall back to an explicit empty board if we have literally nothing to show.
-        if (!cancelled && !cached && state.forKey !== canonicalSportKey) {
-          setState({ forKey: canonicalSportKey, leagues: [], events: [], configured: true, lastUpdated: null })
-        }
+        leaguesReadFailed = true
+      }
+      try {
+        eventRows = (await retryRead(() =>
+          supabase
+            .from('events')
+            .select(
+              'id, title, starts_at, starts_at_tbd, status, kind, metadata, league_id, updated_at, venues(name), leagues(name, logo_url), sports!inner(key)',
+            )
+            .eq('sports.key', canonicalSportKey)
+            .eq('visibility', 'public')
+            .gte('starts_at', nowIso)
+            .order('starts_at', { ascending: true })
+            .limit(250),
+        )) as EventRow[] | null
+      } catch {
+        eventsReadFailed = true
+      }
+      if (leaguesReadFailed && eventsReadFailed) {
+        if (!cancelled && cached) setState(cachedScheduleToState(canonicalSportKey, cached))
         return
       }
-
       if (cancelled) return
 
-      const allLeagues: LiveLeague[] = (leaguesData ?? [])
+      const cachedLeagues = cached?.leagues ?? []
+      const baseLeagues = leaguesReadFailed
+        ? cachedLeagues.map((league) => ({ id: league.id, name: league.name, logo_url: league.logoUrl }))
+        : (leaguesData ?? [])
+      const allLeagues: LiveLeague[] = baseLeagues
         .filter((l) => isPublicLeagueName(l.name))
         .map((l) => ({ id: l.id, name: l.name.trim(), logoUrl: l.logo_url }))
       const leagueNames = new Map(allLeagues.map((l) => [l.id, l.name]))
+      const leagueLogos = new Map(allLeagues.map((l) => [l.id, l.logoUrl]))
       const visibleLeagueIds = new Set(leagueNames.keys())
 
       const rows = (eventRows ?? []) as EventRow[]
+      for (const row of rows) {
+        if (!row.league_id || !isPublicLeagueName(row.leagues?.name)) continue
+        leagueNames.set(row.league_id, row.leagues!.name.trim())
+        if (!leagueLogos.has(row.league_id)) leagueLogos.set(row.league_id, row.leagues!.logo_url)
+        visibleLeagueIds.add(row.league_id)
+      }
       const eventIds = rows.map((row) => row.id)
       let eventCompetitors = new Map<string, EventParticipant[]>()
       if (eventIds.length) {
@@ -226,7 +245,11 @@ export function useSportSchedule(canonicalSportKey: string): SportSchedule {
           participants: eventCompetitors.get(row.id) ?? [],
         }))
 
-      const leagues = allLeagues
+      const leagueIdsAlreadyListed = new Set(allLeagues.map((league) => league.id))
+      const derivedLeagues: LiveLeague[] = [...leagueNames.entries()]
+        .filter(([id]) => !leagueIdsAlreadyListed.has(id))
+        .map(([id, name]) => ({ id, name, logoUrl: leagueLogos.get(id) ?? null }))
+      const leagues = [...allLeagues, ...derivedLeagues]
 
       // Keep the full public league catalogue visible. The UI separates leagues with fixtures
       // from supported leagues whose next schedule has not landed yet.
@@ -252,7 +275,6 @@ export function useSportSchedule(canonicalSportKey: string): SportSchedule {
     return () => {
       cancelled = true
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canonicalSportKey])
 
   const loading = state.forKey !== canonicalSportKey
