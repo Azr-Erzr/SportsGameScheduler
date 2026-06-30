@@ -63,13 +63,27 @@ been closed in the repo:
 - **Coverage expanded.** Baseball is a full route, other provider-backed sports have a coverage
   page, and the sports nav/dropdown is now the primary discovery pattern.
 
+## 0.2 Update - MP5 Production Hardening (June 30, 2026)
+
+- **Email, push, and admin secrets are now provable.** `npm run verify:prod` checks deployed
+  Supabase secret names and passes 15/15, including Resend, VAPID, `APP_URL`, `EMAIL_FROM`, and
+  `ADMIN_EMAILS=azharmoolla@gmail.com`.
+- **Live-data outage guardrails are in place.** `npm run build` fails before bundling if critical
+  sports fall below strict live-data thresholds, and `.github/workflows/live-data-monitor.yml` runs
+  the same check twice hourly.
+- **Admin stats are locked down.** `admin_overview()` is service-role only; the browser still goes
+  through the `admin-stats` Edge Function allowlist.
+- **Push is no longer a key-provisioning stub.** Remaining work is end-to-end device/browser QA,
+  opt-in UX refinement, and deliverability/alert-noise tuning.
+
 Remaining MP4 work:
 
-- Provision email and push secrets, then verify real delivery end to end.
+- Continue real delivery QA for email and push, including device/browser coverage and alert-noise
+  tuning.
 - Add source-target admin review tooling and seed verified official calendar feeds.
 - Backfill factual `broadcasts`/watch-provider data and approved affiliate URLs.
-- Push/verify the repo-ready competition lifecycle migration once the existing remote migration
-  history mismatch is repaired; the schema/RPC layer is in repo, but not safely applied remotely.
+- Keep competition lifecycle migrations verified in Supabase before deploy; the MP5 hardening
+  migration has been applied remotely.
 - Model `event_bouts`, bracket slots, playoff series, and race-weekend sessions once reliable data
   sources are selected.
 

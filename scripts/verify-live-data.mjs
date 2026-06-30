@@ -22,6 +22,19 @@ for (const name of ['.env.production.local', '.env.production', '.env.local', '.
   loadEnvFile(path.join(root, name))
 }
 
+function loadWranglerVars() {
+  const file = path.join(root, 'wrangler.jsonc')
+  if (!existsSync(file)) return
+  const text = readFileSync(file, 'utf8')
+  for (const key of ['VITE_SUPABASE_URL', 'VITE_SUPABASE_PUBLISHABLE_KEY', 'SUPABASE_URL', 'SUPABASE_PUBLISHABLE_KEY']) {
+    if (process.env[key]) continue
+    const match = text.match(new RegExp(`"${key}"\\s*:\\s*"([^"]+)"`))
+    if (match?.[1]) process.env[key] = match[1]
+  }
+}
+
+loadWranglerVars()
+
 if (process.env.SILBO_SKIP_LIVE_DATA_VERIFY === '1') {
   console.log('skip live data verification (SILBO_SKIP_LIVE_DATA_VERIFY=1)')
   process.exit(0)

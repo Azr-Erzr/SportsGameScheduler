@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
+import { execSync } from 'node:child_process'
 
 const root = process.cwd()
 const strict = process.argv.includes('--strict')
@@ -24,23 +25,66 @@ for (const name of ['.env.production.local', '.env.production', '.env.local', '.
   loadEnvFile(path.join(root, name))
 }
 
+function loadWranglerVars() {
+  const text = readText(path.join(root, 'wrangler.jsonc'))
+  for (const key of ['VITE_SUPABASE_URL', 'VITE_SUPABASE_PUBLISHABLE_KEY']) {
+    if (process.env[key]) continue
+    const match = text.match(new RegExp(`"${key}"\\s*:\\s*"([^"]+)"`))
+    if (match?.[1]) process.env[key] = match[1]
+  }
+}
+
 const checks = []
+const deployedSecretNames = new Set()
 
 function check(name, ok, detail, severity = 'error') {
   checks.push({ name, ok: Boolean(ok), detail, severity })
 }
 
 function hasAny(...keys) {
-  return keys.some((key) => Boolean(process.env[key]))
+  return keys.some((key) => Boolean(process.env[key]) || deployedSecretNames.has(key))
 }
 
 function envValue(key) {
   return process.env[key] ?? ''
 }
 
+function discoverSupabaseProjectRef() {
+  if (process.env.SUPABASE_PROJECT_REF) return process.env.SUPABASE_PROJECT_REF
+  const localRef = readText(path.join(root, 'supabase/.temp/project-ref')).trim()
+  if (localRef) return localRef
+  const match = readText(path.join(root, 'wrangler.jsonc')).match(/https:\/\/([a-z0-9]+)\.supabase\.co/i)
+  return match?.[1] ?? ''
+}
+
+function loadDeployedSecretNames() {
+  const projectRef = discoverSupabaseProjectRef()
+  if (!projectRef) return
+  if (!/^[a-z0-9]+$/i.test(projectRef)) return
+
+  try {
+    const output = execSync(`npx supabase secrets list --project-ref ${projectRef}`, {
+      cwd: root,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+      timeout: 60_000,
+    })
+    const parsed = JSON.parse(output)
+    for (const item of parsed.secrets ?? []) {
+      if (item?.name) deployedSecretNames.add(String(item.name))
+    }
+  } catch (_) {
+    // Offline/unauthenticated audits still work from local env files; the check output below will
+    // show which secrets could not be proven present.
+  }
+}
+
 const seoText = readText(path.join(root, 'src/lib/seo.ts'))
 const wranglerText = readText(path.join(root, 'wrangler.jsonc'))
 const deploymentDoc = readText(path.join(root, 'docs/deployment.md'))
+
+loadWranglerVars()
+loadDeployedSecretNames()
 
 check('Cloudflare/Vite Supabase URL', hasAny('VITE_SUPABASE_URL'), 'Set VITE_SUPABASE_URL in Pages build env.')
 check(

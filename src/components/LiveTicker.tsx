@@ -31,7 +31,7 @@ function TickerItem({ event, timeZone, locale, hour12 }: { event: TickerEvent; t
   return (
     <Link
       to={`/events/${event.id}`}
-      className="group inline-flex shrink-0 items-center gap-2 px-3 text-sm sm:gap-2.5 sm:px-5"
+      className="group inline-flex min-h-9 shrink-0 items-center gap-2 px-3 py-1 text-sm sm:gap-2.5 sm:px-5"
     >
       <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-export shadow-[0_0_6px_var(--mp-export)]" aria-hidden="true" />
       {sport && (

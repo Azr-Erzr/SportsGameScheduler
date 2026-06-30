@@ -24,8 +24,30 @@ describe('fallbackWatchOptions league-specific rights', () => {
     expect(names('GB', 'motorsport', 'Formula 1')).toContain('Sky Sports F1')
   })
 
+  it('World Cup maps priority North America and UK routes', () => {
+    expect(names('US', 'soccer', 'FIFA World Cup 2026')).toEqual(expect.arrayContaining(['FOX Sports', 'Telemundo Deportes']))
+    expect(names('CA', 'soccer', 'FIFA World Cup 2026')).toContain('CTV / TSN / RDS')
+    expect(names('GB', 'soccer', 'FIFA World Cup 2026')).toEqual(expect.arrayContaining(['BBC iPlayer', 'ITVX']))
+    expect(names('MX', 'soccer', 'FIFA World Cup 2026')).toEqual(expect.arrayContaining(['Televisa / TUDN', 'TV Azteca Deportes']))
+  })
+
+  it('World Cup maps major EU public routes', () => {
+    expect(names('FR', 'soccer', 'FIFA World Cup 2026')).toEqual(expect.arrayContaining(['M6+', 'beIN SPORTS']))
+    expect(names('DE', 'soccer', 'FIFA World Cup 2026')).toEqual(expect.arrayContaining(['ARD Mediathek', 'ZDF']))
+    expect(names('IT', 'soccer', 'FIFA World Cup 2026')).toContain('RaiPlay')
+    expect(names('ES', 'soccer', 'FIFA World Cup 2026')).toContain('RTVE Play')
+    expect(names('NL', 'soccer', 'FIFA World Cup 2026')).toContain('NOS')
+  })
+
   it('NBA maps to NBA League Pass', () => {
     expect(names('US', 'basketball', 'NBA')).toContain('NBA League Pass')
+  })
+
+  it('major non-soccer sports keep official first routes', () => {
+    expect(names('CA', 'american_football', 'NFL')).toContain('NFL Game Pass on DAZN')
+    expect(names('US', 'baseball', 'MLB')).toContain('MLB.TV')
+    expect(names('CA', 'cricket', 'Cricket')).toContain('Willow TV')
+    expect(names('US', 'table_tennis', 'World Table Tennis')).toContain('World Table Tennis')
   })
 
   it('every resolved link is a real https destination', () => {

@@ -2786,6 +2786,7 @@
     }
 
     .sport-channel-title {
+      overflow: visible;
       padding-block: 0;
     }
 
@@ -2797,6 +2798,7 @@
     .sport-channel-title h1 {
       max-width: 12ch;
       font-size: clamp(2rem, 10.4vw, 3.05rem);
+      line-height: 1.02;
     }
 
     .sport-channel-stats {
@@ -2830,10 +2832,6 @@
     }
 
     .sport-channel-copy p {
-      display: -webkit-box;
-      overflow: hidden;
-      -webkit-box-orient: vertical;
-      -webkit-line-clamp: 4;
       font-size: 13px;
       line-height: 1.45;
     }

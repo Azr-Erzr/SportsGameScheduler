@@ -1,108 +1,112 @@
 # Silbo Deployment (Cloudflare Pages + Supabase)
 
-Last updated: June 17, 2026
+Last updated: June 30, 2026
 
-The app is a Vite SPA hosted on **Cloudflare Pages**; the backend is **Supabase** (Postgres +
-edge functions + cron). This documents how a push to `main` becomes a live deploy and the config
-that must be in place.
+The app is a Vite SPA hosted on Cloudflare Pages/Workers Static Assets; the backend is Supabase
+(Postgres, Edge Functions, and cron). This documents how a push to `main` becomes a live deploy and
+the config that must be in place.
 
-## Frontend — Cloudflare Pages
+## Frontend - Cloudflare Pages
 
-### Build settings (Pages → project → Settings → Builds)
-- **Build command:** `npm run build`
-- **Build output directory:** `dist`
-- **Node version:** 20 (set `NODE_VERSION=20` env if needed)
+### Build settings
 
-### Required build-time env vars (Pages → Settings → Environment variables)
-These are `VITE_`-prefixed, so they're inlined at build time and safe for the browser (the
-Supabase key is the publishable/anon key; RLS protects data):
+- Build command: `npm run build`
+- Build output directory: `dist`
+- Node version: 22
+
+### Required build-time env vars
+
+These are `VITE_`-prefixed, so they are inlined at build time and safe for the browser. The Supabase
+key is the publishable key; RLS protects the data.
+
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_PUBLISHABLE_KEY`
-- `VITE_ADSENSE_CLIENT` (optional — activates ads; see monetization doc)
-- `VITE_AFFILIATE_*` (optional — per approved affiliate program)
+- `VITE_ADSENSE_CLIENT` (optional; activates ads)
+- `VITE_AFFILIATE_*` (optional; per approved affiliate program)
 
-### SPA fallback + headers (shipped)
+The Worker also keeps the public Supabase URL/key in `wrangler.jsonc`. The local verification
+scripts read those values as a fallback, so CI and scheduled monitors do not need private secrets for
+public live-data checks.
+
+### SPA fallback and headers
+
 `wrangler.jsonc` uses Cloudflare Workers Static Assets with
-`not_found_handling = "single-page-application"` so deep links and hard refreshes resolve to the
-app shell instead of 404. **Without this, `/events/:id`, `/s/:token`, etc. break on direct load**
--- required for shareable links, calendar "View" links, and SEO.
+`not_found_handling = "single-page-application"` so deep links and hard refreshes resolve to the app
+shell instead of 404. Without this, `/events/:id`, `/s/:token`, and similar routes break on direct
+load.
 
 `public/_headers` ships conservative hardening headers plus immutable cache headers for
 fingerprinted Vite assets. Keep `index.html` off immutable caching so new deploys propagate.
 
-### Deploy trigger — two options
-1. **Native Git integration (recommended, likely current setup):** connect the GitHub repo in the
-   Cloudflare Pages dashboard. Every push to `main` auto-builds + deploys; PRs get preview URLs.
-   No GitHub Actions needed. This is the simplest and avoids double-deploys.
-2. **CI-driven (optional):** if you prefer deploys to run from GitHub Actions (e.g., to gate on
-   the existing CI), add the workflow below and set repo secrets `CLOUDFLARE_API_TOKEN` and
-   `CLOUDFLARE_ACCOUNT_ID`. **Use only one** of these two options, not both.
+### Deploy trigger
 
-```yaml
-# .github/workflows/deploy.yml  (enable only if NOT using Pages git-integration)
-name: Deploy
-on:
-  push:
-    branches: [main]
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 20, cache: npm }
-      - run: npm ci
-      - run: npm run build
-        env:
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
-      - uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy dist --project-name=silbo-sports
-```
+Native Git integration is the recommended deploy path: connect the GitHub repo in Cloudflare Pages.
+Every push to `main` auto-builds and deploys; PRs get preview URLs. Avoid running a second deploy
+workflow unless Cloudflare Git integration is intentionally disabled.
 
-CI (lint + test + build) already runs on every push/PR via `.github/workflows/ci.yml` and is
-independent of the deploy path.
+CI (`.github/workflows/ci.yml`) already runs lint, tests, e2e smoke, and build on push/PR.
+`npm run build` runs strict live-data verification before Vite bundles, so a deploy with empty
+critical schedules fails before publishing.
 
-## Backend — Supabase
-- Migrations live in `supabase/migrations/` and are applied to project `gcnbgdpicgeahxscpsfc`.
-- Edge functions in `supabase/functions/` (calendar-feed, notifications, provider-hydrate,
-  provider-hydrate-players, provider-sync, ics-feed-ingest, admin-stats, delete-account) deploy via
-  the Supabase MCP / CLI.
-- **`delete-account` must be deployed for the account page's "Delete my account" (GDPR) to work.**
-  Keep `verify_jwt = true` (default) — only signed-in callers may invoke it. It reads the caller
-  from their own access token, then uses the service role to `auth.admin.deleteUser`; ON DELETE
-  CASCADE on `auth.users` removes the profile, follows, feeds, alert prefs, push subs, and custom
-  leagues. Until it's deployed, the UI surfaces a clear error rather than silently failing.
-- **`calendar-feed` MUST be deployed with `verify_jwt = false`.** It's the public subscription
-  endpoint — Google/Apple/Outlook fetch the `.ics` URL with **no Authorization header**, so with
-  `verify_jwt = true` the gateway returns `401 UNAUTHORIZED_NO_AUTH_HEADER` and live sync is dead.
-  Auth is the unguessable URL token (resolved server-side) + a 120-req/min per-token+IP rate limit
-  (`_shared/rate-limit.ts`). Keep verify_jwt off on any redeploy.
-- Cron jobs (`supabase/cron.sql`): provider-hydrate (15 min), players (3×/hr), notifications
-  (5 min), **ics-feed-ingest (every 6 h, `17 */6 * * *`)** — the non-API ICS/webcal source
-  re-check. The function gates each `source_targets` row by its own `cadence_minutes` (12–24 h for
-  the seeded feeds), so the cron is only a heartbeat and never hammers the sources.
-- **Secrets** (Supabase → Settings → Edge Functions): `THESPORTSDB_API_KEY`, `ADMIN_EMAILS`, and
-  for live alerts: `RESEND_API_KEY` or the existing `RESENDAPI` alias + `EMAIL_FROM` + `APP_URL`
-  + `VAPID_PUBLIC_KEY` + `VAPID_PRIVATE_KEY` + `VAPID_SUBJECT`.
+`.github/workflows/live-data-monitor.yml` runs `npm run verify:live-data -- --strict` twice an hour
+and on manual dispatch. A failed scheduled run should be treated as a production incident: check
+Supabase RLS, provider cron, source freshness, and recent migrations before pushing unrelated UI
+changes.
 
-Run `npm run verify:prod` locally or in CI before launch. It checks the domain lock, required
-build env, Supabase function secrets, VAPID/Resend readiness, asset headers, and SPA fallback.
+## Backend - Supabase
+
+- Project ref: `gcnbgdpicgeahxscpsfc`
+- Migrations live in `supabase/migrations/`.
+- Edge functions live in `supabase/functions/`.
+- Cron definitions live in `supabase/cron.sql`.
+
+Active functions:
+
+- `calendar-feed`
+- `delete-account`
+- `provider-sync`
+- `provider-hydrate`
+- `provider-hydrate-players`
+- `provider-hydrate-apisports`
+- `provider-hydrate-apisports-f1`
+- `provider-hydrate-pandascore`
+- `ics-feed-ingest`
+- `notifications`
+- `admin-stats`
+
+Important function posture:
+
+- `delete-account` must keep JWT verification on. It reads the caller from their access token, then
+  uses the service role to delete the user.
+- `calendar-feed` must keep `verify_jwt = false`. Calendar clients fetch `.ics` URLs without
+  authorization headers. Auth is the unguessable feed token plus rate limiting.
+- `admin-stats` must remain the only public path to admin overview data; the underlying
+  `admin_overview()` RPC is service-role only.
+
+Supabase Edge Function secrets:
+
+- `THESPORTSDB_API_KEY`
+- `ADMIN_EMAILS` - currently `azharmoolla@gmail.com`
+- `RESEND_API_KEY` or legacy `RESENDAPI`
+- `EMAIL_FROM`
+- `APP_URL`
+- `VAPID_PUBLIC_KEY`
+- `VAPID_PRIVATE_KEY`
+- `VAPID_SUBJECT`
+
+Run `npm run verify:prod` locally before launch or after secret changes. It checks the domain lock,
+required build env, deployed Supabase function secrets, VAPID/Resend readiness, asset headers, and
+SPA fallback.
 
 ## Pre-launch checklist
-- [ ] Domain lock: production is `https://silbosports.com`; keep `seo.ts` `SEO_ORIGIN`, sitemap,
-      robots, email links, calendar links, and Edge Function `APP_URL` on that domain.
-- [ ] Confirm Pages env vars are set (above) so the deployed build talks to Supabase.
-- [ ] Add a 1200×630 `public/og-cover.png` (referenced by OG/Twitter tags).
+
+- [ ] Keep production domain locked to `https://silbosports.com` across SEO, sitemap, robots,
+      email links, calendar links, and Edge Function `APP_URL`.
+- [ ] Confirm Pages env vars are set so the deployed build talks to Supabase.
+- [ ] Keep `public/og-cover.png` generated for social cards.
 - [ ] Verify Workers Static Assets SPA fallback is active in the deployed Worker.
-- [ ] Cloudflare WAF: add a rate-limiting rule on `/* ` or the Supabase functions domain (see
-      Admin/observability doc) rather than a custom limiter.
-- [ ] Legal/footer lock: Terms (`/terms`), Privacy (`/privacy`), contact, and unsubscribe/alert-management
-      links are live before email alerts are enabled.
-- [ ] Consent: AdSense is loaded at runtime only after the consent banner is accepted
-      (`src/lib/consent.ts` — the static `<script>` was removed from `index.html`). Declining
-      blocks all ad cookies. Set the real contact email in `src/pages/Legal.tsx` (`CONTACT_EMAIL`).
-- [ ] Deploy the `delete-account` edge function so account deletion works.
+- [ ] Keep Cloudflare WAF/rate-limit rules active for public app and Supabase function surfaces.
+- [ ] Keep Terms, Privacy, contact, and unsubscribe/alert-management links live before email alerts
+      are broadly enabled.
+- [ ] Keep AdSense/advertising scripts gated behind consent.
+- [ ] Keep the `delete-account` Edge Function deployed so account deletion works.

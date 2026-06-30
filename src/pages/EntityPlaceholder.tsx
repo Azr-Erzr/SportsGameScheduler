@@ -62,11 +62,11 @@ function UpcomingEvents({ events, sportKey }: { events: LiveEvent[]; sportKey: s
         <li key={e.id}>
           <Link
             to={`/events/${e.id}`}
-            className="flex items-center gap-3 rounded-lg bg-page/60 px-3 py-2 hover:bg-primary/10"
+            className="flex items-center gap-3 rounded-lg bg-page/60 px-3 py-2 hover:bg-primary/10 max-sm:flex-wrap"
           >
             <span className="text-lg leading-none">{sportEmoji(e.sportKey ?? sportKey)}</span>
             <span className="min-w-0 flex-1 truncate text-sm font-semibold">{e.title}</span>
-            <span className="shrink-0 font-mono text-xs text-ink/55">
+            <span className="shrink-0 font-mono text-xs text-ink/55 max-sm:ml-8 max-sm:w-[calc(100%-2rem)] max-sm:shrink max-sm:whitespace-normal">
               {e.startsAt
                 ? `${formatLongDate(e.startsAt, prefs.timezone, { locale: prefs.locale, hour12: prefs.hour12 ?? undefined })} ${formatTime(e.startsAt, prefs.timezone, { locale: prefs.locale, hour12: prefs.hour12 ?? undefined })}`
                 : 'TBD'}
