@@ -9,7 +9,8 @@ import { exportFilename } from '../domain/brand'
 import { downloadBlob } from '../lib/clipboard'
 import { createMultiSportIcsBlob, sportEmoji } from '../lib/ics'
 import { t } from '../lib/i18n'
-import { SEO_ORIGIN, useDocumentMeta, useJsonLd } from '../lib/seo'
+import { useDocumentMeta, useJsonLd } from '../lib/seo'
+import { eventStructuredData } from '../lib/eventStructuredData'
 import { formatLongDate, formatTime } from '../lib/time'
 
 // A fixture is perishable once finished, or once its start is comfortably past (covers events whose
@@ -48,31 +49,18 @@ export function EventDetailPage() {
   useJsonLd(
     'event',
     event && event.startsAt
-      ? {
-          '@context': 'https://schema.org',
-          '@type': 'SportsEvent',
-          name: event.title,
-          startDate: event.startsAt.toISOString(),
-          eventStatus:
-            event.status === 'cancelled'
-              ? 'https://schema.org/EventCancelled'
-              : event.status === 'postponed'
-                ? 'https://schema.org/EventPostponed'
-                : 'https://schema.org/EventScheduled',
-          ...(event.venue
-            ? {
-                location: {
-                  '@type': 'Place',
-                  name: event.venue,
-                  address: [event.venueCity, event.venueCountry].filter(Boolean).join(', ') || undefined,
-                },
-              }
-            : {}),
-          ...(event.competitors.length
-            ? { competitor: event.competitors.map((c) => ({ '@type': 'SportsTeam', name: c.name })) }
-            : {}),
-          url: `${SEO_ORIGIN}/events/${event.id}`,
-        }
+      ? eventStructuredData({
+          id: event.id,
+          title: event.title,
+          startsAt: event.startsAt,
+          status: event.status,
+          sportKey: event.sportKey,
+          leagueName: event.leagueName,
+          venue: event.venue,
+          venueCity: event.venueCity,
+          venueCountry: event.venueCountry,
+          competitors: event.competitors,
+        })
       : null,
   )
 

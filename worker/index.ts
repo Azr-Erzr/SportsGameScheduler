@@ -46,8 +46,31 @@ type Meta = {
   /** First-paint body summary for no-JS crawlers; React replaces #root on hydration. */
   heading: string
   summaryHtml: string
+  jsonLd?: Record<string, unknown>
   /** Past/finished entities set this so the URL drops out of the index without breaking humans. */
   noindex?: boolean
+}
+
+const SPORT_TIMING_MINUTES: Record<string, number> = {
+  soccer: 115,
+  basketball: 140,
+  american_football: 195,
+  hockey: 150,
+  baseball: 165,
+  tennis: 150,
+  golf: 300,
+  motorsport: 120,
+  combat_sports: 300,
+  athletics: 150,
+  olympic_sports: 150,
+  cricket: 210,
+  rugby: 105,
+  volleyball: 110,
+  handball: 80,
+  cycling: 300,
+  snooker: 180,
+  darts: 120,
+  esports: 120,
 }
 
 // Route sport key → backend canonical key + display copy. Mirrors src/domain/sports.ts but kept
@@ -152,6 +175,7 @@ async function renderMeta(request: Request, env: Env, entity: Entity): Promise<R
     .on('meta[name="twitter:description"]', new AttrSetter('content', meta.description))
     .on('meta[name="twitter:image"]', new AttrSetter('content', OG_IMAGE))
     .on('link[rel="canonical"]', new AttrSetter('href', meta.canonical))
+    .on('head', new JsonLdInjector(meta))
     .on('#root', new RootInjector(meta))
 
   // Perishable: a finished/past fixture is rewritten to noindex,follow so it leaves the index
@@ -204,6 +228,17 @@ class RootInjector {
       `<section data-ssr-summary style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">` +
       `<h1>${escapeHtml(this.meta.heading)}</h1>${this.meta.summaryHtml}</section>`
     el.prepend(block, { html: true })
+  }
+}
+
+class JsonLdInjector {
+  constructor(private meta: Meta) {}
+  element(el: { append: (content: string, opts: { html: boolean }) => void }) {
+    if (!this.meta.jsonLd) return
+    el.append(
+      `<script type="application/ld+json" id="jsonld-event">${escapeJsonScript(this.meta.jsonLd)}</script>`,
+      { html: true },
+    )
   }
 }
 
@@ -267,6 +302,7 @@ function sportHubLink(canonicalKey: string | null | undefined): string {
 }
 
 type EventRow = {
+  id: string
   title: string
   starts_at: string | null
   starts_at_tbd: boolean | null
@@ -274,16 +310,91 @@ type EventRow = {
   league_id: string | null
   leagues: { name: string | null } | null
   sports: { key: string | null } | null
-  venues: { name: string | null } | null
+  venues: { name: string | null; city: string | null; country: string | null } | null
+}
+
+type EventPerformerRow = {
+  competitors: { name: string | null; kind: string | null } | null
+}
+
+function eventStatusUrl(status: string | null): string {
+  if (status === 'cancelled') return 'https://schema.org/EventCancelled'
+  if (status === 'postponed') return 'https://schema.org/EventPostponed'
+  return 'https://schema.org/EventScheduled'
+}
+
+function performerType(kind: string | null): string {
+  return kind === 'person' ? 'Person' : 'SportsTeam'
+}
+
+function eventStructuredData(row: EventRow, performers: Array<{ name: string; kind: string | null }>): Record<string, unknown> | undefined {
+  if (!row.starts_at) return undefined
+  const start = new Date(row.starts_at)
+  if (Number.isNaN(start.getTime())) return undefined
+  const url = `${ORIGIN}/events/${row.id}`
+  const end = new Date(start.getTime() + (SPORT_TIMING_MINUTES[row.sports?.key ?? ''] ?? 120) * 60_000)
+  const venue = row.venues
+  const mappedPerformers = performers.map((performer) => ({ '@type': performerType(performer.kind), name: performer.name }))
+  const location = venue?.name
+    ? {
+        '@type': 'Place',
+        name: venue.name,
+        address:
+          venue.city || venue.country
+            ? {
+                '@type': 'PostalAddress',
+                ...(venue.city ? { addressLocality: venue.city } : {}),
+                ...(venue.country ? { addressCountry: venue.country } : {}),
+              }
+            : venue.name,
+      }
+    : { '@type': 'VirtualLocation', url }
+  const descriptionParts = [
+    row.title,
+    row.leagues?.name ? `in ${row.leagues.name}` : null,
+    venue?.name ? `at ${venue.name}` : null,
+  ].filter(Boolean)
+
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'SportsEvent',
+    name: row.title,
+    description: `${descriptionParts.join(' ')}. See the start time in your local timezone, find where to watch, and add it to your calendar with Silbo Sports.`,
+    image: [`${ORIGIN}/og-cover.png`],
+    startDate: start.toISOString(),
+    endDate: end.toISOString(),
+    eventStatus: eventStatusUrl(row.status),
+    eventAttendanceMode: venue?.name ? 'https://schema.org/OfflineEventAttendanceMode' : 'https://schema.org/MixedEventAttendanceMode',
+    location,
+    ...(mappedPerformers.length ? { performer: mappedPerformers, competitor: mappedPerformers } : {}),
+    ...(row.leagues?.name ? { organizer: { '@type': 'Organization', name: row.leagues.name } } : {}),
+    offers: {
+      '@type': 'Offer',
+      name: 'Free Silbo Sports schedule page',
+      url,
+      price: '0',
+      priceCurrency: 'USD',
+      availability: 'https://schema.org/InStock',
+      validFrom: new Date(0).toISOString(),
+    },
+    url,
+  }
 }
 
 async function eventMeta(env: Env, id: string): Promise<Meta | null> {
   const rows = await supabaseSelect<EventRow>(
     env,
-    `events?id=eq.${encodeURIComponent(id)}&select=title,starts_at,starts_at_tbd,status,league_id,leagues(name),sports(key),venues(name)&limit=1`,
+    `events?id=eq.${encodeURIComponent(id)}&select=id,title,starts_at,starts_at_tbd,status,league_id,leagues(name),sports(key),venues(name,city,country)&limit=1`,
   )
   const row = rows?.[0]
   if (!row?.title) return null
+  const performerRows = await supabaseSelect<EventPerformerRow>(
+    env,
+    `event_competitors?event_id=eq.${encodeURIComponent(id)}&select=competitors(name,kind)&limit=20`,
+  )
+  const performers = (performerRows ?? []).flatMap((entry) =>
+    entry.competitors?.name ? [{ name: entry.competitors.name, kind: entry.competitors.kind }] : [],
+  )
 
   const league = row.leagues?.name ?? null
   const venue = row.venues?.name ?? null
@@ -317,6 +428,7 @@ async function eventMeta(env: Env, id: string): Promise<Meta | null> {
     canonical: `${ORIGIN}/events/${id}`,
     heading: when ? `${row.title} — ${when}` : row.title,
     summaryHtml,
+    jsonLd: eventStructuredData(row, performers),
     noindex: isPerishable(row.status, row.starts_at),
   }
 }
@@ -490,4 +602,8 @@ function escapeHtml(value: string): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;')
+}
+
+function escapeJsonScript(value: unknown): string {
+  return JSON.stringify(value).replace(/</g, '\\u003c')
 }

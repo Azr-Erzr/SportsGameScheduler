@@ -115,6 +115,28 @@ const SPORT_CANONICAL = {
 const LOCAL_TIME_NOTE =
   'Silbo Sports shows each start time converted to your local timezone, lists where to watch, and lets you add fixtures to your calendar or get a reminder before kickoff.'
 
+const SPORT_TIMING_MINUTES = {
+  soccer: 115,
+  basketball: 140,
+  american_football: 195,
+  hockey: 150,
+  baseball: 165,
+  tennis: 150,
+  golf: 300,
+  motorsport: 120,
+  combat_sports: 300,
+  athletics: 150,
+  olympic_sports: 150,
+  cricket: 210,
+  rugby: 105,
+  volleyball: 110,
+  handball: 80,
+  cycling: 300,
+  snooker: 180,
+  darts: 120,
+  esports: 120,
+}
+
 function formatWhenUtc(iso) {
   if (!iso) return null
   const date = new Date(iso)
@@ -214,8 +236,17 @@ function escapeXml(value) {
     .replaceAll("'", '&apos;')
 }
 
+function escapeJsonScript(value) {
+  return JSON.stringify(value).replace(/</g, '\\u003c')
+}
+
 function setTag(html, pattern, replacement) {
   return pattern.test(html) ? html.replace(pattern, replacement) : html.replace('</head>', `    ${replacement}\n  </head>`)
+}
+
+function injectJsonLd(html, id, data) {
+  if (!data) return html
+  return html.replace('</head>', `    <script type="application/ld+json" id="${escapeXml(id)}">${escapeJsonScript(data)}</script>\n  </head>`)
 }
 
 function injectMeta(baseHtml, route) {
@@ -240,10 +271,78 @@ function injectBody(html, bodyHtml) {
 
 async function writeRouteHtml(baseHtml, route) {
   let html = injectMeta(baseHtml, route)
+  if (route.jsonLd) html = injectJsonLd(html, route.jsonLdId ?? `jsonld-${route.path.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '')}`, route.jsonLd)
   if (route.bodyHtml) html = injectBody(html, route.bodyHtml)
   const routeDir = route.path === '/' ? distDir : path.join(distDir, route.path.replace(/^\//, ''))
   await fs.mkdir(routeDir, { recursive: true })
   await fs.writeFile(path.join(routeDir, 'index.html'), html)
+}
+
+function eventStatusUrl(status) {
+  if (status === 'cancelled') return 'https://schema.org/EventCancelled'
+  if (status === 'postponed') return 'https://schema.org/EventPostponed'
+  return 'https://schema.org/EventScheduled'
+}
+
+function performerType(kind) {
+  return kind === 'person' ? 'Person' : 'SportsTeam'
+}
+
+function eventStructuredData(event, performers) {
+  if (!event.starts_at) return null
+  const start = new Date(event.starts_at)
+  if (Number.isNaN(start.getTime())) return null
+  const url = `${origin}/events/${event.id}`
+  const sportKey = event.sports?.key
+  const end = new Date(start.getTime() + (SPORT_TIMING_MINUTES[sportKey] ?? 120) * 60_000)
+  const mappedPerformers = (performers ?? [])
+    .filter((competitor) => competitor.name)
+    .map((competitor) => ({ '@type': performerType(competitor.kind), name: competitor.name }))
+  const venue = event.venues
+  const location = venue?.name
+    ? {
+        '@type': 'Place',
+        name: venue.name,
+        address:
+          venue.city || venue.country
+            ? {
+                '@type': 'PostalAddress',
+                ...(venue.city ? { addressLocality: venue.city } : {}),
+                ...(venue.country ? { addressCountry: venue.country } : {}),
+              }
+            : venue.name,
+      }
+    : { '@type': 'VirtualLocation', url }
+  const descriptionParts = [
+    event.title,
+    event.leagues?.name ? `in ${event.leagues.name}` : null,
+    venue?.name ? `at ${venue.name}` : null,
+  ].filter(Boolean)
+
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'SportsEvent',
+    name: event.title,
+    description: `${descriptionParts.join(' ')}. See the start time in your local timezone, find where to watch, and add it to your calendar with Silbo Sports.`,
+    image: [`${origin}/og-cover.png`],
+    startDate: start.toISOString(),
+    endDate: end.toISOString(),
+    eventStatus: eventStatusUrl(event.status),
+    eventAttendanceMode: venue?.name ? 'https://schema.org/OfflineEventAttendanceMode' : 'https://schema.org/MixedEventAttendanceMode',
+    location,
+    ...(mappedPerformers.length ? { performer: mappedPerformers, competitor: mappedPerformers } : {}),
+    ...(event.leagues?.name ? { organizer: { '@type': 'Organization', name: event.leagues.name } } : {}),
+    offers: {
+      '@type': 'Offer',
+      name: 'Free Silbo Sports schedule page',
+      url,
+      price: '0',
+      priceCurrency: 'USD',
+      availability: 'https://schema.org/InStock',
+      validFrom: new Date(0).toISOString(),
+    },
+    url,
+  }
 }
 
 async function fetchDbRoutes() {
@@ -258,7 +357,7 @@ async function fetchDbRoutes() {
   const [eventsRes, leaguesRes, teamsRes] = await Promise.all([
     supabase
       .from('events')
-      .select('id, title, starts_at, league_id, leagues(name), sports(key), venues(name)')
+      .select('id, title, starts_at, starts_at_tbd, status, league_id, leagues(name), sports(key), venues(name, city, country)')
       .eq('visibility', 'public')
       .gte('starts_at', nowIso)
       .order('starts_at', { ascending: true })
@@ -286,13 +385,19 @@ async function fetchDbRoutes() {
   // Competitor ids that appear in an upcoming public fixture → the only team pages worth indexing.
   const eventIds = events.map((e) => e.id).filter(Boolean)
   const teamsWithUpcoming = new Set()
+  const performersByEvent = new Map()
   for (let i = 0; i < eventIds.length; i += 200) {
     const linkRes = await supabase
       .from('event_competitors')
-      .select('competitor_id')
+      .select('event_id, competitor_id, competitors(name, kind)')
       .in('event_id', eventIds.slice(i, i + 200))
     for (const link of linkRes.data ?? []) {
       if (link.competitor_id) teamsWithUpcoming.add(link.competitor_id)
+      if (link.event_id && link.competitors?.name) {
+        const list = performersByEvent.get(link.event_id) ?? []
+        list.push({ name: link.competitors.name, kind: link.competitors.kind })
+        performersByEvent.set(link.event_id, list)
+      }
     }
   }
   // Group fixtures by sport (for the static /sports body) and by league (for the static /leagues body).
@@ -324,6 +429,8 @@ async function fetchDbRoutes() {
     description: `${event.title}${event.leagues?.name ? ` - ${event.leagues.name}` : ''}. Start time, venue, where to watch, follow, and add to calendar.`,
     priority: '0.7',
     changefreq: 'daily',
+    jsonLdId: 'jsonld-event',
+    jsonLd: eventStructuredData(event, performersByEvent.get(event.id) ?? []),
   }))
 
   // Only leagues with at least one upcoming fixture are indexable (the Worker noindexes empty ones).

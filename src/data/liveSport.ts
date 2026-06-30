@@ -422,7 +422,7 @@ export function useMyEvents(
   return { events: loading ? [] : state.events, loading, configured: state.configured }
 }
 
-export type EventCompetitor = { id: string; name: string; country: string | null; role: string; logoUrl: string | null }
+export type EventCompetitor = { id: string; name: string; country: string | null; kind: string | null; role: string; logoUrl: string | null }
 export type EventBroadcast = { country: string; channel: string; streamUrl: string | null; kind: string }
 export type EventBout = {
   id: string
@@ -479,7 +479,7 @@ export function useEvent(eventId: string | undefined): { event: EventDetail | nu
           .maybeSingle(),
         supabase
           .from('event_competitors')
-          .select('role, position, competitors(id, name, country, logo_url)')
+          .select('role, position, competitors(id, name, country, kind, logo_url)')
           .eq('event_id', eventId)
           .order('position', { ascending: true }),
         supabase.from('broadcasts').select('country, channel, stream_url, kind').eq('event_id', eventId),
@@ -510,11 +510,12 @@ export function useEvent(eventId: string | undefined): { event: EventDetail | nu
         leagues: { name: string } | null
       }
       const competitors: EventCompetitor[] = (comps ?? []).map((c) => {
-        const person = (c as unknown as { competitors: { id: string; name: string; country: string | null; logo_url: string | null } }).competitors
+        const person = (c as unknown as { competitors: { id: string; name: string; country: string | null; kind: string | null; logo_url: string | null } }).competitors
         return {
           id: person.id,
           name: person.name,
           country: person.country,
+          kind: person.kind,
           logoUrl: person.logo_url,
           role: (c as unknown as { role: string }).role,
         }
@@ -544,8 +545,8 @@ export function useEvent(eventId: string | undefined): { event: EventDetail | nu
         if (cancelled) return
         boutCompetitors = new Map(
           ((people ?? []) as unknown as Array<{ id: string; name: string; country: string | null; logo_url: string | null }>).map((person) => [
-            person.id,
-            { id: person.id, name: person.name, country: person.country, logoUrl: person.logo_url, role: 'fighter' },
+          person.id,
+            { id: person.id, name: person.name, country: person.country, kind: 'person', logoUrl: person.logo_url, role: 'fighter' },
           ]),
         )
       }

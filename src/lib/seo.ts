@@ -58,6 +58,7 @@ export function useDocumentMeta(opts: {
 export function useJsonLd(id: string, data: Record<string, unknown> | null) {
   useEffect(() => {
     if (!data) return
+    document.getElementById(`jsonld-${id}`)?.remove()
     const script = document.createElement('script')
     script.type = 'application/ld+json'
     script.id = `jsonld-${id}`
