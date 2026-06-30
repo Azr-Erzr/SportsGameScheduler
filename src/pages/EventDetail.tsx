@@ -1,6 +1,7 @@
-import { ArrowLeft, Bell, CalendarDays, Clock, Download, MapPin, Star, Tv } from 'lucide-react'
+import { ArrowLeft, Bell, CalendarDays, Clock, Download, MapPin, Star, Ticket, Tv } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
 import { useAppState } from '../app/state-context'
+import { TicketOptionsPanel } from '../components/TicketOptionsPanel'
 import { WatchOptionsPanel } from '../components/WatchOptionsPanel'
 import { Badge, Button, EmptyState, Panel, PanelHeading } from '../components/ui'
 import { useEvent } from '../data/liveSport'
@@ -264,6 +265,18 @@ export function EventDetailPage() {
             locale={prefs.locale}
           />
         )}
+      </Panel>
+
+      <Panel>
+        <PanelHeading title="Tickets">
+          <Ticket size={18} className="text-primary" />
+        </PanelHeading>
+        <TicketOptionsPanel
+          title={event.title}
+          leagueName={event.leagueName}
+          venue={event.venue}
+          regionCode={prefs.regionCode}
+        />
       </Panel>
     </div>
   )
