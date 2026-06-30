@@ -118,13 +118,18 @@ function BrandBlock() {
     <Link
       to="/"
       aria-label={brand.appName}
-      className="group flex min-w-0 justify-self-start items-center gap-3 rounded-xl px-1 py-1 transition-colors hover:bg-primary/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+      className="group flex min-w-0 justify-self-start items-center gap-2 rounded-xl px-1 py-1 transition-colors hover:bg-primary/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:gap-3"
     >
-      <span className="flex h-12 w-16 shrink-0 items-center justify-center sm:h-14 sm:w-[4.75rem]">
-        <SilboBrandMark size={70} color="var(--mp-primary)" />
+      <span className="flex h-10 w-12 shrink-0 items-center justify-center sm:h-14 sm:w-[4.75rem]">
+        <span className="sm:hidden">
+          <SilboBrandMark size={54} color="var(--mp-primary)" />
+        </span>
+        <span className="hidden sm:block">
+          <SilboBrandMark size={70} color="var(--mp-primary)" />
+        </span>
       </span>
       <span className="min-w-0">
-        <span className="neon-text block whitespace-nowrap font-display text-xl leading-none tracking-wide sm:text-2xl">
+        <span className="neon-text block truncate whitespace-nowrap font-display text-[1rem] leading-none tracking-wide min-[390px]:text-lg sm:text-2xl">
           Silbo Sports
         </span>
         <span className="hidden max-w-[18rem] truncate font-mono text-[10px] uppercase tracking-[0.18em] text-ink/45 lg:block">
@@ -167,18 +172,18 @@ export function AppShell() {
         {/* PERF: no backdrop-blur on the sticky header — blur over a fixed gradient forces a
             full-viewport recomposite on every scroll frame. Near-opaque surface instead. */}
         <header className="sticky top-0 z-40 border-b border-primary/15 bg-surface/95">
-          <div className="mx-auto grid w-full max-w-[1460px] grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-3 py-2.5 sm:gap-4 sm:px-4 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
+          <div className="mx-auto grid w-full max-w-[1460px] grid-cols-[minmax(0,1fr)_auto] items-center gap-1.5 px-2.5 py-2.5 sm:gap-4 sm:px-4 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
             <BrandBlock />
 
             <DesktopNav locale={prefs.locale} />
 
-            <div className="flex items-center justify-self-end gap-2">
+            <div className="flex items-center justify-self-end gap-1.5 sm:gap-2">
               <button
                 type="button"
                 onClick={() => setPrefs({ ...prefs, themeMode: programMode ? 'broadcast' : 'program' })}
                 title={t(programMode ? 'app.theme.toBroadcast' : 'app.theme.toProgram', undefined, prefs.locale)}
                 aria-label={t(programMode ? 'app.theme.toBroadcast' : 'app.theme.toProgram', undefined, prefs.locale)}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-primary/30 text-primary transition-colors hover:bg-primary/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-primary/30 text-primary transition-colors hover:bg-primary/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:h-10 sm:w-10"
               >
                 {programMode ? <Moon size={17} /> : <Sun size={17} />}
               </button>

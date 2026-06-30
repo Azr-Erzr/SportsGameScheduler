@@ -44,7 +44,7 @@ export function AuthButton() {
         disabled
         title="Account sync is not available in this environment"
         aria-label="Local-only mode"
-        className="max-sm:h-10 max-sm:w-10 max-sm:px-0"
+        className="max-sm:h-9 max-sm:w-9 max-sm:px-0"
       >
         <UserCircle size={16} />
         <span className="hidden sm:inline">Local</span>
@@ -58,7 +58,7 @@ export function AuthButton() {
         to="/account"
         title={auth.user.email ?? 'Account'}
         aria-label="Your account"
-        className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary/12 px-4 py-2 text-sm font-semibold text-primary transition-colors hover:bg-primary/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary max-sm:h-10 max-sm:w-10 max-sm:px-0"
+        className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary/12 px-4 py-2 text-sm font-semibold text-primary transition-colors hover:bg-primary/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary max-sm:h-9 max-sm:w-9 max-sm:px-0"
       >
         <UserCircle size={16} />
         <span className="hidden sm:inline">Account</span>
@@ -71,7 +71,7 @@ export function AuthButton() {
       <Button
         variant="ghost"
         onClick={() => setOpen((current) => !current)}
-        className="max-sm:h-10 max-sm:w-10 max-sm:px-0"
+        className="max-sm:h-9 max-sm:w-9 max-sm:px-0"
         aria-label="Sign in"
       >
         <LogIn size={16} />

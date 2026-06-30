@@ -2746,6 +2746,10 @@
   }
 
   @media (max-width: 700px) {
+    .broadcast-lock-board {
+      display: none !important;
+    }
+
     .sport-channel-banner {
       grid-template-columns: 1fr;
       grid-template-rows: none;
@@ -2960,7 +2964,7 @@
     }
 
     .poster-stack {
-      --mobile-card-width: min(78vw, 21rem);
+      --mobile-card-width: min(86vw, 22rem);
       --mobile-side-pad: calc((100vw - var(--mobile-card-width)) / 2);
       justify-content: flex-start;
       gap: 0.9rem;
@@ -3077,7 +3081,43 @@
     }
 
     .feature-ribbon {
+      display: grid;
+      grid-template-columns: 1fr;
+      overflow: visible;
       box-shadow: none;
+      content-visibility: visible;
+      contain-intrinsic-size: auto;
+    }
+
+    .feature-ribbon-lead,
+    .feature-ribbon-cell {
+      min-width: 0;
+      min-height: 0;
+      padding: 14px;
+    }
+
+    .feature-ribbon-lead {
+      grid-template-columns: 46px minmax(0, 1fr);
+    }
+
+    .feature-ribbon-lead h2 {
+      max-width: none;
+      font-size: 22px;
+    }
+
+    .feature-ribbon-lead p,
+    .feature-ribbon-cell p {
+      max-width: none;
+      font-size: 13px;
+      line-height: 1.38;
+    }
+
+    .feature-ribbon-cell {
+      grid-template-columns: 38px minmax(0, 1fr);
+    }
+
+    .feature-ribbon-arrow {
+      display: none;
     }
 
     .manifesto-poster {

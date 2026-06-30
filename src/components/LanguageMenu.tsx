@@ -40,10 +40,10 @@ export function LanguageMenu() {
         aria-expanded={open}
         aria-label="Change language"
         title="Change language"
-        className="inline-flex h-10 items-center gap-1.5 rounded-lg border border-primary/30 px-2.5 text-primary transition-colors hover:bg-primary/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        className="inline-flex h-9 items-center gap-1 rounded-lg border border-primary/30 px-2 text-primary transition-colors hover:bg-primary/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:h-10 sm:gap-1.5 sm:px-2.5"
       >
-        <Languages size={17} />
-        <span className="font-mono text-[11px] font-bold uppercase">{current?.shortLabel ?? 'EN'}</span>
+        <Languages size={16} />
+        <span className="font-mono text-[10px] font-bold uppercase sm:text-[11px]">{current?.shortLabel ?? 'EN'}</span>
       </button>
 
       {open && (

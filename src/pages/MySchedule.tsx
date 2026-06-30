@@ -431,11 +431,11 @@ export function MySchedulePage() {
       ...followCounts.map(({ team, count }) => ({ targetType: 'team' as const, targetId: team, label: team, group: 'World Cup', count })),
       ...activeFollowedLeagueIds.map((id) => {
         const info = leagueLabels.get(id)
-        return { targetType: 'league' as const, targetId: id, label: info?.label ?? 'League follow', group: info?.group ?? 'Live sports', count: info?.count ?? 0 }
+        return { targetType: 'league' as const, targetId: id, label: info?.label ?? 'Saved league', group: info?.group ?? 'Live sports', count: info?.count ?? 0 }
       }),
       ...activeFollowedCompetitorIds.map((id) => {
         const info = competitorLabels.get(id)
-        return { targetType: 'competitor' as const, targetId: id, label: info?.label ?? 'Team/player follow', group: info?.group ?? 'Live sports', count: info?.count ?? 0 }
+        return { targetType: 'competitor' as const, targetId: id, label: info?.label ?? 'Saved team/player', group: info?.group ?? 'Live sports', count: info?.count ?? 0 }
       }),
     ]
   }, [activeFollowedCompetitorIds, activeFollowedLeagueIds, followCounts, myEvents.events])
@@ -1193,7 +1193,7 @@ export function MySchedulePage() {
                       className="group inline-flex max-w-full items-center gap-1.5 rounded-full border border-primary/20 bg-page/70 px-2.5 py-1 text-xs font-bold text-ink/75"
                     >
                       <span className="truncate">{pick.label}</span>
-                      <span className="font-mono text-[10px] text-ink/40">{pick.count}</span>
+                      {pick.count > 0 && <span className="font-mono text-[10px] text-ink/40">{pick.count}</span>}
                       <button
                         type="button"
                         onClick={() => removeReviewPick(pick)}
