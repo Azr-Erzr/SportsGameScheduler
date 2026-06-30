@@ -210,7 +210,6 @@ export function renderSilboAlertEmail(options: RenderAlertEmailOptions) {
         .header { padding:18px 16px !important; }
         .header td { display:block !important; width:100% !important; text-align:left !important; }
         .brand-lockup { width:220px !important; max-width:100% !important; height:auto !important; }
-        .header .label { margin-top:12px !important; letter-spacing:.18em !important; }
         .hero { padding:22px 16px !important; }
         .hero .label { margin-top:42px !important; }
         .title { font-size:25px !important; line-height:1.08 !important; }
@@ -240,7 +239,6 @@ export function renderSilboAlertEmail(options: RenderAlertEmailOptions) {
                     <td>
                       <img class="brand-lockup" src="${escapeHtml(emailLockupUrl)}" width="258" height="58" alt="${escapeHtml(brandName)}" style="display:block;width:258px;max-width:100%;height:auto;border:0;outline:none;text-decoration:none;">
                     </td>
-                    <td align="right" class="label" style="color:#8ba091;font:800 9px/1 Arial,sans-serif;text-transform:uppercase;letter-spacing:.24em;">Schedule alert</td>
                   </tr>
                 </table>
               </td>
