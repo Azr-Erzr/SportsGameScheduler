@@ -62,6 +62,22 @@ export function createFaviconSvg(logoPath) {
 `
 }
 
+export function createEmailLockupSvgWithText(logoPath, text) {
+  return `<svg width="430" height="96" viewBox="0 0 430 96" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="softGlow" x="-18%" y="-45%" width="136%" height="190%">
+      <feGaussianBlur stdDeviation="1.5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <path transform="translate(0 12) scale(0.14)" d="${logoPath}" fill="${brandGreen}" fill-rule="evenodd" opacity="0.42" filter="url(#softGlow)"/>
+  <path transform="translate(0 12) scale(0.14)" d="${logoPath}" fill="${brandGreen}" fill-rule="evenodd"/>
+  ${textPath(text.display, 'SILBO SPORTS', { x: 112, y: 28, size: 37, fill: brandGreen, opacity: 0.42 })}
+  ${textPath(text.display, 'SILBO SPORTS', { x: 112, y: 28, size: 37, fill: brandGreen })}
+</svg>
+`
+}
+
 export function createOgCoverSvg(logoPath) {
   return createOgCoverSvgWithText(logoPath, loadBrandText(defaultRoot))
 }
@@ -188,11 +204,14 @@ export async function writeBrandAssets(targetDir, { rootDir = defaultRoot } = {}
   const logoPath = await readLogoPath(rootDir)
   const text = loadBrandText(rootDir)
   const faviconSvg = createFaviconSvg(logoPath)
+  const emailLockupSvg = createEmailLockupSvgWithText(logoPath, text)
   const ogSvg = createOgCoverSvgWithText(logoPath, text)
 
   await fs.writeFile(path.join(targetDir, 'favicon.svg'), faviconSvg)
   await sharp(Buffer.from(ogSvg)).png().toFile(path.join(targetDir, 'og-cover.png'))
   await sharp(Buffer.from(faviconSvg)).resize(180, 180).png().toFile(path.join(targetDir, 'apple-touch-icon.png'))
+  await fs.mkdir(path.join(targetDir, 'assets/brand'), { recursive: true })
+  await sharp(Buffer.from(emailLockupSvg)).resize(258, 58).png().toFile(path.join(targetDir, 'assets/brand/silbo-email-lockup.png'))
 
   // Raster favicons. The browser tab uses favicon.svg, but Google Search (and other engines) use
   // favicon.ico / the PNG rel=icon links — so these MUST be regenerated from the current mark too,

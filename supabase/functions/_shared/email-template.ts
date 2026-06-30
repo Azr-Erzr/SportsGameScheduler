@@ -145,6 +145,7 @@ export function renderSilboAlertEmail(options: RenderAlertEmailOptions) {
   const brandName = options.brandName || 'Silbo Sports'
   const appUrl = normalizeUrl(options.appUrl)
   const eventUrl = options.eventUrl ? normalizeUrl(options.eventUrl) : appUrl
+  const emailLockupUrl = `${appUrl}/assets/brand/silbo-email-lockup.png`
   const tz = options.displayTimezone || options.event.timezone || 'UTC'
   const start = formatStartParts(options.event.starts_at, tz, options.hour12)
   const countdown = options.kind && UPCOMING_KINDS.has(options.kind) ? countdownLabel(options.event.starts_at) : null
@@ -208,6 +209,7 @@ export function renderSilboAlertEmail(options: RenderAlertEmailOptions) {
         .panel { width:100% !important; max-width:100% !important; border-left:0 !important; border-right:0 !important; border-radius:0 !important; }
         .header { padding:18px 16px !important; }
         .header td { display:block !important; width:100% !important; text-align:left !important; }
+        .brand-lockup { width:220px !important; max-width:100% !important; height:auto !important; }
         .header .label { margin-top:12px !important; letter-spacing:.18em !important; }
         .hero { padding:22px 16px !important; }
         .hero .label { margin-top:42px !important; }
@@ -236,8 +238,7 @@ export function renderSilboAlertEmail(options: RenderAlertEmailOptions) {
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                   <tr>
                     <td>
-                      <span style="display:inline-block;width:28px;height:28px;border-radius:999px;background:#28f070;color:#061008;text-align:center;font:900 15px/28px Arial,sans-serif;margin-right:10px;">S</span>
-                      <span class="brand" style="display:inline-block;color:#28f070;font:900 18px/1 Arial,sans-serif;letter-spacing:.16em;text-transform:uppercase;vertical-align:middle;white-space:nowrap;">${escapeHtml(brandName)}</span>
+                      <img class="brand-lockup" src="${escapeHtml(emailLockupUrl)}" width="258" height="58" alt="${escapeHtml(brandName)}" style="display:block;width:258px;max-width:100%;height:auto;border:0;outline:none;text-decoration:none;">
                     </td>
                     <td align="right" class="label" style="color:#8ba091;font:800 9px/1 Arial,sans-serif;text-transform:uppercase;letter-spacing:.24em;">Schedule alert</td>
                   </tr>
