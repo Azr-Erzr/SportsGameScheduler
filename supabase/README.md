@@ -18,6 +18,7 @@ the production database and Edge Function path.
   - `provider-hydrate` - paced TheSportsDB league/team/event hydrator.
   - `provider-hydrate-apisports` - paced API-SPORTS football fixture hydrator.
   - `provider-hydrate-apisports-f1` - paced API-SPORTS Formula 1 hydrator.
+  - `provider-hydrate-openf1` - OpenF1 Formula 1 meetings/sessions + driver art hydrator.
   - `provider-hydrate-players` - TheSportsDB roster/player hydrator for individual sports.
   - `ics-feed-ingest` - allowlisted `.ics` / `webcal://` ingestion, dry-run by default.
   - `calendar-feed` - `GET /calendar-feed/:token.ics`, stable UID/SEQUENCE, RFC 5545 output.
@@ -34,7 +35,7 @@ the production database and Edge Function path.
 4. Deploy functions:
 
 ```sh
-supabase functions deploy provider-sync provider-hydrate provider-hydrate-apisports provider-hydrate-apisports-f1 provider-hydrate-players ics-feed-ingest calendar-feed notifications admin-stats
+supabase functions deploy provider-sync provider-hydrate provider-hydrate-apisports provider-hydrate-apisports-f1 provider-hydrate-openf1 provider-hydrate-players ics-feed-ingest calendar-feed notifications admin-stats
 ```
 
 5. Run `cron.sql` with the project ref filled in.
@@ -61,9 +62,21 @@ Free plan usage should stay low: run these daily or manually while testing, and 
 `APISPORTS_CALL_BUDGET` / `APISPORTS_F1_CALL_BUDGET` small until the admin dashboard proves
 consumption is stable.
 
-API-Formula-1 free access has historically been limited for this account, so the checked-in pilot
-target uses `2024` for shape testing. Current-season F1 hydration should come from TheSportsDB,
-OpenF1 where appropriate, or a paid API-SPORTS tier.
+API-Formula-1 free access is plan-limited on this account. A 2026 test returned "Free plans do not
+have access to this season, try from 2022 to 2024," so the API-Sports F1 hydrator is now kept as a
+manual/paid-tier secondary lane rather than scheduled production coverage.
+
+## OpenF1 Setup
+
+`provider-hydrate-openf1` reads Formula 1 meetings and sessions from `https://api.openf1.org/v1`
+without an API key. It writes provider evidence to `provider_event_sources`, links each OpenF1
+`session_key` through `event_external_ids`, and only creates canonical events when no existing
+TheSportsDB/API-Sports row matches by sport, time, venue, and title. It also hydrates current F1
+drivers using provider-supplied `headshot_url`, `team_name`, and `team_colour`.
+
+The live project runs `provider-hydrate-openf1` daily at `07:42 UTC`. Do not enable high-volume
+realtime timing endpoints here; OpenF1 realtime requires paid access and is better suited to a
+separate live-alert worker if we buy that subscription.
 
 ## Alert Delivery Accounts
 
@@ -93,6 +106,8 @@ The MP4 calendar-feed ingestion lane uses:
 - `source_targets` - reviewed feed URLs, sport/league mapping, cadence, dry-run status, payload
   hashes, and last error/status fields.
 - `event_external_ids` - feed UID to canonical event mapping.
+- `provider_event_sources` - raw provider evidence and match confidence for API/ICS feeds that
+  attach to canonical events.
 
 Keep `source_targets.dry_run = true` for any new feed until the source is confirmed public,
 redistribution-safe, and the parsed events look sane.

@@ -20,6 +20,9 @@ Completed in this MP5 pass:
 - Removed moderate/high npm audit findings by refreshing vulnerable transitive packages in `package-lock.json`.
 - Fixed mobile league/team detail rows so event dates wrap under titles instead of squeezing into one row.
 - Raised live ticker tap target height and loosened mobile sport-banner clipping.
+- Added the provider reconciliation lane: `provider_event_sources` stores raw provider evidence,
+  `event_external_ids` now tracks match confidence/last-seen, and OpenF1 is deployed/scheduled as
+  the current-season F1 second source.
 
 ## Verified Gates
 
@@ -95,7 +98,12 @@ Backend gaps and posture:
 
 - `ADMIN_EMAILS` is set to `azharmoolla@gmail.com`.
 - API-SPORTS soccer has a FIFA World Cup target but `events_synced_at` is still null. TheSportsDB/seeded data covers the live site now, but API-SPORTS fallback is not proven.
-- API-SPORTS F1 last sync is 2026-06-19; OpenF1 and TheSportsDB are covering current motorsport, but this target should be reviewed.
+- OpenF1 now hydrates Formula 1 meetings/sessions daily at `07:42 UTC`; the first production run
+  fetched 126 sessions, retained 85 current/future-ish source rows, linked all retained rows to
+  canonical events, and hydrated 22 driver profiles from provider-supplied images/team colors.
+- API-SPORTS F1 is current-season plan-limited on the free account. A 2026 call returned that free
+  plans can access seasons 2022-2024 only, so this target remains a manual/paid-tier fallback and
+  is not scheduled.
 - ICS ingestion has only rugby and snooker targets, and all are `dry_run=true`; this is not yet a production enrichment lane.
 - Provider observability tables are intentionally RLS-enabled with no policies, service-role only. Keep that documented so advisor warnings are not confused with outages.
 
@@ -202,6 +210,8 @@ Open items found from docs/code scan:
 - Build source freshness UI for empty sports: last provider sync, next expected schedule release, and "alert me when schedule drops". Blocked until a sanitized public aggregate exists; raw provider/source tables should stay service-role-only.
 - Turn ICS dry-run feeds into a controlled production ingestion lane after source terms are approved.
 - Add combat undercard provider/curation plan with estimated bout timing.
+- Add provider reconciliation to every new paid/free source before enabling cron. Done for F1;
+  next candidates are API-Sports MMA, SportsDataIO/Sportradar MMA, and any promoted ICS adapters.
 
 ### P2
 

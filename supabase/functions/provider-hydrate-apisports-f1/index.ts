@@ -4,6 +4,14 @@
 // F1 schedule pilot: one races-by-season call hydrates the current Formula 1 calendar.
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
+import {
+  findCandidateEvent,
+  findLinkedEvent,
+  linkExternalId,
+  payloadHash,
+  upsertProviderEventSource,
+  type CandidateEvent,
+} from '../_shared/provider-reconcile.ts'
 
 const PROVIDER_KEY = 'apisports_formula1'
 const API_KEY = Deno.env.get('APISPORTS_KEY') ?? ''
@@ -19,7 +27,7 @@ class BudgetSpent extends Error {}
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
-type Counters = { calls: number; targets: number; races: number; changed: number }
+type Counters = { calls: number; targets: number; races: number; changed: number; linked: number }
 type Target = {
   id: string
   provider_league_id: string
@@ -55,14 +63,6 @@ type ApiEnvelope = Record<string, unknown> & {
 
 function stale(ts: string | null, ttl: number, now: number) {
   return !ts || now - new Date(ts).getTime() > ttl
-}
-
-async function payloadHash(value: unknown): Promise<string> {
-  const data = new TextEncoder().encode(JSON.stringify(value))
-  const hash = await crypto.subtle.digest('SHA-256', data)
-  return Array.from(new Uint8Array(hash))
-    .map((byte) => byte.toString(16).padStart(2, '0'))
-    .join('')
 }
 
 function normalizeStatus(raw?: string | null): string {
@@ -105,6 +105,17 @@ async function ensureSportId(): Promise<string> {
 }
 
 async function ensureLeague(sportId: string) {
+  const { data: existing, error: existingError } = await supabase
+    .from('leagues')
+    .select('id')
+    .eq('sport_id', sportId)
+    .or('name.eq.Formula 1,short_name.eq.F1')
+    .order('display_rank', { ascending: true })
+    .limit(1)
+    .maybeSingle()
+  if (existingError) throw existingError
+  if (existing?.id) return existing.id as string
+
   const { data, error } = await supabase
     .from('leagues')
     .upsert(
@@ -154,16 +165,13 @@ async function upsertRaces(target: Target, races: ApiRace[], counters: Counters)
   const venueMap = await ensureVenues(races)
   const providerIds = races.map((race) => String(race.id))
 
-  const existing = new Map<
-    string,
-    { id: string; title: string; status: string; starts_at: string | null; version: number; payload_hash: string | null }
-  >()
+  const existing = new Map<string, CandidateEvent>()
   const { data: existingRows } = await supabase
     .from('events')
-    .select('id, provider_event_id, title, status, starts_at, version, payload_hash')
+    .select('id, provider_event_id, provider_key, title, status, starts_at, version, payload_hash, league_id, venue_id, metadata')
     .eq('provider_key', PROVIDER_KEY)
     .in('provider_event_id', providerIds)
-  for (const row of existingRows ?? []) existing.set(row.provider_event_id, row)
+  for (const row of existingRows ?? []) existing.set(row.provider_event_id, { ...row, matchConfidence: 100 })
 
   for (const race of races) {
     const providerEventId = String(race.id)
@@ -189,32 +197,108 @@ async function upsertRaces(target: Target, races: ApiRace[], counters: Counters)
       venue: race.circuit?.name ?? null,
       metadata,
     })
-    const prior = existing.get(providerEventId)
+    const prior =
+      existing.get(providerEventId) ??
+      (await findLinkedEvent(supabase, PROVIDER_KEY, providerEventId)) ??
+      (await findCandidateEvent(supabase, {
+        sportId,
+        leagueId,
+        venueId: race.circuit?.name ? venueMap.get(race.circuit.name) ?? null : null,
+        title,
+        startsAt,
+        windowHours: 14,
+        metadataNeedles: [race.type, race.circuit?.name, race.competition?.name, race.competition?.location?.country],
+      }))
 
     if (!prior) {
       // Never create brand-new rows for long-past events: cleanup_past_events prunes at 90 days,
       // and re-inserting pruned sessions with fresh ids breaks permalinks and churns nightly.
       if (startsAt && new Date(startsAt).getTime() < Date.now() - 30 * 24 * 3600_000) continue
-      const { error } = await supabase.from('events').insert({
-        sport_id: sportId,
-        league_id: leagueId,
-        venue_id: race.circuit?.name ? venueMap.get(race.circuit.name) ?? null : null,
-        provider_key: PROVIDER_KEY,
-        provider_event_id: providerEventId,
-        kind: 'race',
-        status,
-        title,
-        starts_at: startsAt,
-        starts_at_tbd: !startsAt,
-        timezone: race.timezone ?? null,
-        visibility: 'public',
-        metadata,
-        payload_hash: hash,
-        last_checked_at: checkedAt,
-        source_confidence: 'provider',
-      })
+      const { data, error } = await supabase
+        .from('events')
+        .insert({
+          sport_id: sportId,
+          league_id: leagueId,
+          venue_id: race.circuit?.name ? venueMap.get(race.circuit.name) ?? null : null,
+          provider_key: PROVIDER_KEY,
+          provider_event_id: providerEventId,
+          kind: 'race',
+          status,
+          title,
+          starts_at: startsAt,
+          starts_at_tbd: !startsAt,
+          timezone: race.timezone ?? null,
+          visibility: 'public',
+          metadata,
+          payload_hash: hash,
+          last_checked_at: checkedAt,
+          source_confidence: 'provider',
+        })
+        .select('id')
+        .single()
       if (error) throw error
+      if (!data) throw new Error(`API-Sports F1 insert returned no id for ${providerEventId}`)
+      await linkExternalId(supabase, {
+        eventId: data.id,
+        providerKey: PROVIDER_KEY,
+        externalId: providerEventId,
+        rawUid: race.competition?.id ? String(race.competition.id) : null,
+        payloadHash: hash,
+        metadata,
+      })
+      await upsertProviderEventSource(supabase, {
+        eventId: data.id,
+        providerKey: PROVIDER_KEY,
+        externalId: providerEventId,
+        sportKey: 'motorsport',
+        providerLeagueId: 'f1',
+        title,
+        startsAt,
+        status,
+        payloadHash: hash,
+        rawPayload: race,
+        metadata,
+      })
       counters.changed += 1
+      continue
+    }
+
+    await linkExternalId(supabase, {
+      eventId: prior.id,
+      providerKey: PROVIDER_KEY,
+      externalId: providerEventId,
+      rawUid: race.competition?.id ? String(race.competition.id) : null,
+      matchConfidence: prior.matchConfidence,
+      payloadHash: hash,
+      metadata,
+    })
+    await upsertProviderEventSource(supabase, {
+      eventId: prior.id,
+      providerKey: PROVIDER_KEY,
+      externalId: providerEventId,
+      sportKey: 'motorsport',
+      providerLeagueId: 'f1',
+      title,
+      startsAt,
+      status,
+      matchConfidence: prior.matchConfidence,
+      payloadHash: hash,
+      rawPayload: race,
+      metadata,
+    })
+
+    if (prior.provider_key !== PROVIDER_KEY) {
+      await supabase
+        .from('events')
+        .update({
+          last_checked_at: checkedAt,
+          metadata: {
+            ...(prior.metadata ?? {}),
+            apisports_formula1: metadata,
+          },
+        })
+        .eq('id', prior.id)
+      counters.linked += 1
       continue
     }
 
@@ -260,7 +344,7 @@ Deno.serve(async (req) => {
   const body = req.method === 'POST' ? ((await req.json().catch(() => ({}))) as Record<string, unknown>) : {}
   const force = body.force === true
   const seasonOverride = typeof body.season === 'string' ? body.season : null
-  const counters: Counters = { calls: 0, targets: 0, races: 0, changed: 0 }
+  const counters: Counters = { calls: 0, targets: 0, races: 0, changed: 0, linked: 0 }
   const now = Date.now()
 
   const { data: run } = await supabase

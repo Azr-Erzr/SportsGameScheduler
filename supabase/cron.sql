@@ -94,3 +94,22 @@ select cron.schedule(
   '30 4 * * *',
   $$ select public.cleanup_past_events(interval '2 days'); $$
 );
+
+-- OpenF1 Formula 1 schedule/session hydration once daily. This is the current-season F1
+-- second-source lane because API-Sports Formula-1 free access is limited to older seasons on
+-- the current account. Live production job: 'provider-hydrate-openf1' at 07:42 UTC.
+select cron.schedule(
+  'provider-hydrate-openf1',
+  '42 7 * * *',
+  $$
+  select net.http_post(
+    url := 'https://<project-ref>.supabase.co/functions/v1/provider-hydrate-openf1',
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'Authorization', 'Bearer ' || current_setting('app.settings.service_role_key')
+    ),
+    body := jsonb_build_object('year', extract(year from now())::int),
+    timeout_milliseconds := 150000
+  );
+  $$
+);

@@ -16,6 +16,8 @@ This document tracks when supported leagues normally publish schedules, how Silb
 
 - `competition_instances.schedule_release_expected_at` exists for schedule-drop lifecycle automation.
 - `source_targets` supports allowlisted direct `ics` and `webcal` feeds.
+- `provider_event_sources` stores raw provider evidence for API/ICS/partner sources that attach to
+  canonical events; use it for all future second-source providers before enabling cron.
 - `ics-feed-ingest` fetches those targets on cron, parses `VEVENT`s, and stays dry-run until promotion.
 - `notifications` and `alert_preferences` already support email/browser alerts for followed targets; schedule-drop alerts should be modeled as a new alert kind tied to competition/source status changes.
 - `design_art_kits` tracks reusable art and license status for competition surfaces.
@@ -31,7 +33,7 @@ This document tracks when supported leagues normally publish schedules, how Silb
 | Hockey | NHL | Usually July | Monitor mid-July for the 2026-27 regular-season schedule if not already loaded by provider. | NHL/team schedule widgets exist; verify feed stability and terms before ingestion. |
 | Baseball | MLB | Often July/August for the following season | 2026 schedule was released August 26, 2025. Future release windows should be tracked annually. | MLB exposes official schedule sync surfaces; review direct feed URLs before promotion. |
 | Football | NFL | Usually May | Use provider/official schedule release as the primary drop event. | Official team/league calendar widgets are source intelligence; backend route depends on feed terms. |
-| Motorsport | Formula 1 | Calendar announced months ahead, session times refined later | Calendar-level schedule can be loaded early; session details need follow-up checks. | Official calendar pages and provider API should be reconciled. |
+| Motorsport | Formula 1 | Calendar announced months ahead, session times refined later | OpenF1 2026 sessions are now hydrated and scheduled daily; API-Sports F1 free tier is current-season plan-limited. | OpenF1 is production second source; keep API-Sports F1 manual until paid current-season access is enabled. |
 | Tennis | Grand Slams / tours | Event windows known long ahead; daily draws/sessions close to event | Model tournament windows first, then sessions/draws as they appear. | Player photos and draw data need provider/license review. |
 | Combat | UFC / major cards | Rolling event announcements; bout order changes late | Track cards as event instances and update bouts after announcements. | Fighter headshots should come only from licensed/provider-supplied assets or approved official sources. |
 
@@ -58,6 +60,8 @@ Keep feeds in `dry_run = true` until QA confirms:
 - League logos and team icons are trademarks. Use them only when they arrive through a licensed/approved provider field such as `leagues.logo_url` or `competitors.logo_url`, or when we have explicit first-party permission.
 - Player/fighter headshots are normally copyrighted/publicity-rights-sensitive. Do not scrape or hotlink arbitrary headshots from search results, social sites, or news pages.
 - If a provider gives headshots under usable terms, store the source and license state before surfacing them.
+- OpenF1 driver `headshot_url`, `team_name`, and `team_colour` are provider-supplied and may be used
+  as F1 provider imagery with `image_rights = provider_url`; do not scrape missing F1 assets.
 - Until rights are clear, filters/cards should use provider-supplied logos where present, then initials/generic sport art as fallback.
 - Olympic and federation marks need special care. Use generic sport/venue motifs unless official marks are licensed.
 

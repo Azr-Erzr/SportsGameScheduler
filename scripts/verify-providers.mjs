@@ -78,10 +78,16 @@ await check('API-SPORTS Formula 1 adapter', ['APISPORTS_KEY'], async () => {
 
 await check('OpenF1 public adapter', [], async () => {
   const base = env('OPENF1_BASE_URL', 'https://api.openf1.org/v1')
-  const { json, elapsedMs } = await getJson('OpenF1 meetings', `${base}/meetings?year=2024`)
-  const count = Array.isArray(json) ? json.length : 0
-  if (!count) throw new Error('meetings?year=2024 returned no rows')
-  return `meetings=${count}; ${elapsedMs}ms`
+  const year = env('OPENF1_VERIFY_YEAR', String(new Date().getUTCFullYear()))
+  const [{ json: meetings, elapsedMs: meetingsMs }, { json: sessions, elapsedMs: sessionsMs }] = await Promise.all([
+    getJson('OpenF1 meetings', `${base}/meetings?year=${year}`),
+    getJson('OpenF1 sessions', `${base}/sessions?year=${year}`),
+  ])
+  const meetingCount = Array.isArray(meetings) ? meetings.length : 0
+  const sessionCount = Array.isArray(sessions) ? sessions.length : 0
+  if (!meetingCount) throw new Error(`meetings?year=${year} returned no rows`)
+  if (!sessionCount) throw new Error(`sessions?year=${year} returned no rows`)
+  return `meetings=${meetingCount}; sessions=${sessionCount}; year=${year}; ${meetingsMs}/${sessionsMs}ms`
 })
 
 await check('Combat data path', [], async () => {

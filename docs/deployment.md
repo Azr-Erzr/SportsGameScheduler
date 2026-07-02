@@ -69,6 +69,7 @@ Active functions:
 - `provider-hydrate-players`
 - `provider-hydrate-apisports`
 - `provider-hydrate-apisports-f1`
+- `provider-hydrate-openf1`
 - `provider-hydrate-pandascore`
 - `ics-feed-ingest`
 - `notifications`
@@ -82,10 +83,15 @@ Important function posture:
   authorization headers. Auth is the unguessable feed token plus rate limiting.
 - `admin-stats` must remain the only public path to admin overview data; the underlying
   `admin_overview()` RPC is service-role only.
+- `provider-hydrate-openf1` has no provider secret; it should stay on meetings/sessions/driver
+  metadata unless a paid realtime OpenF1 subscription is explicitly added.
+- `provider-hydrate-apisports-f1` requires `APISPORTS_KEY`, but current-season 2026 F1 is
+  plan-limited on the free account. Do not schedule it until paid access is enabled.
 
 Supabase Edge Function secrets:
 
 - `THESPORTSDB_API_KEY`
+- `APISPORTS_KEY` - used by API-Sports football and manual/paid-tier API-Sports F1 checks
 - `ADMIN_EMAILS` - currently `azharmoolla@gmail.com`
 - `RESEND_API_KEY` or legacy `RESENDAPI`
 - `EMAIL_FROM`

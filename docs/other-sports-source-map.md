@@ -16,6 +16,11 @@ This document is the working map for the sports that live outside the primary sw
 
 The app already has TheSportsDB provider targets for baseball, cricket, rugby, volleyball, handball, cycling, snooker, and darts. The `ics-feed-ingest` Edge Function currently supports allowlisted direct `ics` and `webcal` rows in `source_targets`, parses `VEVENT` records, and writes canonical events only when `dry_run` is disabled.
 
+The F1 lane now has a reusable reconciliation pattern for future sources: `provider_event_sources`
+stores raw API evidence, while `event_external_ids` maps secondary provider IDs to canonical
+events with match confidence and last-seen timestamps. Any new paid/free source should use this
+pattern before it is scheduled, so one provider cannot erase another provider's live schedule.
+
 The new calendar candidate migration seeds:
 
 - Direct dry-run feeds for Snooker via a public Snooker.org-derived iCalendar.
@@ -27,6 +32,7 @@ The new calendar candidate migration seeds:
 
 | Sport | High-interest markets | Priority competitions | Best current source path | Ingestion status |
 | --- | --- | --- | --- | --- |
+| Formula 1 / motorsport | Global, UK, Europe, Canada, USA, Middle East, Australia | Formula 1 calendar, practice/qualifying/sprint/race sessions | TheSportsDB plus OpenF1 meetings/sessions; API-Sports F1 only if current-season paid tier is enabled | OpenF1 production cron active; API-Sports F1 plan-limited for 2026 on free tier |
 | Cricket | India, Pakistan, Bangladesh, Australia, England, New Zealand, South Africa, Caribbean | ICC events, IPL, Big Bash, domestic T20 leagues | TheSportsDB now; ICC ECAL as official sync surface | Provider-backed, ECAL adapter needed |
 | Rugby | UK, Ireland, France, New Zealand, Australia, South Africa, Japan | Six Nations, Rugby World Cup, Premiership, Nations Championship, Rugby Championship | TheSportsDB plus RugbyFixture direct ICS; Six Nations/World Rugby ECAL for official reference | Dry-run ICS candidates added |
 | Volleyball | Brazil, Italy, Poland, Turkey, Japan, Philippines, United States | VNL, World Championships, club/world tours | Volleyball World/VBTV official ECAL and TheSportsDB VNL target | Provider-backed, ECAL adapter needed |
@@ -45,6 +51,21 @@ The new calendar candidate migration seeds:
 | Esports | Global, especially Korea, China, Europe, North America, Brazil | League of Legends, VALORANT, Counter-Strike, Dota 2, esports World Cup majors | Riot official data, HLTV, Liquipedia API, title-specific sites | Curated sources seeded; licensed/API path required |
 
 ## Review Detail By Sport
+
+### Formula 1 / Motorsport
+
+OpenF1 is now the production second source for Formula 1 sessions. It provides meetings,
+sessions, circuit metadata, country flags, circuit images, driver headshots, team colors, and
+daily session updates without an API key for historical/schedule data. Realtime telemetry and
+timing should stay out of the daily hydrator because it is paid/high-volume and better suited to a
+future live-alert worker.
+
+API-Sports Formula-1 is wired and deployed, but the current account's free tier does not expose
+2026. Keep it unscheduled until a current-season paid subscription is enabled, then use it as a
+third opinion through the same provider reconciliation path.
+
+Recommended path: OpenF1 for F1 sessions now; keep TheSportsDB as broad motorsport base; evaluate
+paid API-Sports/Sportmonks/SportsDataIO F1 only if we need richer motorsport metadata beyond F1.
 
 ### Badminton
 
@@ -100,6 +121,26 @@ Esports needs to be treated as several sports under one discovery tile. Riot has
 
 Recommended path: do not scrape esports pages ad hoc. Use Riot official data for LoL/VALORANT if access is approved, and evaluate Liquipedia API or another licensed provider for broad schedules.
 
+### Combat Sports / MMA
+
+TheSportsDB and API-Sports can provide event-level MMA coverage, but full undercards, bout order,
+late replacements, live fight status, and bell/walkout alerting need a structured fight-card
+provider. The best next trial candidates are:
+
+- SportsDataIO MMA/UFC: strongest fit for UFC-style schedules, fight cards, bouts, live results,
+  fighter data, status changes, news/images, and odds-style enrichment.
+- Sportradar MMA/UFC: enterprise-grade structured coverage for UFC and Dana White's Contender
+  Series, likely strongest for live result/settlement reliability but expected to be pricier.
+- API-Sports MMA: worth testing with the existing `APISPORTS_KEY` because the free plan includes
+  100 requests/day per API, but do not assume full undercards until endpoint samples prove event
+  card depth and stable fighter IDs.
+- The Odds API / betting APIs: useful enrichment for where demand is and fight odds, but not a
+  primary fight-card source for bout-order timing.
+
+Recommended path: build an API-Sports MMA verifier first because we already have the account/key;
+if it lacks undercards or live bout status, buy a one-month SportsDataIO MMA/UFC trial before
+building user-facing fight-specific reminders.
+
 ## Direct Calendar Candidates
 
 These can be fetched by `ics-feed-ingest` today, but they are intentionally dry-run only.
@@ -146,6 +187,10 @@ These sources are seeded as `source_providers` with `source_type = curated`. The
 | `riot_esports_data` | Esports | `https://riotesportsdata.com/en-us/` | Official Riot esports data; requires account/partner access. |
 | `hltv_events` | Esports | `https://www.hltv.org/events` | Strong Counter-Strike event coverage; terms/licensing review required. |
 | `liquipedia_api` | Esports | `https://liquipedia.net/api` | Broad esports API candidate; evaluate terms and coverage. |
+| `openf1_api` | Motorsport | `https://openf1.org/docs/` | Deployed for Formula 1 meetings/sessions and driver/team imagery. Realtime requires paid access. |
+| `sportsdataio_mma` | Combat sports | `https://sportsdata.io/mma-ufc-api` | Paid/trial candidate for full fight cards, bouts, live results, fighter data, odds, and images. |
+| `sportradar_mma` | Combat sports | `https://marketplace.sportradar.com/products/652fc88991cb7d6acdef2532` | Enterprise MMA/UFC candidate for structured schedules/live results. |
+| `apisports_mma` | Combat sports | `https://api-sports.io/documentation/mma/v1` | Existing account/key candidate; verify fight-card depth before relying on it for reminders. |
 
 ## Next Technical Steps
 
@@ -155,6 +200,10 @@ These sources are seeded as `source_providers` with `source_type = curated`. The
 4. Promote direct feeds one at a time by sport after source review and dedupe checks.
 5. For HTML-only sources such as BWF, WTT, ITTF, PSA, Netball Australia, FIH, World Aquatics, PLL, World Lacrosse, AUSL, WBSC, and HLTV, decide between official API partnership, licensed data provider, or manual curated spotlight rows.
 6. For esports, make a title-by-title matrix instead of treating all esports as one provider. Riot titles can use Riot's official data path if approved; Counter-Strike and Dota likely need separate licensed/community API decisions.
+7. Use `provider_event_sources` + `event_external_ids` for every new source before enabling cron,
+   and expose only sanitized freshness aggregates to the frontend/admin UI.
+8. Add an API-Sports MMA verifier with a 5-call cap, then compare sample event depth against
+   SportsDataIO/Sportradar before choosing the combat provider.
 
 ## Source Notes
 
@@ -188,3 +237,9 @@ These sources are seeded as `source_providers` with `source_type = curated`. The
 - Riot official esports data: https://riotesportsdata.com/en-us/
 - HLTV Counter-Strike events: https://www.hltv.org/events
 - Liquipedia API: https://liquipedia.net/api
+- OpenF1 API docs: https://openf1.org/docs/
+- API-Sports MMA docs: https://api-sports.io/documentation/mma/v1
+- SportsDataIO MMA/UFC API: https://sportsdata.io/mma-ufc-api
+- SportsDataIO MMA workflow guide: https://sportsdata.io/developers/workflow-guide/mma
+- Sportradar MMA marketplace: https://marketplace.sportradar.com/products/652fc88991cb7d6acdef2532
+- The Odds API MMA/UFC odds: https://the-odds-api.com/sports/mma-ufc-odds.html
