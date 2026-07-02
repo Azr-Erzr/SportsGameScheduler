@@ -10,6 +10,8 @@ export type FeedEvent = {
   title: string
   starts_at: string | null
   starts_at_tbd?: boolean
+  /** Real end time when the source feed provided one; otherwise duration is per-sport. */
+  ends_at?: string | null
   updated_at: string
   version: number
   status: string
@@ -46,18 +48,44 @@ const SPORT_META: Record<string, { emoji: string; label: string }> = {
   athletics: { emoji: '🏃', label: 'Track & Field' },
   olympic_sports: { emoji: '🏅', label: 'Olympic Sports' },
   custom: { emoji: '📅', label: 'Community' },
+  baseball: { emoji: '⚾', label: 'Baseball' },
+  cricket: { emoji: '🏏', label: 'Cricket' },
+  rugby: { emoji: '🏉', label: 'Rugby' },
+  volleyball: { emoji: '🏐', label: 'Volleyball' },
+  handball: { emoji: '🤾', label: 'Handball' },
+  cycling: { emoji: '🚴', label: 'Cycling' },
+  snooker: { emoji: '🎱', label: 'Snooker' },
+  darts: { emoji: '🎯', label: 'Darts' },
+  esports: { emoji: '🎮', label: 'Esports' },
 }
 
-Object.assign(SPORT_META, {
-  baseball: { emoji: 'BSB', label: 'Baseball' },
-  cricket: { emoji: 'CRI', label: 'Cricket' },
-  rugby: { emoji: 'RUG', label: 'Rugby' },
-  volleyball: { emoji: 'VOL', label: 'Volleyball' },
-  handball: { emoji: 'HBL', label: 'Handball' },
-  cycling: { emoji: 'CYC', label: 'Cycling' },
-  snooker: { emoji: 'SNO', label: 'Snooker' },
-  darts: { emoji: 'DRT', label: 'Darts' },
-})
+// Realistic per-sport blocked time (minutes) so a calendar shows how long the event actually
+// occupies — an MLB game is not a 2-hour block and an NFL game runs well past 3. Events whose
+// source feed supplied a real end time (metadata ends_at, surfaced as FeedEvent.ends_at) use
+// that instead. Unknown sports fall back to 2 hours.
+const SPORT_DURATION_MINUTES: Record<string, number> = {
+  soccer: 120,
+  basketball: 150,
+  american_football: 210,
+  hockey: 160,
+  tennis: 180,
+  golf: 360,
+  motorsport: 120,
+  combat_sports: 240,
+  athletics: 180,
+  olympic_sports: 150,
+  baseball: 180,
+  cricket: 240,
+  rugby: 120,
+  volleyball: 120,
+  handball: 120,
+  cycling: 300,
+  snooker: 180,
+  darts: 180,
+  esports: 120,
+  custom: 120,
+}
+const DEFAULT_DURATION_MINUTES = 120
 
 export function escapeIcsText(value: string): string {
   return value
@@ -110,14 +138,28 @@ export function eventToVevent(event: FeedEvent, options: RenderOptions = {}): st
   const start = new Date(event.starts_at)
   // No confirmed time → render as an all-day, tentative entry.
   const dateOnly = Boolean(event.starts_at_tbd)
+  // Prefer the source feed's real end time; sanity-cap at 24h so one bad row can't produce a
+  // week-long block. Otherwise block a realistic per-sport duration.
+  const providedEnd = event.ends_at ? new Date(event.ends_at) : null
+  const validProvidedEnd =
+    providedEnd &&
+    !Number.isNaN(providedEnd.getTime()) &&
+    providedEnd.getTime() > start.getTime() &&
+    providedEnd.getTime() - start.getTime() <= 24 * 60 * 60 * 1000
+      ? providedEnd
+      : null
+  const durationMinutes = SPORT_DURATION_MINUTES[event.sport_key ?? ''] ?? DEFAULT_DURATION_MINUTES
   const end = dateOnly
     ? new Date(start.getTime() + 24 * 60 * 60 * 1000)
-    : new Date(start.getTime() + 2 * 60 * 60 * 1000)
+    : validProvidedEnd ?? new Date(start.getTime() + durationMinutes * 60 * 1000)
   const cancelled = event.status === 'cancelled'
   const tentative = !cancelled && (dateOnly || event.status === 'postponed' || event.status === 'time_tbd')
 
   const meta = event.sport_key ? SPORT_META[event.sport_key] : undefined
-  const summary = meta ? `${meta.emoji} ${event.title}` : event.title
+  // STATUS:CANCELLED rendering varies wildly across clients (some strike through, some ignore
+  // it) — say it in the title so a cancellation is unmissable everywhere.
+  const baseTitle = cancelled ? `Cancelled: ${event.title}` : event.title
+  const summary = meta ? `${meta.emoji} ${baseTitle}` : baseTitle
 
   const categories = [meta?.label, event.league_name].filter(Boolean) as string[]
   const broadcastNotes = (event.broadcasts ?? [])
@@ -149,6 +191,7 @@ export function eventToVevent(event: FeedEvent, options: RenderOptions = {}): st
     categories.length ? `CATEGORIES:${categories.map(escapeIcsText).join(',')}` : '',
     cancelled ? 'STATUS:CANCELLED' : tentative ? 'STATUS:TENTATIVE' : 'STATUS:CONFIRMED',
     dateOnly ? 'TRANSP:TRANSPARENT' : '',
+    options.appUrl ? `URL:${options.appUrl}/events/${event.id}` : '',
     event.venue_name ? `LOCATION:${escapeIcsText(event.venue_name)}` : '',
     descParts.length ? `DESCRIPTION:${escapeIcsText(descParts.join('\n'))}` : '',
     // Reminders: only on timed, non-cancelled events (alarms on all-day TBD entries are noise).

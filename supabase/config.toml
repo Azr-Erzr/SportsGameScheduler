@@ -1,0 +1,40 @@
+# Supabase CLI config. The critical part: calendar-feed must stay publicly fetchable —
+# calendar clients (Google/Apple/Outlook) send NO auth headers, the unguessable token in the
+# URL is the authorization. Deploying it without this file (or without --no-verify-jwt) flips
+# verify_jwt back to true and 401s every subscriber's feed.
+project_id = "gcnbgdpicgeahxscpsfc"
+
+[functions.calendar-feed]
+verify_jwt = false
+
+# Cron-invoked workers authenticate with the anon JWT from cron.job, so JWT verification stays on.
+[functions.notifications]
+verify_jwt = true
+
+[functions.provider-sync]
+verify_jwt = true
+
+[functions.provider-hydrate]
+verify_jwt = true
+
+[functions.provider-hydrate-players]
+verify_jwt = true
+
+[functions.provider-hydrate-apisports]
+verify_jwt = true
+
+[functions.provider-hydrate-apisports-f1]
+verify_jwt = true
+
+[functions.provider-hydrate-pandascore]
+verify_jwt = true
+
+[functions.ics-feed-ingest]
+verify_jwt = true
+
+[functions.admin-stats]
+verify_jwt = true
+
+# delete-account resolves the caller from their own bearer token; verification on is correct.
+[functions.delete-account]
+verify_jwt = true

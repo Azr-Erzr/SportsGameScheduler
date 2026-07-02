@@ -846,7 +846,7 @@ export function MySchedulePage() {
             role="dialog"
             aria-modal="true"
             aria-label={activeFlow.title}
-            className="absolute inset-x-0 bottom-0 max-h-[92svh] overflow-y-auto rounded-t-card border border-primary/20 bg-surface p-4 shadow-xl sm:inset-x-auto sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:w-[min(540px,calc(100vw-2rem))] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-card"
+            className="absolute inset-x-0 bottom-0 max-h-[92svh] overflow-y-auto rounded-t-card border border-primary/20 bg-surface p-4 shadow-xl sm:inset-x-auto sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:w-[min(640px,calc(100vw-2rem))] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-card sm:p-6"
           >
             <div className="mb-4 flex items-start justify-between gap-3">
               <div>
@@ -1033,7 +1033,7 @@ export function MySchedulePage() {
               </p>
             )}
 
-            <div className="sticky bottom-0 -mx-4 mt-5 flex items-center gap-2 border-t border-primary/15 bg-surface px-4 pt-3">
+            <div className="sticky bottom-0 -mx-4 mt-5 flex items-center gap-2 border-t border-primary/15 bg-surface px-4 pt-3 sm:-mx-6 sm:px-6">
               {flow.stepIndex > 0 ? (
                 <Button variant="ghost" onClick={previousStep}>
                   <ChevronLeft size={15} /> Back

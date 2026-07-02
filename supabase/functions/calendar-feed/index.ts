@@ -116,6 +116,8 @@ Deno.serve(async (req) => {
     title: event.title,
     starts_at: event.starts_at,
     starts_at_tbd: event.starts_at_tbd ?? false,
+    // ICS-ingested events carry the source feed's real end time in metadata.
+    ends_at: typeof event.metadata?.ends_at === 'string' ? event.metadata.ends_at : null,
     updated_at: event.updated_at,
     version: event.version,
     status: event.status,

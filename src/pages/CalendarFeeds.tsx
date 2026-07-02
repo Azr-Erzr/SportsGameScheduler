@@ -168,7 +168,10 @@ export function CalendarFeedsPage({ embedded = false }: { embedded?: boolean } =
         </div>
       )}
 
-      <div className="grid min-w-0 gap-4 lg:grid-cols-[360px_minmax(0,1fr)]">
+      {/* Breakpoints are viewport-based, so when this page is embedded in the guided-flow modal
+          (~600px) on a desktop viewport, the lg: two-column grid would still kick in and crush
+          both columns. Embedded = always a single readable column. */}
+      <div className={embedded ? 'grid min-w-0 gap-4' : 'grid min-w-0 gap-4 lg:grid-cols-[360px_minmax(0,1fr)]'}>
         <Panel className="min-w-0 h-fit">
           <PanelHeading
             title="Create a feed"
