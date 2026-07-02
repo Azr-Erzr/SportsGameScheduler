@@ -53,6 +53,12 @@ async function ensureVenueId(location: string | null) {
   return data?.id ?? null
 }
 
+// The events table vocabulary is scheduled/live/finished/cancelled/postponed. ICS TENTATIVE has
+// no equivalent — store it as scheduled (the raw status survives in metadata.raw).
+function eventStatusFromIcs(status: IcsFeedEvent['status']) {
+  return status === 'tentative' ? 'scheduled' : status
+}
+
 async function upsertIcsEvent(target: SourceTarget, sportId: string, event: IcsFeedEvent) {
   if (!event.startsAt) return { skipped: true, changed: false }
 
@@ -105,11 +111,12 @@ async function upsertIcsEvent(target: SourceTarget, sportId: string, event: IcsF
       return { skipped: false, changed: false }
     }
 
+    const nextStatus = eventStatusFromIcs(event.status)
     const visibleChange =
-      existing.title !== event.summary || existing.status !== event.status || existing.starts_at !== event.startsAt
+      existing.title !== event.summary || existing.status !== nextStatus || existing.starts_at !== event.startsAt
     const updatePayload: Record<string, unknown> = {
       title: event.summary,
-      status: event.status,
+      status: nextStatus,
       starts_at: event.startsAt,
       starts_at_tbd: false,
       venue_id: venueId,
@@ -124,11 +131,11 @@ async function upsertIcsEvent(target: SourceTarget, sportId: string, event: IcsF
     const { error } = await supabase.from('events').update(updatePayload).eq('id', existing.id)
     if (error) throw error
 
-    if (existing.starts_at !== event.startsAt || existing.status !== event.status) {
+    if (existing.starts_at !== event.startsAt || existing.status !== nextStatus) {
       await supabase.from('event_status_history').insert({
         event_id: existing.id,
         old_status: existing.status,
-        new_status: event.status,
+        new_status: nextStatus,
         old_starts_at: existing.starts_at,
         new_starts_at: event.startsAt,
         source: providerKey,
@@ -148,6 +155,12 @@ async function upsertIcsEvent(target: SourceTarget, sportId: string, event: IcsF
     return { skipped: false, changed: visibleChange }
   }
 
+  // Never create brand-new rows for long-past events: cleanup_past_events prunes at 90 days, and
+  // re-inserting what it deleted (with a fresh id) breaks permalinks and churns the DB nightly.
+  if (new Date(event.startsAt).getTime() < Date.now() - 30 * 24 * 3600_000) {
+    return { skipped: true, changed: false }
+  }
+
   const { data: inserted, error } = await supabase
     .from('events')
     .insert({
@@ -157,7 +170,7 @@ async function upsertIcsEvent(target: SourceTarget, sportId: string, event: IcsF
       provider_key: providerKey,
       provider_event_id: externalId,
       kind: kindForSport(target.sport_key),
-      status: event.status,
+      status: eventStatusFromIcs(event.status),
       title: event.summary,
       starts_at: event.startsAt,
       starts_at_tbd: false,
@@ -189,18 +202,23 @@ Deno.serve(async (req) => {
   const limit = Math.min(Math.max(Number(body.limit ?? 3), 1), 10)
   const now = Date.now()
 
+  // Fetch a wide candidate window and apply the per-target cadence AFTER, then cap at `limit`.
+  // Limiting before the due-filter starved lower-priority targets: if the top N by priority
+  // weren't due yet, nothing ran even when others were overdue.
   let query = supabase
     .from('source_targets')
     .select('id, target_key, source_type, url, sport_key, league_id, expected_name, source_confidence, dry_run, cadence_minutes, payload_hash, last_checked_at')
     .eq('is_active', true)
     .order('priority', { ascending: true })
-    .limit(limit)
+    .limit(50)
   if (targetId) query = query.eq('id', targetId)
 
   const { data: rows, error: targetError } = await query
   if (targetError) return Response.json({ ok: false, error: targetError.message }, { status: 500 })
 
-  const targets = ((rows ?? []) as SourceTarget[]).filter((target) => targetId || due(target, now))
+  const targets = ((rows ?? []) as SourceTarget[])
+    .filter((target) => targetId || due(target, now))
+    .slice(0, limit)
   const results = []
 
   for (const target of targets) {

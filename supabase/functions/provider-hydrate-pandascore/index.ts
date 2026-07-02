@@ -209,6 +209,9 @@ async function upsertMatches(sportId: string, game: string, matches: PsMatch[], 
     const prior = existing.get(providerEventId)
 
     if (!prior) {
+      // Never create brand-new rows for long-past events: cleanup_past_events prunes at 90 days,
+      // and re-inserting pruned fixtures with fresh ids breaks permalinks and churns nightly.
+      if (iso && new Date(iso).getTime() < Date.now() - 30 * 24 * 3600_000) continue
       const { data: inserted, error } = await supabase
         .from('events')
         .insert({

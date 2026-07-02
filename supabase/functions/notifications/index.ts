@@ -6,6 +6,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { alertCopyFor } from '../_shared/alert-copy.ts'
 import { renderSilboAlertEmail, type WatchOption } from '../_shared/email-template.ts'
+import { encryptWebPushPayload } from '../_shared/web-push.ts'
 
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL')!,
@@ -45,6 +46,9 @@ type EventForAlert = {
 const REMINDER_GRACE_MS = 15 * 60 * 1000
 function isStaleForKind(kind: string, event: { status: string | null; starts_at: string | null }): boolean {
   if (event.status === 'finished') return true
+  // "Starts soon" for a cancelled/postponed match is nonsense; the cancellation alert is the one
+  // that should reach the user.
+  if (kind === 'reminder' && (event.status === 'cancelled' || event.status === 'postponed')) return true
   if (!event.starts_at) return false
   const start = new Date(event.starts_at).getTime()
   if (Number.isNaN(start)) return false
@@ -281,8 +285,44 @@ async function sendPushNotification(delivery: Delivery) {
     .eq('user_id', delivery.user_id)
   if (!subscriptions?.length) throw new SkipDelivery('No push subscriptions for user')
 
+  // Real payload so the service worker can show the event, not the generic fallback. The same
+  // placeholder/staleness guards as email apply — a stale push is as bad as a stale email.
+  let payload: string | null = null
+  if (delivery.event_id) {
+    const { data: event } = await supabase
+      .from('events')
+      .select('title, status, starts_at, timezone, venues(name), leagues(name)')
+      .eq('id', delivery.event_id)
+      .maybeSingle()
+    if (event) {
+      const row = event as unknown as EventForAlert
+      if (isUnresolvedPlaceholderTitle(row.title)) {
+        throw new SkipDelivery(`Unresolved placeholder fixture title: ${row.title}`)
+      }
+      if (isStaleForKind(delivery.kind, row)) {
+        throw new SkipDelivery(`Event already started or finished (${row.status}, ${row.starts_at})`)
+      }
+      const copy = alertCopyFor(
+        delivery.kind,
+        {
+          title: row.title,
+          starts_at: row.starts_at,
+          timezone: row.timezone,
+          venue_name: row.venues?.name ?? null,
+          league_name: row.leagues?.name ?? null,
+        },
+        `${APP_URL}/settings/alerts`,
+      )
+      payload = JSON.stringify({
+        title: copy.subject,
+        body: copy.lead,
+        url: `${APP_URL}/events/${delivery.event_id}`,
+      })
+    }
+  }
+
   for (const subscription of subscriptions) {
-    const result = await deliverWebPush(subscription, delivery)
+    const result = await deliverWebPush(subscription, delivery, payload)
     if (result === 'gone') {
       await supabase.from('push_subscriptions').delete().eq('id', subscription.id)
     }
@@ -292,17 +332,37 @@ async function sendPushNotification(delivery: Delivery) {
 async function deliverWebPush(
   subscription: { endpoint: string; p256dh: string; auth: string },
   delivery: Delivery,
+  payload: string | null,
 ): Promise<'ok' | 'gone'> {
   if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) throw new SkipDelivery('VAPID keys not configured')
   const aud = new URL(subscription.endpoint).origin
   const jwt = await createVapidJwt(aud)
+
+  // Encrypt per RFC 8291. If this subscription's keys are corrupt, fall back to an empty push —
+  // the service worker shows its generic notification, which beats dropping the alert.
+  let body: Uint8Array | null = null
+  if (payload) {
+    try {
+      body = await encryptWebPushPayload({ p256dh: subscription.p256dh, auth: subscription.auth }, payload)
+    } catch (_) {
+      body = null
+    }
+  }
+
+  const headers: Record<string, string> = {
+    authorization: `vapid t=${jwt}, k=${VAPID_PUBLIC_KEY}`,
+    ttl: '3600',
+    urgency: delivery.kind === 'reminder' ? 'normal' : 'high',
+  }
+  if (body) {
+    headers['content-encoding'] = 'aes128gcm'
+    headers['content-type'] = 'application/octet-stream'
+  }
+
   const response = await fetch(subscription.endpoint, {
     method: 'POST',
-    headers: {
-      authorization: `vapid t=${jwt}, k=${VAPID_PUBLIC_KEY}`,
-      ttl: '3600',
-      urgency: delivery.kind === 'reminder' ? 'normal' : 'high',
-    },
+    headers,
+    body: body ? (body as unknown as BodyInit) : undefined,
   })
   if (response.status === 404 || response.status === 410) return 'gone'
   if (!response.ok) throw new Error(`Web Push failed: ${response.status} ${await response.text()}`)

@@ -74,7 +74,9 @@ Deno.serve(async (req) => {
         .filter(Boolean)
         .join(', '),
     )
-    .neq('status', 'finished')
+    // Keep events for 24h after they start (finished included): dropping a VEVENT from the feed
+    // makes calendar clients DELETE it, so excluding finished events made matches vanish from
+    // users' calendars at the final whistle.
     .gte('starts_at', new Date(Date.now() - 24 * 3600_000).toISOString())
     .order('starts_at', { ascending: true })
     .limit(500)

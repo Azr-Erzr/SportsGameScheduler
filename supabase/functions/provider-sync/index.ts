@@ -313,6 +313,11 @@ async function upsertNormalizedEvent(db: SupabaseClient, providerEvent: Provider
       await db.from('event_change_log').insert(changeRows)
     }
   } else {
+    // Never create brand-new rows for long-past events: cleanup_past_events prunes at 90 days,
+    // and re-inserting pruned fixtures with fresh ids breaks permalinks and churns nightly.
+    if (next.starts_at && new Date(next.starts_at).getTime() < Date.now() - 30 * 24 * 3600_000) {
+      return false
+    }
     const { data: inserted, error } = await db
       .from('events')
       .insert({

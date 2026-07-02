@@ -329,6 +329,10 @@ async function upsertEvents(ctx: Ctx, raw: RawEvent[], counters: Counters) {
     })
 
     if (!prior) {
+      // Never create brand-new rows for long-past events: cleanup_past_events prunes at 90 days,
+      // and season feeds keep serving old fixtures — re-inserting them (with fresh ids) broke
+      // permalinks and churned ~3.6k deletes+inserts every night.
+      if (iso && new Date(iso).getTime() < Date.now() - 30 * 24 * 3600_000) continue
       toInsert.push({
         sport_id: ctx.sportId,
         league_id: ctx.leagueId,
