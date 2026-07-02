@@ -150,12 +150,20 @@ function changeLogRows(
   next: NextEvent,
   broadcastChanged: boolean,
 ) {
+  // Feeds keep correcting data on concluded events (venue re-mapping, backfilled scores). Those
+  // corrections stay in the log for the audit trail but must never notify anyone — only changes
+  // to events that haven't kicked off are alertable. Null starts_at = TBD fixture, still upcoming.
+  const alertable =
+    next.status !== 'finished' &&
+    (!next.starts_at || new Date(next.starts_at).getTime() > Date.now())
+  const significance = alertable ? 'notify' : 'calendar'
+
   if (!existing) {
     return [
       {
         event_id: eventId,
         change_type: 'new_event',
-        significance: 'notify',
+        significance,
         old_value: null,
         new_value: next,
         source: providerKey,
@@ -168,7 +176,7 @@ function changeLogRows(
     rows.push({
       event_id: eventId,
       change_type: 'cancellation',
-      significance: 'notify',
+      significance,
       old_value: { status: existing.status },
       new_value: { status: next.status },
       source: providerKey,
@@ -178,7 +186,7 @@ function changeLogRows(
     rows.push({
       event_id: eventId,
       change_type: !existing.starts_at && next.starts_at ? 'time_set' : 'time_change',
-      significance: 'notify',
+      significance,
       old_value: { starts_at: existing.starts_at, starts_at_tbd: existing.starts_at_tbd },
       new_value: { starts_at: next.starts_at, starts_at_tbd: next.starts_at_tbd },
       source: providerKey,
@@ -188,7 +196,7 @@ function changeLogRows(
     rows.push({
       event_id: eventId,
       change_type: 'participant_update',
-      significance: 'notify',
+      significance,
       old_value: { title: existing.title },
       new_value: { title: next.title },
       source: providerKey,
@@ -198,7 +206,7 @@ function changeLogRows(
     rows.push({
       event_id: eventId,
       change_type: next.venue_id ? 'venue_change' : 'venue_set',
-      significance: 'notify',
+      significance,
       old_value: { venue_id: existing.venue_id },
       new_value: { venue_id: next.venue_id },
       source: providerKey,
@@ -208,7 +216,7 @@ function changeLogRows(
     rows.push({
       event_id: eventId,
       change_type: 'broadcast_update',
-      significance: 'notify',
+      significance,
       old_value: null,
       new_value: { broadcasts_updated: true },
       source: providerKey,

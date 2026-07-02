@@ -30,12 +30,26 @@ type Delivery = {
 
 type EventForAlert = {
   title: string
+  status: string | null
   starts_at: string | null
   timezone: string | null
   league_id: string | null
   venues: { name: string | null } | null
   leagues: { name: string | null } | null
   sports: { key: string | null } | null
+}
+
+// Last line of defense against alerting on concluded events (the DB trigger, materializer, and
+// claim RPC all guard this too): a change alert for an event that has started or finished is
+// noise, and a reminder is only worth sending within a short grace window after kickoff.
+const REMINDER_GRACE_MS = 15 * 60 * 1000
+function isStaleForKind(kind: string, event: { status: string | null; starts_at: string | null }): boolean {
+  if (event.status === 'finished') return true
+  if (!event.starts_at) return false
+  const start = new Date(event.starts_at).getTime()
+  if (Number.isNaN(start)) return false
+  const graceMs = kind === 'reminder' ? REMINDER_GRACE_MS : 0
+  return Date.now() > start + graceMs
 }
 
 class SkipDelivery extends Error {}
@@ -169,7 +183,7 @@ async function sendReminderEmail(delivery: Delivery) {
     supabase.auth.admin.getUserById(delivery.user_id),
     supabase
       .from('events')
-      .select('title, starts_at, timezone, league_id, venues(name), leagues(name), sports(key)')
+      .select('title, status, starts_at, timezone, league_id, venues(name), leagues(name), sports(key)')
       .eq('id', delivery.event_id)
       .single(),
     supabase
@@ -188,6 +202,9 @@ async function sendReminderEmail(delivery: Delivery) {
   // skeleton rows. Skipped (not failed) so it doesn't churn retries.
   if (isUnresolvedPlaceholderTitle(row.title)) {
     throw new SkipDelivery(`Unresolved placeholder fixture title: ${row.title}`)
+  }
+  if (isStaleForKind(delivery.kind, row)) {
+    throw new SkipDelivery(`Event already started or finished (${row.status}, ${row.starts_at})`)
   }
   const prefs = (profile ?? {}) as { default_timezone: string | null; locale: string | null; hour12: boolean | null }
   const region = regionFromLocale(prefs.locale)
