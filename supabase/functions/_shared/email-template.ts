@@ -26,20 +26,28 @@ type RenderAlertEmailOptions = {
 // Countdown is only meaningful for alerts about an event that hasn't started yet.
 const UPCOMING_KINDS = new Set(['reminder', 'time_change', 'time_set', 'new_event', 'participant_update', 'venue_change'])
 
-const WATCH_BADGE_STYLES: Record<string, { label: string; bg: string; fg: string; border: string }> = {
-  fox_sports: { label: 'FOX', bg: '#063c78', fg: '#ffffff', border: '#3b82f6' },
-  telemundo: { label: 'TEL', bg: '#d71920', fg: '#ffffff', border: '#ff6b6b' },
-  ctv_tsn_rds: { label: 'TSN', bg: '#cc102d', fg: '#ffffff', border: '#ff8a8a' },
-  tsn: { label: 'TSN', bg: '#cc102d', fg: '#ffffff', border: '#ff8a8a' },
-  rds: { label: 'RDS', bg: '#d71920', fg: '#ffffff', border: '#ff8a8a' },
-  peacock: { label: 'PEA', bg: '#231f55', fg: '#ffffff', border: '#7c6cff' },
-  fubo: { label: 'FUBO', bg: '#ff5a1f', fg: '#111111', border: '#ffb199' },
-  dazn: { label: 'DAZN', bg: '#f2ff00', fg: '#111111', border: '#f8ff7a' },
-  espn_plus: { label: 'ESPN', bg: '#c4001a', fg: '#ffffff', border: '#ff7a8a' },
-  nba_league_pass: { label: 'NBA', bg: '#1d428a', fg: '#ffffff', border: '#5b8def' },
-  max_tnt: { label: 'TNT', bg: '#111827', fg: '#ffffff', border: '#4b5563' },
-  sling: { label: 'SLING', bg: '#00a7e1', fg: '#081015', border: '#7ddcff' },
-  movistar_plus: { label: 'MOV', bg: '#0b8f5a', fg: '#ffffff', border: '#83e1b7' },
+/*
+ * "Matchday Programme" palette: dark broadcast chrome (header/hero) over a light
+ * program-paper body, per the site direction — dark surfaces are for live UI,
+ * light paper is for reading, and an email is a reading surface.
+ */
+const FONT_SANS = "'Space Grotesk','Segoe UI',Arial,sans-serif"
+const FONT_DISPLAY = "'Archivo Black','Arial Black',Arial,sans-serif"
+
+const WATCH_BADGE_STYLES: Record<string, { label: string; bg: string; fg: string }> = {
+  fox_sports: { label: 'FOX', bg: '#063c78', fg: '#ffffff' },
+  telemundo: { label: 'TEL', bg: '#d71920', fg: '#ffffff' },
+  ctv_tsn_rds: { label: 'TSN', bg: '#cc102d', fg: '#ffffff' },
+  tsn: { label: 'TSN', bg: '#cc102d', fg: '#ffffff' },
+  rds: { label: 'RDS', bg: '#d71920', fg: '#ffffff' },
+  peacock: { label: 'PEA', bg: '#231f55', fg: '#ffffff' },
+  fubo: { label: 'FUBO', bg: '#ff5a1f', fg: '#111111' },
+  dazn: { label: 'DAZN', bg: '#f2ff00', fg: '#111111' },
+  espn_plus: { label: 'ESPN', bg: '#c4001a', fg: '#ffffff' },
+  nba_league_pass: { label: 'NBA', bg: '#1d428a', fg: '#ffffff' },
+  max_tnt: { label: 'TNT', bg: '#111827', fg: '#ffffff' },
+  sling: { label: 'SLING', bg: '#00a7e1', fg: '#081015' },
+  movistar_plus: { label: 'MOV', bg: '#0b8f5a', fg: '#ffffff' },
 }
 
 function escapeHtml(value: unknown) {
@@ -126,19 +134,19 @@ function watchBadgeStyle(watch: WatchOption) {
     .join('')
     .toUpperCase()
     .slice(0, 4)
-  return { label: label || 'TV', bg: '#101812', fg: '#dff7e6', border: '#2a4c34' }
+  return { label: label || 'TV', bg: '#0b6f44', fg: '#fff3d7' }
 }
 
-function watchBadgeHtml(watch: WatchOption, compact = false) {
+function watchBadgeHtml(watch: WatchOption) {
   const style = watchBadgeStyle(watch)
-  return `<a href="${escapeHtml(normalizeUrl(watch.url))}" title="${escapeHtml(watch.name)}" style="display:inline-block;text-decoration:none;margin:0 7px 7px 0;">
-    <span class="watch-badge" style="display:inline-block;min-width:${compact ? '34px' : '42px'};text-align:center;background:${style.bg};color:${style.fg};border:1px solid ${style.border};border-radius:6px;padding:${compact ? '6px 7px' : '8px 9px'};font:900 ${compact ? '10px' : '11px'}/1 Arial,sans-serif;letter-spacing:.08em;text-transform:uppercase;">${escapeHtml(style.label)}</span>
+  return `<a href="${escapeHtml(normalizeUrl(watch.url))}" title="${escapeHtml(watch.name)}" style="display:inline-block;text-decoration:none;margin:0 8px 8px 0;">
+    <span class="watch-badge" style="display:inline-block;min-width:44px;text-align:center;background:${style.bg};color:${style.fg};border-radius:7px;padding:9px 11px;font:800 11px/1 ${FONT_SANS};letter-spacing:.08em;text-transform:uppercase;">${escapeHtml(style.label)}</span>
   </a>`
 }
 
 function detailLine(value: string | null | undefined) {
   if (!value) return ''
-  return `<div style="margin-top:7px;color:#111611;font:700 14px/1.35 Arial,sans-serif;"><span style="display:inline-block;width:6px;height:6px;border-radius:999px;background:#0f8a45;margin-right:7px;vertical-align:2px;"></span>${escapeHtml(value)}</div>`
+  return `<div style="margin-top:8px;color:#1d1812;font:700 15px/1.35 ${FONT_SANS};"><span style="display:inline-block;width:7px;height:7px;border-radius:999px;background:#0b6f44;margin-right:8px;vertical-align:2px;"></span>${escapeHtml(value)}</div>`
 }
 
 export function renderSilboAlertEmail(options: RenderAlertEmailOptions) {
@@ -150,6 +158,7 @@ export function renderSilboAlertEmail(options: RenderAlertEmailOptions) {
   const start = formatStartParts(options.event.starts_at, tz, options.hour12)
   const countdown = options.kind && UPCOMING_KINDS.has(options.kind) ? countdownLabel(options.event.starts_at) : null
   const watch = options.watch ?? []
+  const kindLabel = (options.kind ?? 'alert').replace(/_/g, ' ')
 
   const textLines = [
     options.copy.lead,
@@ -167,18 +176,18 @@ export function renderSilboAlertEmail(options: RenderAlertEmailOptions) {
   const text = textLines.join('\n')
 
   const countdownHtml = countdown
-    ? `<div class="pill" style="display:inline-block;background:#13251a;color:#28f070;font:900 13px/1 Arial,sans-serif;padding:9px 14px;border-radius:999px;margin-top:14px;">${escapeHtml(countdown)}</div>`
+    ? `<div style="display:inline-block;background:rgba(84,255,159,.12);border:1px solid rgba(84,255,159,.4);color:#54ff9f;font:700 13px/1 ${FONT_SANS};padding:9px 14px;border-radius:999px;margin-top:16px;">${escapeHtml(countdown)}</div>`
     : ''
   const watchHtml = watch.length
     ? `<tr>
-          <td class="section-pad" style="padding:0 24px 20px;">
-            <div class="label" style="color:#8ba091;font:800 10px/1.2 Arial,sans-serif;text-transform:uppercase;letter-spacing:.16em;margin-bottom:10px;">Where to watch${options.region ? ` - ${escapeHtml(options.region)}` : ''}</div>
+          <td class="section-pad" style="padding:20px 28px 4px;">
+            <div style="color:#8a7c63;font:700 11px/1.2 ${FONT_SANS};text-transform:uppercase;letter-spacing:.16em;margin-bottom:12px;">Where to watch${options.region ? ` - ${escapeHtml(options.region)}` : ''}</div>
             ${watch.map((w) => watchBadgeHtml(w)).join('')}
           </td>
         </tr>`
     : ''
   const calendarButton = options.calendarUrl
-    ? `<a class="secondary-button" href="${escapeHtml(options.calendarUrl)}" style="display:inline-block;border:1px solid #2c5a3c;color:#9be7b4;text-decoration:none;font:900 14px/1 Arial,sans-serif;padding:14px 18px;border-radius:8px;margin:8px 0 0 8px;">Add to calendar</a>`
+    ? `<a class="secondary-button" href="${escapeHtml(options.calendarUrl)}" style="display:inline-block;border:2px solid #0b6f44;color:#0b6f44;text-decoration:none;font:700 14px/1 ${FONT_SANS};padding:13px 20px;border-radius:9px;margin:0 0 0 10px;">Add to calendar</a>`
     : ''
 
   const html = `<!doctype html>
@@ -186,84 +195,70 @@ export function renderSilboAlertEmail(options: RenderAlertEmailOptions) {
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <meta name="color-scheme" content="dark light">
-    <meta name="supported-color-schemes" content="dark light">
+    <meta name="color-scheme" content="light dark">
+    <meta name="supported-color-schemes" content="light dark">
     <title>${escapeHtml(options.copy.subject)}</title>
     <style>
+      @import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Space+Grotesk:wght@400;500;700&display=swap');
+      body { -webkit-font-smoothing: antialiased; }
+      /* The panel body is already program-paper; light mode just lightens the outer field.
+         The header/hero stay dark on purpose — that block carries the broadcast branding
+         and the lockup art is drawn for a dark background. */
       @media (prefers-color-scheme: light) {
-        body, .email-bg { background:#f4ead8 !important; color:#17130e !important; }
-        .panel { background:#fff8e8 !important; border-color:#d8c9ad !important; }
-        .header { background:#fff8e8 !important; border-color:#d8c9ad !important; }
-        .hero { background:#07110c !important; color:#fff6df !important; }
-        .brand, .accent { color:#0d7a3f !important; }
-        .hero .label { color:#6dff9a !important; }
-        .title { color:#fff6df !important; }
-        .muted, .label { color:#685f50 !important; }
-        .pill { background:#dff5dc !important; color:#0d7a3f !important; }
-        .ticket-main { background:#fffdf4 !important; color:#17130e !important; }
-        .footer { background:#f4ead8 !important; border-color:#d8c9ad !important; color:#675d4e !important; }
-        .secondary-button { color:#0d7a3f !important; border-color:#b8d0ae !important; }
+        body, .email-bg { background:#e9ddc3 !important; }
+        .panel { border:1px solid #d8c9ad !important; }
       }
       @media only screen and (max-width: 480px) {
         .email-bg { padding:8px 0 !important; }
-        .panel { width:100% !important; max-width:100% !important; border-left:0 !important; border-right:0 !important; border-radius:0 !important; }
+        .panel { width:100% !important; max-width:100% !important; border-radius:0 !important; }
         .header { padding:18px 16px !important; }
-        .header td { display:block !important; width:100% !important; text-align:left !important; }
-        .brand-lockup { width:220px !important; max-width:100% !important; height:auto !important; }
-        .hero { padding:22px 16px !important; }
-        .hero .label { margin-top:42px !important; }
-        .title { font-size:25px !important; line-height:1.08 !important; }
+        .brand-lockup { width:210px !important; max-width:100% !important; height:auto !important; }
+        .hero { padding:24px 16px 26px !important; }
+        .title { font-size:26px !important; line-height:1.08 !important; }
         .section-pad { padding-left:16px !important; padding-right:16px !important; }
-        .ticket-shell { border-spacing:0 !important; }
-        .ticket-time, .ticket-main { display:block !important; width:auto !important; border-radius:7px !important; }
-        .ticket-time { padding:16px !important; }
-        .ticket-main { margin-top:0 !important; padding:16px !important; }
-        .primary-button, .secondary-button { display:block !important; box-sizing:border-box !important; width:100% !important; margin:8px 0 0 !important; text-align:center !important; }
+        .ticket-stub, .ticket-main { display:block !important; width:auto !important; }
+        .ticket-stub { padding:16px !important; border-radius:10px 10px 0 0 !important; }
+        .ticket-main { margin-top:0 !important; padding:16px !important; border-left:0 !important; border-top:2px dashed #cbbfa4 !important; border-radius:0 0 10px 10px !important; }
+        .primary-button, .secondary-button { display:block !important; box-sizing:border-box !important; width:100% !important; margin:10px 0 0 !important; text-align:center !important; }
         .watch-badge { min-width:0 !important; }
       }
       a { color:inherit; }
     </style>
   </head>
-  <body style="margin:0;background:#070908;color:#f3efe2;font-family:Arial,sans-serif;">
+  <body style="margin:0;background:#0b0a08;color:#1d1812;font-family:'Space Grotesk','Segoe UI',Arial,sans-serif;">
     <div style="display:none;max-height:0;overflow:hidden;color:transparent;">
       ${escapeHtml(options.copy.lead)}${countdown ? ` - ${escapeHtml(countdown)}` : ''}
     </div>
-    <table class="email-bg" role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#070908;padding:24px 10px;">
+    <table class="email-bg" role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#0b0a08;padding:28px 10px;">
       <tr>
         <td align="center">
-          <table class="panel" role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;border:1px solid #16351f;background:#0a0d0b;border-radius:8px;overflow:hidden;">
+          <table class="panel" role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;background:#f4ead8;border-radius:12px;overflow:hidden;">
             <tr>
-              <td class="header" style="padding:20px 24px;border-bottom:1px solid #16351f;background:#070908;">
-                <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
-                  <tr>
-                    <td>
-                      <img class="brand-lockup" src="${escapeHtml(emailLockupUrl)}" width="258" height="58" alt="${escapeHtml(brandName)}" style="display:block;width:258px;max-width:100%;height:auto;border:0;outline:none;text-decoration:none;">
-                    </td>
-                  </tr>
-                </table>
+              <td class="header" style="padding:22px 28px;background:#0b0a08;">
+                <img class="brand-lockup" src="${escapeHtml(emailLockupUrl)}" width="240" height="54" alt="${escapeHtml(brandName)}" style="display:block;width:240px;max-width:100%;height:auto;border:0;outline:none;text-decoration:none;">
               </td>
             </tr>
             <tr>
-              <td class="hero" style="padding:24px;background:#07110c;background-image:linear-gradient(90deg,#07110c 0%,#0b2215 72%,#0f3a20 100%);">
-                <div class="pill" style="display:inline-block;background:#28f070;color:#061008;font:900 10px/1 Arial,sans-serif;padding:9px 13px;border-radius:999px;text-transform:uppercase;letter-spacing:.16em;">${escapeHtml(options.kind ?? 'alert')}</div>
-                <div class="label" style="margin-top:58px;color:#6dff9a;font:900 10px/1.2 Arial,sans-serif;text-transform:uppercase;letter-spacing:.18em;">${escapeHtml(options.event.league_name ?? 'Schedule')}</div>
-                <h1 class="title" style="margin:10px 0 0;color:#fff6df;font:900 30px/1.05 Arial,sans-serif;letter-spacing:-.01em;">${escapeHtml(options.event.title)}</h1>
+              <td class="hero" style="padding:28px 28px 30px;background:#0b0a08;background-image:linear-gradient(135deg,#0b0a08 0%,#0d1f14 62%,#12351f 100%);border-bottom:4px solid #54ff9f;">
+                <div style="display:inline-block;background:#54ff9f;color:#0b0a08;font:800 11px/1 ${FONT_SANS};padding:8px 13px;border-radius:999px;text-transform:uppercase;letter-spacing:.14em;">${escapeHtml(kindLabel)}</div>
+                <div style="margin-top:26px;color:#54ff9f;font:700 11px/1.2 ${FONT_SANS};text-transform:uppercase;letter-spacing:.2em;">${escapeHtml(options.event.league_name ?? 'Schedule')}</div>
+                <h1 class="title" style="margin:10px 0 0;color:#f4ead8;font:400 32px/1.05 ${FONT_DISPLAY};letter-spacing:-.01em;text-transform:uppercase;">${escapeHtml(options.event.title)}</h1>
                 ${countdownHtml}
               </td>
             </tr>
             <tr>
-              <td class="section-pad" style="padding:24px 24px 10px;">
-                <table class="ticket-shell" role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:separate;border-spacing:0;">
+              <td class="section-pad" style="padding:26px 28px 6px;">
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:separate;border-spacing:0;">
                   <tr>
-                    <td class="ticket-time" style="width:118px;background:#0e5c3f;color:#e9fff1;border-radius:7px 0 0 7px;padding:18px 14px;vertical-align:middle;">
-                      <div style="font:900 10px/1 Arial,sans-serif;letter-spacing:.18em;text-transform:uppercase;color:#bfffd2;">${escapeHtml(start?.datePart ?? 'Time')}</div>
-                      <div style="margin-top:7px;font:900 25px/1 Arial,sans-serif;color:#ffffff;">${escapeHtml(start?.timePart ?? 'TBD')}</div>
-                      <div style="margin-top:5px;font:800 10px/1 Arial,sans-serif;letter-spacing:.18em;text-transform:uppercase;color:#bfffd2;">${escapeHtml(start?.zonePart ?? '')}</div>
+                    <td class="ticket-stub" style="width:128px;background:#0b6f44;color:#fff3d7;border-radius:10px 0 0 10px;padding:20px 16px;vertical-align:middle;">
+                      <div style="font:700 10px/1 ${FONT_SANS};letter-spacing:.18em;text-transform:uppercase;color:#a8e8c3;">${escapeHtml(start?.datePart ?? 'Time')}</div>
+                      <div style="margin-top:8px;font:400 26px/1 ${FONT_DISPLAY};color:#ffffff;">${escapeHtml(start?.timePart ?? 'TBD')}</div>
+                      <div style="margin-top:6px;font:700 10px/1 ${FONT_SANS};letter-spacing:.18em;text-transform:uppercase;color:#a8e8c3;">${escapeHtml(start?.zonePart ?? '')}</div>
                     </td>
-                    <td class="ticket-main" style="background:#f4ead8;color:#111611;border-radius:0 7px 7px 0;padding:18px 18px;vertical-align:middle;">
-                      <div class="label" style="font:900 10px/1 Arial,sans-serif;letter-spacing:.18em;text-transform:uppercase;color:#776c5b;">${escapeHtml(options.event.league_name ?? 'Event')}</div>
+                    <td class="ticket-main" style="background:#fffdf4;color:#1d1812;border-left:2px dashed #cbbfa4;border-radius:0 10px 10px 0;padding:20px 20px;vertical-align:middle;">
+                      <div style="font:700 10px/1 ${FONT_SANS};letter-spacing:.18em;text-transform:uppercase;color:#8a7c63;">${escapeHtml(options.event.league_name ?? 'Event')}</div>
                       ${detailLine(options.event.venue_name)}
-                      <div style="margin-top:7px;color:#565045;font:13px/1.45 Arial,sans-serif;">Shown in your local time${tz ? ` - ${escapeHtml(tz)}` : ''}</div>
+                      <div style="margin-top:8px;color:#5f5544;font:400 13px/1.45 ${FONT_SANS};">Shown in your local time${tz ? ` - ${escapeHtml(tz)}` : ''}</div>
                     </td>
                   </tr>
                 </table>
@@ -271,15 +266,15 @@ export function renderSilboAlertEmail(options: RenderAlertEmailOptions) {
             </tr>
             ${watchHtml}
             <tr>
-              <td style="padding:8px 24px 28px;">
-                <a class="primary-button" href="${escapeHtml(eventUrl)}" style="display:inline-block;background:#28f070;color:#061008;text-decoration:none;font:900 14px/1 Arial,sans-serif;padding:15px 20px;border-radius:8px;">View event</a>
+              <td class="section-pad" style="padding:16px 28px 30px;">
+                <a class="primary-button" href="${escapeHtml(eventUrl)}" style="display:inline-block;background:#0b6f44;color:#fff3d7;text-decoration:none;font:700 14px/1 ${FONT_SANS};padding:15px 22px;border-radius:9px;">View event</a>
                 ${calendarButton}
               </td>
             </tr>
             <tr>
-              <td class="footer" style="padding:17px 24px 22px;border-top:1px solid #16351f;background:#070908;color:#8ba091;font:12px/1.5 Arial,sans-serif;">
-                <div class="brand" style="color:#28f070;font:900 15px/1 Arial,sans-serif;letter-spacing:.12em;text-transform:uppercase;margin-bottom:7px;">${escapeHtml(brandName)}</div>
-                You follow ${escapeHtml(options.event.league_name ?? 'a Silbo schedule')}. <a href="${escapeHtml(options.manageUrl)}" style="color:#9be7b4;text-decoration:none;font-weight:800;">Manage alerts</a> or change preferences any time.
+              <td style="padding:18px 28px 24px;border-top:1px solid #d8c9ad;background:#efe3cd;color:#5f5544;font:400 12.5px/1.55 ${FONT_SANS};">
+                <div style="color:#0b6f44;font:400 14px/1 ${FONT_DISPLAY};letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px;">${escapeHtml(brandName)}</div>
+                You follow ${escapeHtml(options.event.league_name ?? 'a Silbo schedule')}. <a href="${escapeHtml(options.manageUrl)}" style="color:#0b6f44;text-decoration:underline;font-weight:700;">Manage alerts</a> or change preferences any time.
               </td>
             </tr>
           </table>
