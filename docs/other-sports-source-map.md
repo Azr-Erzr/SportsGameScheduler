@@ -7,10 +7,66 @@ This document is the working map for the sports that live outside the primary sw
 ## Operating Rules
 
 - Prefer official league/federation sources first, then licensed/provider APIs, then public utility feeds only as dry-run candidates.
+- Bridge providers are allowed when they are semi-official, well-managed, or transparently
+  community-run, even if they are not a cure-all. Use them to hydrate gaps and run regular
+  check-ins until Silbo can afford larger licensed feeds.
 - Keep every new calendar source in `dry_run = true` until we inspect event counts, titles, timezones, venues, UID stability, and redistribution terms.
 - ECAL pages are valuable source intelligence, but they are not automatically direct ICS feeds for our backend. Treat them as `curated` source providers until an ECAL adapter or partner export route exists.
 - Do not scrape pages that only expose interactive HTML unless terms and stability have been reviewed.
 - TheSportsDB targets are already useful for broad coverage and artwork, but the other-sports layer needs a second source lane for official calendar updates, postponed fixtures, venues, and competitions that TheSportsDB misses.
+
+## Bridge Provider Admission Test
+
+A free/open/semi-official source can be used before enterprise-provider budget exists when it
+passes this test:
+
+1. It has a stable maintainer, federation/league relationship, transparent community, or clear
+   public provenance.
+2. It exposes structured data, a stable feed, or pages that can be normalized without brittle
+   private-user scraping.
+3. Its terms are compatible with at least dry-run storage, source attribution, and internal
+   reconciliation. If commercial redistribution is unclear, keep it dry-run or contact the owner.
+4. It adds a real missing layer: event windows, participants, undercards, sessions, results,
+   artwork, or schedule-drop signals.
+5. It writes through `provider_event_sources` and `event_external_ids` first, then promotes to
+   canonical events only when match confidence is good and duplicates are controlled.
+6. It has a capped cadence and failure posture. A broken bridge source should mark itself stale,
+   not delete or hide canonical data from another provider.
+
+The current machine-readable queue lives at `docs/data/bridge-provider-candidates.json`.
+
+## Bridge Probe Results
+
+Last probed locally with `npm run bridge:probe` on 2026-07-02.
+
+| Source | Result | Data loaded | Usefulness | Site integration read |
+| --- | --- | --- | --- | --- |
+| World Athletics calendar | Pass | 100 structured rows in initial page payload; source advertises 38k+ total records | High | Best first new adapter. Structured meet IDs, dates, venue, category, disciplines, and startlist/result flags are present. |
+| TFRRS public results | Pass | 30 latest-result rows on first page | Medium | Good NCAA/US college athletics dry-run source. Easy table parsing, but terms/API posture needs review. |
+| OpenTrack docs/platform | Public docs only | No public event rows found, but docs mention APIs/results heavily | Medium-high if access is granted | Strong partner/contact candidate, not a direct public feed yet. |
+| Cricsheet | Pass | 2,456 download links; 18k+ people-register rows; 7.5k+ alias rows | Medium-high | Easy cricket identity and historical enrichment. Not a fixture source. |
+| openfootball World Cup JSON | Pass | 104 World Cup 2026 match rows | Medium | Very easy fallback/reference data. Keep secondary because provider freshness/slot resolution is weaker than live feeds. |
+| rugby-data-api | Reject/deprioritize | GitHub repo is archived; no live data probe | Low | Do not prioritize. Useful only as historical/self-host experiment. |
+| SportsDataverse | Pass | 25 package cards detected | Medium | Useful package ecosystem for enrichment/cross-checks, but not a simple direct schedule cron. |
+| TheSportsDB bridge baseline | Pass/active | Existing UFC next-event sample with badge/art fields | High | Keep as current baseline and compare all bridge feeds against it. |
+| API-Sports MMA | Not locally probed | Existing production secret is not present in local `.env` | Unknown | Needs local `APISPORTS_KEY` or a server-side verifier using the deployed secret. |
+
+## Bridge Adapter Implementation Status
+
+Applied July 3, 2026 against Supabase project `gcnbgdpicgeahxscpsfc`.
+
+| Adapter | Function | Live result | Promotion status |
+| --- | --- | --- | --- |
+| World Athletics calendar | `provider-hydrate-world-athletics` | 25 dry-run `provider_event_sources`; upstream page advertised 38,551 calendar/result records | Keep source-only until terms review and meet/session/discipline modeling are complete |
+| TFRRS results search | `provider-hydrate-tfrrs` | 30 dry-run result-page `provider_event_sources` | Useful NCAA/US college track evidence; not a future fixture source |
+| Cricsheet people register | `provider-hydrate-cricsheet` | 18,242 cricket `competitors`; 26,092 `competitor_aliases` | Identity batch is live for reconciliation; no schedule/event promotion |
+| API-Sports MMA verifier | `provider-verify-apisports-mma` | Free plan verified; categories returned 18 rows; `fights?season=2024` returned 637 rows with fighter ids/logos/status/category fields | Current/future fights are plan-limited on Free; paid month needed before undercard/live-alert importer |
+
+API-Sports MMA notes: `/fights` requires at least one of `id`, `date`, `season`, or `fighter`.
+The Free plan rejected `next=5` and current season `2026`; the provider error said free access is
+limited to seasons 2022-2024. Historical fight rows are structured enough to design the importer:
+`id`, `date`, `time`, `timestamp`, `timezone`, `slug`, `is_main`, `category`, `status`, and two
+fighter objects with provider ids and logo URLs.
 
 ## Current Technical State
 
@@ -66,6 +122,26 @@ third opinion through the same provider reconciliation path.
 
 Recommended path: OpenF1 for F1 sessions now; keep TheSportsDB as broad motorsport base; evaluate
 paid API-Sports/Sportmonks/SportsDataIO F1 only if we need richer motorsport metadata beyond F1.
+
+### Athletics / Track And Field
+
+Athletics should not be treated like a normal league. The correct canonical shape is:
+
+`meet -> session -> discipline event -> round/heat/final -> athlete/team`
+
+World Athletics is the first bridge-provider candidate for global meet discovery. It can help
+hydrate competition windows, locations, category/tour context, and results links. It is not
+expected to solve heat-by-heat schedules or live event timing by itself.
+
+OpenTrack is the stronger long-term architecture/contact candidate because it is built around
+entries, start lists, results, and meet management. If OpenTrack exposes public/partner API access
+for events it powers, that should become the preferred athletics deep-data lane.
+
+TFRRS is useful for NCAA/college track and cross-country calendars/results, but should stay dry-run
+until DirectAthletics/TFRRS terms or API access are clarified.
+
+Recommended path: build a dry-run World Athletics verifier first, use the OpenTrack/W3C athletics
+model to shape our DB, then add TFRRS only for US college coverage after source review.
 
 ### Badminton
 

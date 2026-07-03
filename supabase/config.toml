@@ -26,6 +26,21 @@ verify_jwt = true
 [functions.provider-hydrate-apisports-f1]
 verify_jwt = true
 
+[functions.provider-hydrate-openf1]
+verify_jwt = true
+
+[functions.provider-hydrate-world-athletics]
+verify_jwt = true
+
+[functions.provider-hydrate-tfrrs]
+verify_jwt = true
+
+[functions.provider-hydrate-cricsheet]
+verify_jwt = true
+
+[functions.provider-verify-apisports-mma]
+verify_jwt = true
+
 [functions.provider-hydrate-pandascore]
 verify_jwt = true
 

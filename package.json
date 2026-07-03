@@ -10,6 +10,7 @@
     "test": "vitest run",
     "test:e2e": "playwright test",
     "provider:verify": "node scripts/verify-providers.mjs",
+    "bridge:probe": "node scripts/probe-bridge-providers.mjs",
     "verify:prod": "node scripts/verify-production-readiness.mjs",
     "verify:live-data": "node scripts/verify-live-data.mjs",
     "brand:assets": "node scripts/generate-brand-assets.mjs",
