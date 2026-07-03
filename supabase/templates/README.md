@@ -4,15 +4,23 @@ Two kinds of email leave Silbo, both delivered through the **Resend SMTP** confi
 
 | Email | Sent by | Template source | Action needed |
 |---|---|---|---|
-| **Magic link / sign-in** | Supabase Auth | `magic-link.html` (this folder) | Paste into the dashboard ↓ |
-| **Confirm signup** | Supabase Auth | `confirm-signup.html` (this folder) | Paste into the dashboard ↓ |
+| **Magic link / sign-in** | Supabase Auth | `magic-link.html` (this folder) | None — installed remotely 2026-07-02; re-push after edits ↓ |
+| **Confirm signup** | Supabase Auth | `confirm-signup.html` (this folder) | None — installed remotely 2026-07-02; re-push after edits ↓ |
 | **Schedule alerts / reminders** | `notifications` edge function | `supabase/functions/_shared/email-template.ts` (`renderSilboAlertEmail`) | None — already branded & deployed with the function |
 
 The alert/reminder emails are rendered in code and sent via the Resend API directly, so they need no
-dashboard step. Only the **Auth** emails (magic link, confirm signup) are configured in the dashboard.
+dashboard step. Only the **Auth** emails (magic link, confirm signup) live in Supabase Auth config.
 
-## How to install the Auth templates
-Supabase Dashboard → project **SportsGameScheduler** → **Authentication → Emails → Templates**.
+## How to install / update the Auth templates
+
+**Option A — Management API (no dashboard needed).** `PATCH https://api.supabase.com/v1/projects/<ref>/config/auth`
+with a `sbp_…` personal access token (the Supabase CLI login token works), setting only these keys:
+- `mailer_subjects_magic_link` / `mailer_templates_magic_link_content`
+- `mailer_subjects_confirmation` / `mailer_templates_confirmation_content`
+
+The PATCH is partial — untouched auth config keys are left alone. Verify with a GET afterwards.
+
+**Option B — Dashboard.** Supabase Dashboard → project **SportsGameScheduler** → **Authentication → Emails → Templates**.
 
 1. **Magic Link**
    - **Subject:** `Sign in to Silbo Sports`
@@ -34,5 +42,8 @@ These use Supabase's Go-template tokens, already embedded in the HTML:
 - (Available if you want them) `{{ .Token }}` 6-digit code, `{{ .SiteURL }}`, `{{ .Email }}`.
 
 ## Keeping brand consistency
-All three templates share the same palette so inbox + in-app feel like one product:
-background `#070908`, card `#0b0f0d`, brand green `#28f070`, body text `#c4cabf`, hairline `#16351f`.
+All three templates share the "Matchday Programme" layout: dark broadcast header (brand lockup +
+`#54ff9f` neon rule) over a light program-paper body, per the site's design direction (dark surfaces
+for live UI, paper for reading). Palette: void `#0b0a08`, paper `#f4ead8` / card `#fffdf4`, ink
+`#1d1812` (muted `#5f5544`, labels `#8a7c63`), stub green `#0b6f44`, neon `#54ff9f`. Type: Space
+Grotesk body / Archivo Black display, with Arial fallbacks for clients that strip web fonts.
