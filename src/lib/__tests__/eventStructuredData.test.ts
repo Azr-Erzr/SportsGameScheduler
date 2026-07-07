@@ -9,6 +9,7 @@ describe('eventStructuredData', () => {
       startsAt: new Date('2026-07-07T19:00:00Z'),
       status: 'scheduled',
       sportKey: 'soccer',
+      leagueId: 'league-9',
       leagueName: 'UEFA Champions League',
       venue: 'Example Stadium',
       venueCity: 'London',
@@ -26,7 +27,12 @@ describe('eventStructuredData', () => {
       image: ['https://silbosports.com/og-cover.png'],
       startDate: '2026-07-07T19:00:00.000Z',
       endDate: '2026-07-07T20:55:00.000Z',
-      organizer: { '@type': 'Organization', name: 'UEFA Champions League' },
+      eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
+      organizer: {
+        '@type': 'Organization',
+        name: 'UEFA Champions League',
+        url: 'https://silbosports.com/leagues/league-9',
+      },
       location: {
         '@type': 'Place',
         name: 'Example Stadium',
@@ -43,7 +49,7 @@ describe('eventStructuredData', () => {
         url: 'https://silbosports.com/events/event-1',
       },
     })
-    expect(data.performer).toEqual([
+    expect(data!.performer).toEqual([
       { '@type': 'SportsTeam', name: 'Arsenal' },
       { '@type': 'SportsTeam', name: 'Barcelona' },
     ])
@@ -59,11 +65,13 @@ describe('eventStructuredData', () => {
       venue: 'Vikingsvollur',
     })
 
-    expect(data.location).toMatchObject({
+    expect(data!.location).toMatchObject({
       '@type': 'Place',
       name: 'Vikingsvollur',
       address: 'Vikingsvollur',
     })
+    // No leagueId → organizer url falls back to the site origin, still a valid absolute URL.
+    expect(data!.organizer).toMatchObject({ name: 'UEFA Champions League', url: 'https://silbosports.com' })
   })
 
   it('marks person competitors as performers for individual sports', () => {
@@ -72,16 +80,30 @@ describe('eventStructuredData', () => {
       title: 'Fighter A vs Fighter B',
       startsAt: new Date('2026-08-01T02:00:00Z'),
       sportKey: 'combat_sports',
+      venue: 'T-Mobile Arena',
+      venueCity: 'Las Vegas',
+      venueCountry: 'US',
       competitors: [
         { name: 'Fighter A', kind: 'person' },
         { name: 'Fighter B', kind: 'person' },
       ],
     })
 
-    expect(data.performer).toEqual([
+    expect(data!.performer).toEqual([
       { '@type': 'Person', name: 'Fighter A' },
       { '@type': 'Person', name: 'Fighter B' },
     ])
-    expect(data.endDate).toBe('2026-08-01T07:00:00.000Z')
+    expect(data!.endDate).toBe('2026-08-01T07:00:00.000Z')
+  })
+
+  it('returns null (no invalid Event markup) when there is no location at all', () => {
+    const data = eventStructuredData({
+      id: 'event-4',
+      title: 'TBD vs TBD',
+      startsAt: new Date('2026-08-01T02:00:00Z'),
+      sportKey: 'soccer',
+      leagueName: 'FIFA World Cup',
+    })
+    expect(data).toBeNull()
   })
 })

@@ -7,6 +7,7 @@ export type StructuredEventInput = {
   startsAt: Date
   status?: string | null
   sportKey?: string | null
+  leagueId?: string | null
   leagueName?: string | null
   venue?: string | null
   venueCity?: string | null
@@ -43,23 +44,24 @@ export function eventStructuredData(event: StructuredEventInput) {
       name: competitor.name,
     }))
 
-  const location = event.venue
-    ? {
-        '@type': 'Place',
-        name: event.venue,
-        address:
-          event.venueCity || event.venueCountry
-            ? {
-                '@type': 'PostalAddress',
-                ...(event.venueCity ? { addressLocality: event.venueCity } : {}),
-                ...(event.venueCountry ? { addressCountry: event.venueCountry } : {}),
-              }
-            : event.venue,
-      }
-    : {
-        '@type': 'VirtualLocation',
-        url,
-      }
+  // A SportsEvent is physical: it needs a real Place location. Without venue/city/country we can't
+  // emit a valid one, so we skip the JSON-LD (null) rather than emit an invalid item Google flags.
+  const location =
+    event.venue || event.venueCity || event.venueCountry
+      ? {
+          '@type': 'Place',
+          name: event.venue || event.venueCity || event.leagueName || 'Venue to be confirmed',
+          address:
+            event.venueCity || event.venueCountry
+              ? {
+                  '@type': 'PostalAddress',
+                  ...(event.venueCity ? { addressLocality: event.venueCity } : {}),
+                  ...(event.venueCountry ? { addressCountry: event.venueCountry } : {}),
+                }
+              : event.venue,
+        }
+      : null
+  if (!location) return null
 
   return {
     '@context': 'https://schema.org',
@@ -70,12 +72,14 @@ export function eventStructuredData(event: StructuredEventInput) {
     startDate: event.startsAt.toISOString(),
     endDate: endDate.toISOString(),
     eventStatus: eventStatusUrl(event.status),
-    eventAttendanceMode: event.venue
-      ? 'https://schema.org/OfflineEventAttendanceMode'
-      : 'https://schema.org/MixedEventAttendanceMode',
+    eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
     location,
     ...(performers.length ? { performer: performers, competitor: performers } : {}),
-    ...(event.leagueName ? { organizer: { '@type': 'Organization', name: event.leagueName } } : {}),
+    organizer: {
+      '@type': 'Organization',
+      name: event.leagueName || 'Silbo Sports',
+      url: event.leagueId ? `${SEO_ORIGIN}/leagues/${event.leagueId}` : SEO_ORIGIN,
+    },
     offers: {
       '@type': 'Offer',
       name: 'Free Silbo Sports schedule page',

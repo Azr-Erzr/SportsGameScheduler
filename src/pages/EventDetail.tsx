@@ -56,6 +56,7 @@ export function EventDetailPage() {
           startsAt: event.startsAt,
           status: event.status,
           sportKey: event.sportKey,
+          leagueId: event.leagueId,
           leagueName: event.leagueName,
           venue: event.venue,
           venueCity: event.venueCity,
