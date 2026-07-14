@@ -17,11 +17,11 @@
 @import 'tailwindcss';
 
 @theme {
-  /* Surface tokens — broadcast defaults (warm void: a hair warmer than pure black). */
-  --color-page: var(--mp-bg, #0b0a08);
-  --color-surface: var(--mp-surface, #16130f);
+  /* Surface tokens — broadcast defaults (grass-cast charcoal; see themes.ts broadcastBase). */
+  --color-page: var(--mp-bg, #171b18);
+  --color-surface: var(--mp-surface, #212622);
   --color-ink: var(--mp-text, #f4ead8);
-  --color-primary: var(--mp-primary, #54ff9f);
+  --color-primary: var(--mp-primary, #38e57d);
   --color-secondary: var(--mp-secondary, #f4ead8);
   --color-accent: var(--mp-accent, #46e8ff);
   --color-export: var(--mp-export, #ffc24b);
@@ -54,7 +54,7 @@
   body {
     margin: 0;
     min-height: 100svh;
-    background: var(--mp-bg, #0b0a08);
+    background: var(--mp-bg, #171b18);
     color: var(--mp-text, #f4ead8);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
@@ -121,11 +121,12 @@
     background: linear-gradient(90deg, var(--mp-accent), var(--mp-export));
   }
 
-  /* CRT atmosphere: corner glow + faint scanlines. Sits behind content; the data-paper
-     subtree (share pages/exports) turns it off. Disabled under prefers-reduced-motion
-     stays static anyway — it does not animate. */
-  /* PERF: no 1px repeating scanlines over the whole viewport (huge rasterized layer), and
-     force the fixed backdrop onto its own GPU layer so scrolling never repaints it. */
+  /* CRT atmosphere: faint scanlines + broad grey static bands + tube vignette + corner
+     glows. Sits behind content; the data-paper subtree (share pages/exports) overrides it.
+     Static by design — nothing animates, so prefers-reduced-motion needs no branch. */
+  /* PERF: everything lives on ONE fixed translateZ(0) layer, painted once — scrolling never
+     repaints it. Scanlines run at a 3px pitch (not 1px) to keep the rasterized layer cheap
+     and avoid DPR moiré; the mobile block below drops them entirely. */
   .broadcast-air {
     position: fixed;
     inset: 0;
@@ -133,8 +134,16 @@
     pointer-events: none;
     transform: translateZ(0);
     background:
-      radial-gradient(1100px 500px at 85% -10%, color-mix(in srgb, var(--mp-primary) 9%, transparent), transparent 60%),
-      radial-gradient(900px 480px at -10% 110%, color-mix(in srgb, var(--mp-accent) 7%, transparent), transparent 60%);
+      /* fine scan lines */
+      repeating-linear-gradient(0deg, rgba(6, 9, 7, 0.16) 0 1px, transparent 1px 3px),
+      /* broad static bands — two offset periods so the banding feels organic, not striped */
+      repeating-linear-gradient(0deg, rgba(233, 240, 234, 0.028) 0 54px, transparent 54px 210px),
+      repeating-linear-gradient(0deg, transparent 0 120px, rgba(233, 240, 234, 0.018) 120px 168px, transparent 168px 340px),
+      /* tube vignette */
+      radial-gradient(130% 105% at 50% 42%, transparent 58%, rgba(4, 6, 5, 0.34) 100%),
+      /* channel glows */
+      radial-gradient(1100px 500px at 85% -10%, color-mix(in srgb, var(--mp-primary) 8%, transparent), transparent 60%),
+      radial-gradient(900px 480px at -10% 110%, color-mix(in srgb, var(--mp-accent) 6%, transparent), transparent 60%);
   }
 
   [data-paper] {
@@ -1095,7 +1104,7 @@
     border-radius: var(--radius-card);
     background:
       radial-gradient(circle at 55% 15%, color-mix(in srgb, var(--mp-accent) 18%, transparent), transparent 42%),
-      linear-gradient(180deg, #07100f 0%, #0b0a08 100%);
+      linear-gradient(180deg, #0e1411 0%, #121714 100%);
     padding: 24px;
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.035), 0 16px 38px rgba(0, 0, 0, 0.24);
   }
@@ -1106,7 +1115,7 @@
     background:
       radial-gradient(circle at 52% 26%, color-mix(in srgb, var(--mp-accent) 22%, transparent), transparent 35%),
       radial-gradient(circle at 82% 12%, color-mix(in srgb, var(--color-neon-magenta) 12%, transparent), transparent 30%),
-      linear-gradient(180deg, #07100f 0%, #0b0a08 100%);
+      linear-gradient(180deg, #0e1411 0%, #121714 100%);
   }
 
   [data-paper] .global-event-board {
@@ -1161,7 +1170,7 @@
     border: 1px solid color-mix(in srgb, var(--poster-primary) 60%, transparent);
     background:
       radial-gradient(circle at 35% 25%, rgba(255, 255, 255, 0.16), transparent 38%),
-      color-mix(in srgb, #0b0a08 80%, var(--poster-primary));
+      color-mix(in srgb, #151a17 80%, var(--poster-primary));
     box-shadow: 0 5px 12px rgba(0, 0, 0, 0.3);
     /* Centre on the card's top edge; the scroll entrance rides `translate` so the two compose. */
     transform: translate(-50%, -50%);
@@ -1488,7 +1497,7 @@
     color: #f4ead8;
     background:
       radial-gradient(circle at 76% 24%, color-mix(in srgb, var(--poster-accent) 18%, transparent), transparent 34%),
-      linear-gradient(135deg, color-mix(in srgb, var(--poster-primary) 18%, #07100f) 0%, #10130f 100%);
+      linear-gradient(135deg, color-mix(in srgb, var(--poster-primary) 18%, #0e1411) 0%, #131715 100%);
   }
 
   [data-paper] .event-poster-art {
@@ -2847,10 +2856,14 @@
     }
 
     .broadcast-air {
+      /* Mobile: bands + vignette only — no scanlines (cheaper, and 1-3px pitches moiré
+         against high-DPR phone screens). */
       background:
+        repeating-linear-gradient(0deg, rgba(233, 240, 234, 0.024) 0 44px, transparent 44px 170px),
+        radial-gradient(140% 110% at 50% 40%, transparent 60%, rgba(4, 6, 5, 0.30) 100%),
         radial-gradient(680px 330px at 80% -10%, color-mix(in srgb, var(--mp-primary) 8%, transparent), transparent 62%),
         radial-gradient(560px 300px at -10% 105%, color-mix(in srgb, var(--mp-accent) 5%, transparent), transparent 64%);
-      opacity: 0.75;
+      opacity: 0.9;
     }
 
     .art-capsule {
@@ -2881,7 +2894,7 @@
       padding: 18px;
       background:
         radial-gradient(circle at 68% 16%, color-mix(in srgb, var(--mp-accent) 12%, transparent), transparent 38%),
-        linear-gradient(180deg, #07100f 0%, #0b0a08 100%);
+        linear-gradient(180deg, #0e1411 0%, #121714 100%);
     }
 
     .global-event-board-room {

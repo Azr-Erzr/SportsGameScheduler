@@ -27,11 +27,12 @@ export type SportTheme = {
   }
 }
 
-// Shared broadcast base: warm void (a hair warmer/lighter than pure black, per direction),
-// warm panels, cream type, gold export CTAs.
+// Shared broadcast base: charcoal field with a faint grass cast (2026-07 direction from
+// r/WebApps launch feedback — pure black + bright green read "tech product"; charcoal +
+// deeper pitch neon reads "floodlit stadium"), warm panels, cream type, gold export CTAs.
 const broadcastBase = {
-  bg: '#0b0a08',
-  surface: '#16130f',
+  bg: '#171b18',
+  surface: '#212622',
   text: '#f4ead8',
   secondary: '#f4ead8',
   export: '#ffc24b',
@@ -55,12 +56,12 @@ function broadcast(
   }
 }
 
-export const neutralTheme = broadcast('neutral', 'All Sports', '#4dff8a', '#46e8ff', {
+export const neutralTheme = broadcast('neutral', 'All Sports', '#2ee06f', '#46e8ff', {
   background: 'neutral',
   cardShape: 'slab',
 })
 
-export const soccerTheme = broadcast('soccer', 'Soccer', '#54ff9f', '#46e8ff', {
+export const soccerTheme = broadcast('soccer', 'Soccer', '#38e57d', '#46e8ff', {
   background: 'pitch',
   cardShape: 'ticket',
 }, '#0b6f44')

@@ -118,7 +118,7 @@ function BrandBlock() {
     <Link
       to="/"
       aria-label={brand.appName}
-      className="group flex min-w-0 justify-self-start items-center gap-2 rounded-xl px-1 py-1 transition-colors hover:bg-primary/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:gap-3"
+      className="group flex min-w-0 justify-self-start items-center gap-2 rounded-xl px-1 py-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:gap-3"
     >
       <span className="flex h-10 w-12 shrink-0 items-center justify-center sm:h-14 sm:w-[4.75rem]">
         <span className="sm:hidden">
