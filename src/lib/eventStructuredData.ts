@@ -80,7 +80,7 @@ export function eventStructuredData(event: StructuredEventInput) {
     '@type': 'SportsEvent',
     name: event.title,
     description: eventDescription(event),
-    image: [`${SEO_ORIGIN}/og-cover.png`],
+    image: [`${SEO_ORIGIN}/og-cover-2026-07.png`],
     startDate: event.startsAt.toISOString(),
     endDate: endDate.toISOString(),
     eventStatus: eventStatusUrl(event.status),

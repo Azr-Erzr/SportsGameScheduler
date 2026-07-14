@@ -24,7 +24,7 @@ describe('eventStructuredData', () => {
       '@type': 'SportsEvent',
       name: 'Arsenal vs Barcelona',
       description: expect.stringContaining('UEFA Champions League'),
-      image: ['https://silbosports.com/og-cover.png'],
+      image: ['https://silbosports.com/og-cover-2026-07.png'],
       startDate: '2026-07-07T19:00:00.000Z',
       endDate: '2026-07-07T20:55:00.000Z',
       eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',

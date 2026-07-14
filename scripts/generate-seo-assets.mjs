@@ -449,7 +449,7 @@ function eventStructuredData(event, performers) {
     '@type': 'SportsEvent',
     name: event.title,
     description: `${descriptionParts.join(' ')}. See the start time in your local timezone, find where to watch, and add it to your calendar with Silbo Sports.`,
-    image: [`${origin}/og-cover.png`],
+    image: [`${origin}/og-cover-2026-07.png`],
     startDate: start.toISOString(),
     endDate: end.toISOString(),
     eventStatus: eventStatusUrl(event.status),

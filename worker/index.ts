@@ -32,7 +32,7 @@ interface HTMLRewriterInstance {
 declare const HTMLRewriter: { new (): HTMLRewriterInstance }
 
 const ORIGIN = 'https://silbosports.com'
-const OG_IMAGE = `${ORIGIN}/og-cover.png`
+const OG_IMAGE = `${ORIGIN}/og-cover-2026-07.png`
 
 // Silbo converts every time to the visitor's zone client-side; the crawlable copy is rendered in
 // UTC (formatWhen appends "UTC") so the fact is unambiguous for engines reading the static shell.
@@ -380,7 +380,7 @@ function eventStructuredData(row: EventRow, performers: Array<{ name: string; ki
     '@type': 'SportsEvent',
     name: row.title,
     description: `${descriptionParts.join(' ')}. See the start time in your local timezone, find where to watch, and add it to your calendar with Silbo Sports.`,
-    image: [`${ORIGIN}/og-cover.png`],
+    image: [OG_IMAGE],
     startDate: start.toISOString(),
     endDate: end.toISOString(),
     eventStatus: eventStatusUrl(row.status),
