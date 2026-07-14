@@ -79,7 +79,7 @@ function validTicketmasterDestination(value: string | null | undefined, region: 
     if (destination.protocol !== 'https:' || !domain) return null
     if (destination.hostname !== domain && destination.hostname !== `www.${domain}`) return null
     return destination.toString()
-  } catch (_) {
+  } catch {
     return null
   }
 }
@@ -109,7 +109,7 @@ export function buildImpactTicketDeepLink(
     tracking.searchParams.set('subId1', trackingValue(options.placement, 'web-event'))
     if (options.eventId) tracking.searchParams.set('subId2', trackingValue(options.eventId, 'event'))
     return tracking.toString()
-  } catch (_) {
+  } catch {
     return trackingUrl
   }
 }

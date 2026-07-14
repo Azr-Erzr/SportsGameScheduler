@@ -15,14 +15,14 @@ export function SportSwitcher() {
   const navigate = useNavigate()
   const location = useLocation()
   const { sportKey } = useParams()
-  const { prefs } = useAppState()
+  const { surfaceMode } = useAppState()
   const activeKey =
     location.pathname === '/'
       ? 'neutral'
       : location.pathname === '/other-sports'
         ? 'custom'
         : sportKey ?? 'soccer'
-  const sportIconVariant = prefs.themeMode === 'program' ? 'brush' : 'neon3d'
+  const sportIconVariant = surfaceMode === 'program' ? 'brush' : 'neon3d'
   const sportsArea = location.pathname === '/explore' || location.pathname === '/other-sports' || location.pathname.startsWith('/sports/')
 
   useEffect(() => {
@@ -96,7 +96,7 @@ export function SportSwitcher() {
             </div>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               {sports.map((sport, index) => {
-                const theme = withSurfaceMode(getTheme(sport.key), prefs.themeMode)
+                const theme = withSurfaceMode(getTheme(sport.key), surfaceMode)
                 const isActive = sport.key === activeKey
                 return (
                   <button

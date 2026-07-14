@@ -85,7 +85,7 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
         // Click on the backdrop (not the card) dismisses — and counts as onboarded, so it won't re-open.
         if (e.target === e.currentTarget) skip()
       }}
-      className="fixed inset-0 z-[60] flex items-end justify-center bg-void/70 p-3 sm:items-center"
+      className="silbo-modal-backdrop fixed inset-0 z-[60] flex items-end justify-center p-3 sm:items-center"
     >
       <div className="relative w-full max-w-lg rounded-card border border-primary/20 bg-surface p-5 shadow-[0_12px_40px_rgba(0,0,0,0.45)] sm:p-6">
         <button

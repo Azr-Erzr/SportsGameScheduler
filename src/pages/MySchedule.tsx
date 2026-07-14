@@ -292,7 +292,7 @@ function CompactScheduleRow({
 }
 
 export function MySchedulePage() {
-  const { followedTeams, followedLeagueIds, followedCompetitorIds, prefs } = useAppState()
+  const { followedTeams, followedLeagueIds, followedCompetitorIds, prefs, surfaceMode } = useAppState()
   const [range, setRange] = useState<RangeKey>('all')
   const [hidePast, setHidePast] = useState(true)
   // Individually-saved matches (read once on mount; "Add to schedule" elsewhere persists them).
@@ -300,7 +300,7 @@ export function MySchedulePage() {
   const [flow, setFlow] = useState<FlowState>({ flowId: null, stepIndex: 0, answers: {} })
   const [template, setTemplate] = useState<ExportTemplate>('poster')
   const [posterVariant, setPosterVariant] = useState<PosterVariant>(
-    prefs.themeMode === 'program' ? 'light' : 'dark',
+    surfaceMode === 'program' ? 'light' : 'dark',
   )
   const [message, setMessage] = useState('')
   const [reminderSummary, setReminderSummary] = useState('')
@@ -867,7 +867,7 @@ export function MySchedulePage() {
 
       {activeFlow && currentStep &&
         createPortal(
-        <div className="fixed inset-0 z-50 bg-void/70">
+        <div className="silbo-modal-backdrop fixed inset-0 z-50">
           {/* Deliberate close only: a double-click outside dismisses, so a stray tap or tab-switch
               never wipes choices in progress. The header X is the primary close. */}
           <button

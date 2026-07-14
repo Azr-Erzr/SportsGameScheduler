@@ -9,7 +9,8 @@ function cx(...parts: Array<string | false | undefined>) {
 
 type ButtonVariant = 'solid' | 'ghost' | 'export' | 'subtle' | 'danger'
 
-// Neon fills carry void-dark text (broadcast rule: neon is light, so type goes dark).
+// Broadcast neon carries dark text; program mode overrides filled controls to its dedicated
+// warm-paper contrast token in tailwind.css.
 const buttonStyles: Record<ButtonVariant, string> = {
   solid: 'bg-primary text-void font-bold hover:opacity-90 shadow-[0_0_22px_color-mix(in_srgb,var(--mp-primary)_30%,transparent)]',
   ghost: 'border border-primary/30 bg-transparent text-primary hover:bg-primary/10',
@@ -41,7 +42,7 @@ export function Button({
 export function Panel({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cx('rounded-card border border-primary/15 bg-surface p-4 shadow-sm', className)}
+      className={cx('silbo-glass-panel rounded-card border border-primary/15 bg-surface p-4 shadow-sm', className)}
       {...props}
     />
   )
@@ -53,7 +54,7 @@ export function PanelHeading({
   children,
 }: PropsWithChildren<{ title: string; subtitle?: string }>) {
   return (
-    <div className="mb-4 flex items-start justify-between gap-3">
+    <div className="silbo-panel-heading mb-4 flex items-start justify-between gap-3">
       <div>
         <h2 className="text-sm font-bold uppercase tracking-[0.14em] text-primary">{title}</h2>
         {subtitle && <p className="mt-0.5 text-sm normal-case tracking-normal text-ink/60">{subtitle}</p>}

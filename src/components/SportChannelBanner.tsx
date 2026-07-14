@@ -96,7 +96,7 @@ export function SportChannelBanner({
   ctaTo = '/explore',
   stats = defaultStats,
 }: SportChannelBannerProps) {
-  const { prefs } = useAppState()
+  const { surfaceMode } = useAppState()
   const sport = getSport(sportKey) ?? getSport('soccer')
   const assetKey = resolveAssetKey(sportKey, sport?.key ?? 'soccer')
   const artFocus = artFocusByAsset[assetKey] ?? artFocusByAsset.soccer
@@ -105,7 +105,7 @@ export function SportChannelBanner({
     body ??
     `${sport?.flagshipLeague ?? 'Live sports'} coverage will light up as soon as schedules are ready. Follow what matters and Silbo keeps it in your timezone.`
   const bannerStyle: BannerStyle =
-    prefs.themeMode === 'program'
+    surfaceMode === 'program'
       ? {
           '--sport-channel-icon': `url("/assets/sport-banners/ink/${assetKey}-icon.webp")`,
           '--sport-channel-action': `url("/assets/sport-banners/ink/${assetKey}-action.webp")`,

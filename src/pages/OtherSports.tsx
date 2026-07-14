@@ -111,12 +111,12 @@ function SportGlyph({
 }
 
 function OtherSportRouteCard({ sport }: { sport: SportInfo }) {
-  const { prefs } = useAppState()
+  const { surfaceMode } = useAppState()
   const schedule = useSportSchedule(sport.canonicalSportKey)
   const liveReady = schedule.configured && !schedule.loading && (schedule.leagues.length > 0 || schedule.events.length > 0)
   const status = schedule.loading ? 'Checking' : liveReady ? 'Live route' : 'Queued'
   const href = `/sports/${sport.key}`
-  const theme = withSurfaceMode(getTheme(sport.key), prefs.themeMode)
+  const theme = withSurfaceMode(getTheme(sport.key), surfaceMode)
   const Glyph = providerIcons[sport.key] ?? IconTargetArrow
 
   return (
@@ -157,10 +157,10 @@ function OtherSportRouteCard({ sport }: { sport: SportInfo }) {
 }
 
 export function OtherSportsPage() {
-  const { prefs } = useAppState()
+  const { surfaceMode } = useAppState()
   const [query, setQuery] = useState('')
   const [lane, setLane] = useState<'all' | CommunitySport['lane']>('all')
-  const theme = withSurfaceMode(getTheme('custom'), prefs.themeMode)
+  const theme = withSurfaceMode(getTheme('custom'), surfaceMode)
 
   const filteredCommunitySports = useMemo(() => {
     const q = query.trim().toLowerCase()

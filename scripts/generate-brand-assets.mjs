@@ -9,7 +9,7 @@ const brandGreen = '#4dff8a'
 const warmPaper = '#f4ead8'
 const voidBlack = '#0b0a08'
 const paperInk = '#17130f'
-const ogCoverFilename = 'og-cover-2026-07.png'
+const ogCoverFilename = 'og-cover-2026-07-crt.png'
 
 const brandFontFiles = {
   display: 'Bungee-Regular.ttf',
@@ -84,111 +84,143 @@ export function createOgCoverSvg(logoPath) {
 }
 
 export function createOgCoverSvgWithText(logoPath, text) {
-  const featureCards = [
-    ['LOCAL TIME', 'Times in your timezone.'],
-    ['WATCH + TICKETS', 'Broadcasters and ticket links.'],
-    ['SYNC + EXPORT', 'Calendars, notes, exports.'],
-    ['ALERTS', 'Follow teams, leagues, and stars.'],
-  ]
-  const sports = ['WORLD CUP', 'NBA', 'NFL', 'MLB', 'FORMULA 1', 'UFC', 'TENNIS', 'GOLF']
-
   return `<svg width="1200" height="630" viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#121713"/>
-      <stop offset="0.52" stop-color="#171b18"/>
-      <stop offset="1" stop-color="#07140d"/>
+      <stop offset="0" stop-color="#f8f3e8"/>
+      <stop offset="0.5" stop-color="#f3ead9"/>
+      <stop offset="1" stop-color="#e6f1ed"/>
     </linearGradient>
-    <radialGradient id="heroGlow" cx="72%" cy="45%" r="62%">
-      <stop offset="0" stop-color="${brandGreen}" stop-opacity="0.18"/>
-      <stop offset="0.38" stop-color="#35f5ff" stop-opacity="0.07"/>
-      <stop offset="0.72" stop-color="#ff4fd8" stop-opacity="0.06"/>
-      <stop offset="1" stop-color="#07110b" stop-opacity="0"/>
+    <radialGradient id="greenGlow" cx="8%" cy="18%" r="68%">
+      <stop offset="0" stop-color="#20d77b" stop-opacity="0.20"/>
+      <stop offset="1" stop-color="#20d77b" stop-opacity="0"/>
     </radialGradient>
-    <linearGradient id="logoGrad" x1="70" y1="60" x2="220" y2="180" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#38eaff"/>
-      <stop offset="0.44" stop-color="${brandGreen}"/>
-      <stop offset="0.78" stop-color="#ff4fd8"/>
-      <stop offset="1" stop-color="#ffc24b"/>
-    </linearGradient>
+    <radialGradient id="cyanGlow" cx="92%" cy="82%" r="68%">
+      <stop offset="0" stop-color="#45c7d4" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#45c7d4" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="pinkGlow" cx="96%" cy="10%" r="50%">
+      <stop offset="0" stop-color="#ef6baf" stop-opacity="0.12"/>
+      <stop offset="1" stop-color="#ef6baf" stop-opacity="0"/>
+    </radialGradient>
     <linearGradient id="panel" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#212822"/>
-      <stop offset="1" stop-color="#171b18"/>
+      <stop offset="0" stop-color="#fffdf5" stop-opacity="0.94"/>
+      <stop offset="1" stop-color="#f5eddd" stop-opacity="0.88"/>
     </linearGradient>
-    <linearGradient id="paper" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#fff8ea"/>
-      <stop offset="1" stop-color="#efe2cc"/>
+    <linearGradient id="heroTitle" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#103d31"/>
+      <stop offset="0.76" stop-color="#155f40"/>
+      <stop offset="1" stop-color="#39a964"/>
     </linearGradient>
-    <filter id="softGlow" x="-35%" y="-35%" width="170%" height="170%">
-      <feGaussianBlur stdDeviation="4.2" result="blur"/>
-      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    <pattern id="scanlines" width="6" height="6" patternUnits="userSpaceOnUse">
+      <path d="M0 1H6" stroke="#235b4b" stroke-opacity="0.07"/>
+    </pattern>
+    <pattern id="grid" width="24" height="24" patternUnits="userSpaceOnUse">
+      <path d="M24 0H0V24" fill="none" stroke="#278267" stroke-opacity="0.13"/>
+    </pattern>
+    <linearGradient id="gridFade" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fff" stop-opacity="0.9"/>
+      <stop offset="0.68" stop-color="#fff" stop-opacity="0.2"/>
+      <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+    </linearGradient>
+    <mask id="gridMask"><rect width="420" height="250" fill="url(#gridFade)"/></mask>
+    <filter id="cardShadow" x="-10%" y="-15%" width="120%" height="135%">
+      <feDropShadow dx="0" dy="13" stdDeviation="14" flood-color="#385649" flood-opacity="0.14"/>
     </filter>
-    <filter id="cardShadow" x="-10%" y="-25%" width="120%" height="150%">
-      <feDropShadow dx="0" dy="16" stdDeviation="16" flood-color="#000" flood-opacity="0.42"/>
+    <filter id="signalGlow" x="-20%" y="-80%" width="140%" height="260%">
+      <feGaussianBlur stdDeviation="2" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
   </defs>
   <rect width="1200" height="630" fill="url(#bg)"/>
-  <rect width="1200" height="630" fill="url(#heroGlow)"/>
-  <g opacity="0.11" stroke="${brandGreen}" stroke-width="1">
-    ${Array.from({ length: 16 }, (_, i) => `<path d="M0 ${34 + i * 38}H1200"/>`).join('')}
-    ${Array.from({ length: 22 }, (_, i) => `<path d="M${46 + i * 54} 0V630"/>`).join('')}
+  <rect width="1200" height="630" fill="url(#greenGlow)"/>
+  <rect width="1200" height="630" fill="url(#cyanGlow)"/>
+  <rect width="1200" height="630" fill="url(#pinkGlow)"/>
+  <rect x="8" y="8" width="1184" height="614" rx="38" fill="none" stroke="#3b806b" stroke-opacity="0.18" stroke-width="10"/>
+  <rect width="1200" height="630" rx="42" fill="url(#scanlines)"/>
+  <g mask="url(#gridMask)">
+    <rect x="12" y="88" width="420" height="250" fill="url(#grid)"/>
   </g>
-  <g opacity="0.18" stroke="${warmPaper}" stroke-width="1.2">
-    <path d="M945 78h162v162H945z"/>
-    <path d="M986 78v162M1062 78v162M945 158h162M1024 118a42 42 0 0 0 0 82"/>
-  </g>
-
-  <g transform="translate(64 54)">
-    <path transform="scale(0.138)" d="${logoPath}" fill="url(#logoGrad)" fill-rule="evenodd" filter="url(#softGlow)"/>
-    ${textPath(text.display, 'SILBO SPORTS', { x: 104, y: 13, size: 43, fill: brandGreen })}
-    ${textPath(text.mono, 'EVERY GAME, MATCH, RACE, AND CARD IN YOUR CALENDAR', { x: 106, y: 66, size: 14, fill: warmPaper, opacity: 0.72 })}
+  <g fill="none" stroke-linecap="round" filter="url(#signalGlow)">
+    <path d="M8 326H72V307H109V344H146V317H197V326H264" stroke="#20d77b" stroke-opacity="0.34" stroke-width="2"/>
+    <path d="M930 112c32-30 64-30 96 0s64 30 96 0 52-28 70-8" stroke="#ef6baf" stroke-opacity="0.30" stroke-width="2"/>
+    <path d="M915 555c38-42 76-42 114 0s76 42 114 0" stroke="#45c7d4" stroke-opacity="0.34" stroke-width="2"/>
   </g>
 
-  <g transform="translate(64 154)">
-    ${textPath(text.head, 'ONE SCHEDULE', { x: 0, y: 0, size: 54, fill: warmPaper })}
-    ${textPath(text.head, 'FOR EVERY SPORT', { x: 0, y: 62, size: 54, fill: warmPaper })}
-    ${textPath(text.head, 'YOU FOLLOW.', { x: 0, y: 124, size: 54, fill: brandGreen })}
-    <rect x="0" y="228" width="506" height="2" rx="1" fill="${brandGreen}" opacity="0.7"/>
-    ${textPath(text.sans, 'Local times. Watch links. Tickets. Alerts.', { x: 0, y: 254, size: 22, fill: warmPaper, opacity: 0.82 })}
+  <g transform="translate(34 25)">
+    <path transform="scale(0.105)" d="${logoPath}" fill="#176b49" fill-rule="evenodd"/>
+    ${textPath(text.display, 'SILBO SPORTS', { x: 82, y: 4, size: 34, fill: '#176b49' })}
+    ${textPath(text.mono, 'EVERY GAME, MATCH, RACE, AND CARD IN YOUR CALENDAR', { x: 83, y: 44, size: 10, fill: '#245446', opacity: 0.68 })}
+    ${textPath(text.mono, 'SPORTS     MY SCHEDULE     CREATE LEAGUE', { x: 605, y: 19, size: 13, fill: '#234b40', opacity: 0.72 })}
   </g>
 
-  <g transform="translate(700 122)" filter="url(#cardShadow)">
-    <rect x="0" y="0" width="430" height="372" rx="28" fill="url(#panel)" stroke="${brandGreen}" stroke-opacity="0.45" stroke-width="2"/>
-    <rect x="26" y="28" width="378" height="70" rx="16" fill="#101511" stroke="${brandGreen}" stroke-opacity="0.32"/>
-    ${textPath(text.mono, 'LIVE SPORTS ROOM', { x: 52, y: 48, size: 17, fill: '#ff4fd8' })}
-    ${textPath(text.head, 'Tonight and tomorrow', { x: 52, y: 70, size: 22, fill: warmPaper })}
-    <g transform="translate(26 122)">
-      ${featureCards
-        .map(([label, body], index) => {
-          const x = (index % 2) * 194
-          const y = Math.floor(index / 2) * 104
-          const accent = index === 1 ? '#35f5ff' : index === 2 ? '#ffc24b' : index === 3 ? '#ff4fd8' : brandGreen
-          return `<g transform="translate(${x} ${y})">
-        <rect x="0" y="0" width="178" height="88" rx="14" fill="#141a15" stroke="${accent}" stroke-opacity="0.42"/>
-        <circle cx="22" cy="24" r="6" fill="${accent}"/>
-        ${textPath(text.mono, label, { x: 38, y: 16, size: 12, fill: accent })}
-        ${textPath(text.sans, body, { x: 18, y: 42, size: 12, fill: warmPaper, opacity: 0.72 })}
-      </g>`
+  <g transform="translate(34 90)">
+    <rect width="1132" height="50" rx="14" fill="#fffaf0" fill-opacity="0.76" stroke="#b18428" stroke-opacity="0.34"/>
+    ${textPath(text.mono, 'THIS WEEK', { x: 18, y: 18, size: 11, fill: '#a06c13' })}
+    <circle cx="147" cy="25" r="4" fill="#f0b93f"/>
+    ${textPath(text.sans, 'World Cup', { x: 160, y: 14, size: 14, fill: '#2a332f' })}
+    ${textPath(text.mono, 'TODAY 3:00 PM', { x: 253, y: 18, size: 10, fill: '#58665f', opacity: 0.75 })}
+    <circle cx="425" cy="25" r="4" fill="#20d77b"/>
+    ${textPath(text.sans, 'Tour de France', { x: 438, y: 14, size: 14, fill: '#2a332f' })}
+    <circle cx="753" cy="25" r="4" fill="#ef6baf"/>
+    ${textPath(text.sans, 'England vs Argentina', { x: 766, y: 14, size: 14, fill: '#2a332f' })}
+  </g>
+
+  <g transform="translate(70 160)" filter="url(#cardShadow)">
+    <rect width="760" height="410" rx="24" fill="url(#panel)" stroke="#176b49" stroke-opacity="0.26"/>
+    ${textPath(text.mono, 'WHISTLE TO WHISTLE  /  IN YOUR TIMEZONE', { x: 32, y: 27, size: 12, fill: '#d53e8d' })}
+    ${textPath(text.head, 'ONE SCHEDULE FOR', { x: 32, y: 65, size: 49, fill: 'url(#heroTitle)' })}
+    ${textPath(text.head, 'EVERY SPORT YOU', { x: 32, y: 120, size: 49, fill: 'url(#heroTitle)' })}
+    ${textPath(text.head, 'FOLLOW.', { x: 32, y: 175, size: 49, fill: '#2c9258' })}
+    ${textPath(text.sans, 'Follow every team, country, player, driver, fighter, and league.', { x: 34, y: 242, size: 15, fill: '#465c54', opacity: 0.84 })}
+    <g transform="translate(32 278)">
+      <rect width="696" height="48" rx="12" fill="#f8f4e9" fill-opacity="0.78" stroke="#176b49" stroke-opacity="0.30"/>
+      ${['YOU|11:30 PM|#20a862', 'LONDON|4:30 AM|#218ca7', 'TOKYO|12:30 PM|#d53e8d', 'SYDNEY|1:30 PM|#b77a12']
+        .map((item, index) => {
+          const [city, time, color] = item.split('|')
+          const x = index * 174
+          return `<g transform="translate(${x} 0)">
+            ${index ? '<path d="M0 0V48" stroke="#176b49" stroke-opacity="0.18"/>' : ''}
+            ${textPath(text.mono, city, { x: 87, y: 8, size: 8, fill: '#53665f', opacity: 0.76, anchor: 'top' })}
+            ${textPath(text.sans, time, { x: 87, y: 23, size: 13, fill: color, anchor: 'top' })}
+          </g>`
         })
         .join('')}
     </g>
+    <rect x="32" y="342" width="450" height="38" rx="10" fill="#fffaf0" fill-opacity="0.88" stroke="#176b49" stroke-opacity="0.22"/>
+    <circle cx="52" cy="361" r="6" fill="none" stroke="#63736d" stroke-width="2"/>
+    <path d="M56 365l6 6" stroke="#63736d" stroke-width="2" stroke-linecap="round"/>
+    ${textPath(text.sans, 'Search teams, leagues, players, and tournaments', { x: 72, y: 352, size: 12, fill: '#63736d', opacity: 0.72 })}
+    <rect x="496" y="342" width="112" height="38" rx="10" fill="#fffdf8" stroke="#176b49" stroke-opacity="0.35"/>
+    ${textPath(text.sans, 'Browse sports', { x: 514, y: 352, size: 12, fill: '#176b49' })}
+    <rect x="618" y="342" width="110" height="38" rx="10" fill="#fffdf8" stroke="#176b49" stroke-opacity="0.35"/>
+    ${textPath(text.sans, 'My schedule', { x: 637, y: 352, size: 12, fill: '#176b49' })}
   </g>
 
-  <g transform="translate(64 548)">
-    <rect x="0" y="0" width="1066" height="50" rx="16" fill="#0d130f" stroke="${brandGreen}" stroke-opacity="0.35"/>
-    ${sports
-      .map((sport, index) => {
-        const x = 32 + index * 128
-        const color = index % 4 === 0 ? brandGreen : index % 4 === 1 ? '#35f5ff' : index % 4 === 2 ? '#ffc24b' : '#ff4fd8'
-        return `<g transform="translate(${x} 16)">
-          <circle cx="0" cy="8" r="4" fill="${color}"/>
-          ${textPath(text.mono, sport, { x: 14, y: 0, size: 14, fill: warmPaper, opacity: 0.82 })}
-        </g>`
-      })
-      .join('')}
+  <g transform="translate(850 160)" filter="url(#cardShadow)">
+    <rect width="280" height="410" rx="24" fill="url(#panel)" stroke="#176b49" stroke-opacity="0.26"/>
+    ${textPath(text.mono, 'YOUR NEXT EVENTS', { x: 22, y: 25, size: 14, fill: '#16834f' })}
+    ${textPath(text.sans, 'America/Toronto local time', { x: 22, y: 50, size: 12, fill: '#53665f', opacity: 0.72 })}
+    <g transform="translate(18 83)">
+      <rect width="244" height="72" rx="12" fill="#f2ecdf" fill-opacity="0.88"/>
+      ${textPath(text.sans, 'France vs Spain', { x: 14, y: 15, size: 15, fill: paperInk })}
+      ${textPath(text.mono, 'TODAY 3:00 PM', { x: 14, y: 43, size: 10, fill: '#607068', opacity: 0.76 })}
+    </g>
+    <g transform="translate(18 166)">
+      <rect width="244" height="72" rx="12" fill="#f2ecdf" fill-opacity="0.88"/>
+      ${textPath(text.sans, 'England vs Argentina', { x: 14, y: 15, size: 15, fill: paperInk })}
+      ${textPath(text.mono, 'TOMORROW 3:00 PM', { x: 14, y: 43, size: 10, fill: '#607068', opacity: 0.76 })}
+    </g>
+    ${textPath(text.sans, 'Continue to My Schedule  >', { x: 22, y: 270, size: 13, fill: '#16834f' })}
+    <g transform="translate(22 323)">
+      <rect width="15" height="15" rx="2" fill="#45c7d4" opacity="0.78"/>
+      <rect x="23" y="4" width="9" height="9" rx="2" fill="#ef6baf" opacity="0.72"/>
+      <rect x="40" y="-2" width="7" height="7" rx="2" fill="#f0b93f" opacity="0.78"/>
+      <rect x="54" y="7" width="11" height="11" rx="2" fill="#20d77b" opacity="0.70"/>
+    </g>
   </g>
 
-  ${textPath(text.mono, 'SILBOSPORTS.COM', { x: 934, y: 46, size: 16, fill: brandGreen })}
+  ${textPath(text.mono, 'SILBOSPORTS.COM', { x: 1015, y: 38, size: 12, fill: '#176b49' })}
 </svg>
 `
 }

@@ -49,16 +49,28 @@
 @layer base {
   html {
     min-width: 320px;
+    background: #f4ead8;
+    color-scheme: light;
   }
 
   body {
     margin: 0;
     min-height: 100svh;
-    background: var(--mp-bg, #171b18);
-    color: var(--mp-text, #f4ead8);
+    background: #f4ead8;
+    color: #1d1812;
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
+  }
+
+  html[data-surface='broadcast'] {
+    background: #171b18;
+    color-scheme: dark;
+  }
+
+  html[data-surface='broadcast'] body {
+    background: #171b18;
+    color: #f4ead8;
   }
 
   #root {
@@ -132,18 +144,193 @@
     inset: 0;
     z-index: 0;
     pointer-events: none;
-    transform: translateZ(0);
+    /* Keep this out of its own GPU layer: Chromium can paint black compositor tiles when
+       fixed transformed backgrounds sit underneath sticky popovers in light mode. */
+    transform: none;
+    overflow: hidden;
+    border: clamp(6px, 0.7vw, 14px) solid color-mix(in srgb, var(--mp-primary) 7%, rgba(155, 188, 174, 0.08));
+    border-radius: clamp(20px, 3vw, 48px);
     background:
       /* fine scan lines */
-      repeating-linear-gradient(0deg, rgba(6, 9, 7, 0.16) 0 1px, transparent 1px 3px),
+      repeating-linear-gradient(0deg, rgba(6, 9, 7, 0.19) 0 1px, transparent 1px 4px),
       /* broad static bands — two offset periods so the banding feels organic, not striped */
-      repeating-linear-gradient(0deg, rgba(233, 240, 234, 0.028) 0 54px, transparent 54px 210px),
-      repeating-linear-gradient(0deg, transparent 0 120px, rgba(233, 240, 234, 0.018) 120px 168px, transparent 168px 340px),
+      repeating-linear-gradient(0deg, rgba(233, 240, 234, 0.03) 0 54px, transparent 54px 210px),
+      repeating-linear-gradient(0deg, transparent 0 120px, rgba(233, 240, 234, 0.022) 120px 168px, transparent 168px 340px),
       /* tube vignette */
-      radial-gradient(130% 105% at 50% 42%, transparent 58%, rgba(4, 6, 5, 0.34) 100%),
+      radial-gradient(130% 105% at 50% 42%, transparent 56%, rgba(4, 6, 5, 0.34) 100%),
       /* channel glows */
-      radial-gradient(1100px 500px at 85% -10%, color-mix(in srgb, var(--mp-primary) 8%, transparent), transparent 60%),
-      radial-gradient(900px 480px at -10% 110%, color-mix(in srgb, var(--mp-accent) 6%, transparent), transparent 60%);
+      radial-gradient(760px 520px at 12% 13%, color-mix(in srgb, #20d77b 15%, transparent), transparent 68%),
+      radial-gradient(820px 520px at 88% 88%, color-mix(in srgb, #45c7d4 11%, transparent), transparent 68%),
+      radial-gradient(520px 360px at 94% 8%, color-mix(in srgb, #ef6baf 7%, transparent), transparent 70%);
+  }
+
+  .broadcast-air::before,
+  .broadcast-air::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  /* Aligned to the 32px screen rhythm and feathered away before it reaches dense copy. */
+  .broadcast-air::before {
+    display: none;
+  }
+
+  .broadcast-air::after {
+    /* Abstract signal geometry can stretch safely. Filling the actual viewport prevents the
+       16:9 source from cropping its best details on narrower desktop screens. */
+    background: url('/assets/backgrounds/silbo-crt-signals.svg') center / 100% 100% no-repeat;
+    opacity: 0.46;
+  }
+
+  .crt-side-signal {
+    display: none;
+    position: absolute;
+    top: -6%;
+    bottom: -6%;
+    width: clamp(96px, calc((100vw - 1080px) / 2 + 128px), 340px);
+    background-image: url('/assets/backgrounds/silbo-crt-signals.svg');
+    background-repeat: no-repeat;
+    background-size: calc(100vw + var(--crt-wave-stretch, 0px)) 112%;
+    opacity: 0.72;
+  }
+
+  .crt-side-signal-left {
+    left: 0;
+    background-position: calc(0% + var(--crt-side-left-x, 0px)) calc(50% + var(--crt-side-left-y, 0px));
+  }
+
+  .crt-side-signal-right {
+    right: 0;
+    background-position: calc(100% + var(--crt-side-right-x, 0px)) calc(50% + var(--crt-side-right-y, 0px));
+  }
+
+  .crt-signal-trace {
+    position: absolute;
+    left: 4%;
+    right: 4%;
+    z-index: 2;
+    height: 44px;
+    pointer-events: none;
+  }
+
+  .crt-trace-1 {
+    top: 22%;
+    --crt-trace-color: #20d77b;
+    --crt-trace-offset: var(--crt-trace-one-offset, 24);
+  }
+
+  .crt-trace-2 {
+    top: 52%;
+    opacity: var(--crt-trace-two-opacity, 0.22);
+    --crt-trace-color: #45c7d4;
+    --crt-trace-offset: var(--crt-trace-two-offset, 24);
+  }
+
+  .crt-trace-3 {
+    top: 78%;
+    opacity: var(--crt-trace-three-opacity, 0.16);
+    --crt-trace-color: #ef6baf;
+    --crt-trace-offset: var(--crt-trace-three-offset, 24);
+  }
+
+  .crt-signal-trace svg {
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    filter: drop-shadow(0 0 5px color-mix(in srgb, var(--crt-trace-color) 62%, transparent));
+  }
+
+  .crt-signal-trace path {
+    fill: none;
+    vector-effect: non-scaling-stroke;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .crt-trace-ghost {
+    stroke: var(--crt-trace-color);
+    stroke-width: 1;
+    opacity: 0.16;
+  }
+
+  .crt-trace-live {
+    stroke: var(--crt-trace-color);
+    stroke-width: 2.2;
+    stroke-dasharray: 24 100;
+    stroke-dashoffset: var(--crt-trace-offset);
+    transition: stroke-dashoffset 90ms linear;
+  }
+
+  .crt-side-signal-right .crt-signal-trace svg {
+    transform: scaleX(-1);
+    transform-origin: center;
+  }
+
+  .crt-pixel {
+    position: absolute;
+    z-index: 3;
+    border-radius: 2px;
+    transform-origin: center;
+    transition: transform 180ms ease-out, opacity 180ms linear;
+  }
+
+  .crt-pixel-cyan {
+    width: 18px;
+    height: 18px;
+    background: #45c7d4;
+    box-shadow: 0 0 10px color-mix(in srgb, #45c7d4 32%, transparent);
+    transform: scale(var(--crt-pixel-cyan-scale, 1.45));
+  }
+
+  .crt-pixel-pink {
+    width: 13px;
+    height: 13px;
+    background: #ef6baf;
+    box-shadow: 0 0 9px color-mix(in srgb, #ef6baf 30%, transparent);
+    transform: scale(var(--crt-pixel-pink-scale, 0.68));
+  }
+
+  .crt-pixel-green {
+    width: 15px;
+    height: 15px;
+    background: #20d77b;
+    box-shadow: 0 0 9px color-mix(in srgb, #20d77b 28%, transparent);
+    transform: scale(var(--crt-pixel-green-scale, 0.78));
+  }
+
+  .crt-pixel-amber {
+    width: 9px;
+    height: 9px;
+    background: #f0b93f;
+    box-shadow: 0 0 8px color-mix(in srgb, #f0b93f 28%, transparent);
+    transform: scale(var(--crt-pixel-amber-scale, 1.08));
+  }
+
+  .crt-side-signal-left .crt-pixel-cyan { left: 15%; top: 16%; }
+  .crt-side-signal-left .crt-pixel-pink { left: 58%; top: 42%; }
+  .crt-side-signal-left .crt-pixel-green { left: 28%; top: 73%; }
+  .crt-side-signal-left .crt-pixel-amber { left: 72%; top: 86%; }
+  .crt-side-signal-right .crt-pixel-cyan { right: 14%; top: 24%; }
+  .crt-side-signal-right .crt-pixel-pink { right: 58%; top: 68%; }
+  .crt-side-signal-right .crt-pixel-green { right: 28%; top: 46%; }
+  .crt-side-signal-right .crt-pixel-amber { right: 72%; top: 83%; }
+
+  @media (min-width: 900px) and (prefers-reduced-motion: no-preference) {
+    /* Enhanced desktop uses the scroll-reactive side crops exclusively. Keeping the full-screen
+       copy underneath produced doubled lines and pixel clusters as the moving layer drifted. */
+    :root[data-browser='enhanced'] .broadcast-air::after {
+      display: none;
+    }
+
+    :root[data-browser='enhanced'] .crt-side-signal {
+      display: block;
+    }
+  }
+
+  :root[data-browser='firefox'] .crt-side-signal {
+    display: none !important;
   }
 
   [data-paper] {
@@ -166,14 +353,133 @@
     color: color-mix(in srgb, var(--mp-text) 72%, transparent) !important;
   }
 
+  /* Legacy one-off controls still use broadcast's dark `text-void`. Correct only actual
+     filled controls; hover-only class strings remain untouched. */
+  [data-paper] [class~='bg-primary'][class~='text-void'],
+  [data-paper] [class~='bg-primary/80'][class~='text-void'],
+  [data-paper] [class~='bg-export'][class~='text-void'] {
+    color: var(--mp-ticket-stub-text) !important;
+  }
+
+  [data-paper] [class~='bg-primary'] [class~='text-void/70'],
+  [data-paper] [class~='bg-primary'] [class~='text-void/65'],
+  [data-paper] [class~='bg-primary/80'] [class~='text-void/70'] {
+    color: color-mix(in srgb, var(--mp-ticket-stub-text) 72%, transparent) !important;
+  }
+
   [data-paper] .broadcast-air {
     background:
-      radial-gradient(900px 420px at 85% -10%, color-mix(in srgb, var(--mp-primary) 9%, transparent), transparent 60%),
-      radial-gradient(620px 360px at 0% 105%, color-mix(in srgb, var(--mp-accent) 7%, transparent), transparent 68%),
-      repeating-linear-gradient(108deg, rgba(29, 24, 18, 0.028) 0 1px, transparent 1px 18px),
-      repeating-linear-gradient(90deg, color-mix(in srgb, var(--mp-primary) 7%, transparent) 0 1px, transparent 1px 112px),
-      repeating-linear-gradient(0deg, color-mix(in srgb, var(--mp-primary) 5%, transparent) 0 1px, transparent 1px 92px);
-    opacity: 0.72;
+      repeating-linear-gradient(0deg, rgba(31, 85, 70, 0.054) 0 1px, transparent 1px 5px),
+      repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.2) 0 42px, transparent 42px 196px),
+      repeating-linear-gradient(108deg, rgba(29, 24, 18, 0.022) 0 1px, transparent 1px 19px),
+      radial-gradient(130% 108% at 50% 42%, transparent 58%, rgba(52, 83, 72, 0.12) 100%),
+      radial-gradient(760px 520px at 12% 13%, color-mix(in srgb, #20d77b 22%, transparent), transparent 68%),
+      radial-gradient(820px 520px at 88% 88%, color-mix(in srgb, #45c7d4 19%, transparent), transparent 68%),
+      radial-gradient(520px 360px at 94% 8%, color-mix(in srgb, #ef6baf 11%, transparent), transparent 70%),
+      linear-gradient(135deg, rgba(255, 250, 236, 0.16), rgba(236, 243, 225, 0.12) 52%, rgba(226, 241, 242, 0.16));
+    border-color: color-mix(in srgb, var(--mp-primary) 13%, rgba(67, 96, 83, 0.08));
+  }
+
+  [data-paper] .broadcast-air::after {
+    opacity: 0.47;
+  }
+
+  [data-paper] .crt-side-signal {
+    opacity: 0.58;
+  }
+
+  [data-paper] .crt-signal-trace svg {
+    filter: none;
+  }
+
+  [data-paper] .crt-trace-ghost {
+    opacity: 0.12;
+  }
+
+  .home-cta {
+    border-color: color-mix(in srgb, var(--mp-primary) 34%, transparent) !important;
+    background: color-mix(in srgb, var(--mp-surface) 90%, transparent) !important;
+    color: var(--mp-primary) !important;
+    box-shadow: inset 0 1px 0 color-mix(in srgb, #f4ead8 16%, transparent);
+  }
+
+  .home-cta:hover,
+  .home-cta:focus-visible {
+    border-color: var(--mp-primary) !important;
+    background: var(--mp-primary) !important;
+    color: #0b0a08 !important;
+  }
+
+  [data-paper] .home-cta {
+    background: color-mix(in srgb, var(--mp-surface) 94%, #fff) !important;
+    box-shadow: 0 4px 12px rgba(48, 63, 55, 0.06);
+  }
+
+  [data-paper] .home-cta:hover,
+  [data-paper] .home-cta:focus-visible {
+    color: var(--mp-ticket-stub-text) !important;
+  }
+
+  .ticket-provider-ticketmaster { --ticket-provider-color: #026cdf; }
+  .ticket-provider-stubhub { --ticket-provider-color: #3f2b96; }
+  .ticket-provider-seatgeek { --ticket-provider-color: #008b45; }
+  .ticket-provider-vivid { --ticket-provider-color: #c51a42; }
+
+  [data-paper] .ticket-provider-badge {
+    border-color: color-mix(in srgb, var(--ticket-provider-color) 38%, transparent) !important;
+    background: color-mix(in srgb, var(--ticket-provider-color) 12%, #fffaf0) !important;
+    color: color-mix(in srgb, var(--ticket-provider-color) 76%, #1d1812) !important;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.46), 0 2px 5px rgba(29, 24, 18, 0.08);
+  }
+
+  .silbo-glass-panel {
+    background:
+      radial-gradient(circle at 2% 5%, color-mix(in srgb, #45c7d4 7%, transparent), transparent 115px),
+      radial-gradient(circle at 98% 96%, color-mix(in srgb, #ef6baf 6%, transparent), transparent 135px),
+      color-mix(in srgb, var(--mp-surface) 82%, transparent) !important;
+    box-shadow:
+      inset 1px 0 0 color-mix(in srgb, #45c7d4 16%, transparent),
+      inset -1px 0 0 color-mix(in srgb, #ef6baf 13%, transparent),
+      inset 0 1px 0 color-mix(in srgb, #f0b93f 10%, transparent),
+      0 6px 18px rgba(4, 10, 7, 0.08);
+  }
+
+  [data-paper] .silbo-glass-panel {
+    background:
+      radial-gradient(circle at 2% 5%, color-mix(in srgb, #45c7d4 8%, transparent), transparent 115px),
+      radial-gradient(circle at 98% 96%, color-mix(in srgb, #ef6baf 7%, transparent), transparent 135px),
+      color-mix(in srgb, var(--mp-surface) 84%, transparent) !important;
+    box-shadow:
+      inset 1px 0 0 color-mix(in srgb, #45c7d4 18%, transparent),
+      inset -1px 0 0 color-mix(in srgb, #ef6baf 15%, transparent),
+      inset 0 1px 0 color-mix(in srgb, #f0b93f 14%, transparent),
+      0 7px 18px rgba(48, 63, 55, 0.08);
+  }
+
+  .silbo-panel-heading {
+    position: relative;
+    padding-right: 44px;
+  }
+
+  .silbo-panel-heading::after {
+    content: '';
+    position: absolute;
+    right: 2px;
+    top: 4px;
+    width: 6px;
+    height: 6px;
+    border-radius: 1px;
+    background: #45c7d4;
+    box-shadow: 10px 4px 0 #ef6baf, 21px -1px 0 #f0b93f, 29px 6px 0 #20d77b;
+    opacity: 0.52;
+  }
+
+  .silbo-modal-backdrop {
+    background: color-mix(in srgb, #07110d 68%, transparent);
+  }
+
+  [data-paper] .silbo-modal-backdrop {
+    background: color-mix(in srgb, var(--mp-text) 38%, transparent);
   }
 
   /* Chrome display type — UI keeps it subtle; export posters use the loud variant. */
@@ -656,6 +962,13 @@
 
   [data-paper] .sport-asset-sheen {
     mix-blend-mode: multiply;
+  }
+
+  /* Masked blur + blend layers can produce black compositor tiles when a sticky popover opens
+     in Chromium. Program mode keeps the crisp masked core and drops those dark-mode-only effects. */
+  :root[data-browser='enhanced'] [data-paper] .sport-asset-glow,
+  :root[data-browser='enhanced'] [data-paper] .sport-asset-sheen {
+    display: none;
   }
 
   [data-browser='firefox'] .channel-tile {
@@ -3380,7 +3693,6 @@
   overflow: hidden;
 }
 
-:root[data-visual-effects='enhanced'] .broadcast-tune-panel::before,
 :root[data-visual-effects='enhanced'] .sport-channel-banner::after,
 :root[data-visual-effects='enhanced'] .event-bumper::after {
   content: '';
@@ -3648,7 +3960,6 @@
   .motion-only {
     display: none !important;
   }
-  .broadcast-tune-panel::before,
   .broadcast-tune-panel::after,
   .sport-channel-banner::after,
   .motion-filter-panel::after,
@@ -3693,7 +4004,6 @@
 }
 
 :root[data-browser='firefox'] .motion-only,
-:root[data-browser='firefox'] .broadcast-tune-panel::before,
 :root[data-browser='firefox'] .broadcast-tune-panel::after,
 :root[data-browser='firefox'] .sport-channel-banner::after,
 :root[data-browser='firefox'] .motion-filter-panel::after,

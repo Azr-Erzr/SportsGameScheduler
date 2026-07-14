@@ -26,6 +26,43 @@ const desktopNavItems = [
   { to: '/custom-leagues', labelKey: 'nav.customLeagues', mobileLabelKey: 'nav.mobile.create', icon: PlusCircle },
 ]
 
+const CRT_PIXEL_SCALES = {
+  cyan: [1.45, 1.2, 0.82, 0.62, 0.94, 1.32, 1.05, 0.72],
+  pink: [0.68, 0.92, 1.28, 1.48, 1.12, 0.76, 0.58, 1.18],
+  green: [0.78, 1.02, 1.26, 0.96, 0.66, 0.88, 1.42, 1.12],
+  amber: [1.08, 0.72, 0.56, 1.04, 1.38, 1.16, 0.82, 0.64],
+} as const
+
+const CRT_SIGNAL_TRACES = [
+  {
+    key: 'heart',
+    path: 'M2 23H58L67 23L73 34L80 5L88 39L98 23H112C124 23 129 33 141 33C156 33 162 18 177 18C192 18 198 25 210 25H238',
+  },
+  {
+    key: 'sine',
+    path: 'M2 23C18 3 34 3 50 23S82 43 98 23S130 3 146 23S178 43 194 23S222 3 238 18',
+  },
+  {
+    key: 'square',
+    path: 'M2 24H62V13H102V33H142V17H180V29H214V24H238',
+  },
+] as const
+
+function CrtSignalTraces() {
+  return (
+    <>
+      {CRT_SIGNAL_TRACES.map((trace, index) => (
+        <span key={trace.key} className={`crt-signal-trace crt-trace-${trace.key} crt-trace-${index + 1}`}>
+          <svg viewBox="0 0 240 44" preserveAspectRatio="none" focusable="false">
+            <path className="crt-trace-ghost" pathLength="100" d={trace.path} />
+            <path className="crt-trace-live" pathLength="100" d={trace.path} />
+          </svg>
+        </span>
+      ))}
+    </>
+  )
+}
+
 const mobileNavItems = [
   { to: '/', labelKey: 'nav.home', mobileLabelKey: 'nav.mobile.home', icon: Home },
   { to: '/explore', labelKey: 'nav.sports', mobileLabelKey: 'nav.mobile.sports', icon: Trophy },
@@ -147,7 +184,7 @@ export function AppShell() {
   // Theme follows the sport in the URL where there is one; the root uses a neutral all-sports mood.
   const { sportKey } = useParams()
   const location = useLocation()
-  const { prefs, setPrefs, follows } = useAppState()
+  const { prefs, surfaceMode, setPrefs, follows } = useAppState()
   const spotlightEvents = useSpotlightEvents(prefs.regionCode)
   const footerSpotlightEvents = useMemo(() => dedupeSpotlightBySport(spotlightEvents), [spotlightEvents])
   // First-run onboarding: only for a brand-new visitor (no prior pass, nothing followed yet).
@@ -164,11 +201,110 @@ export function AppShell() {
           ? sportKey
           : 'soccer',
   )
-  const theme = withSurfaceMode(baseTheme, prefs.themeMode)
-  const programMode = prefs.themeMode === 'program'
+  const theme = withSurfaceMode(baseTheme, surfaceMode)
+  const programMode = surfaceMode === 'program'
 
   // Restore the AdSense script if the user accepted advertising in a previous session.
   useEffect(() => initConsent(), [])
+
+  useEffect(() => {
+    const root = document.documentElement
+    root.dataset.surface = surfaceMode
+    root.style.colorScheme = programMode ? 'light' : 'dark'
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute('content', programMode ? '#f4ead8' : '#171b18')
+  }, [programMode, surfaceMode])
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return
+    const root = document.documentElement
+    // Firefox keeps the lightweight static CRT artwork, but skips the extra side layers and
+    // this scroll listener entirely. Its compositor is much more sensitive to fixed artwork
+    // whose background position changes during scroll.
+    if (root.dataset.browser === 'firefox') return
+    const desktop = window.matchMedia('(min-width: 900px)')
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
+    let frame = 0
+    let pixelStep = -1
+
+    const paintSideSignals = () => {
+      frame = 0
+      if (!desktop.matches || reducedMotion.matches) {
+        root.style.removeProperty('--crt-side-left-y')
+        root.style.removeProperty('--crt-side-right-y')
+        root.style.removeProperty('--crt-side-left-x')
+        root.style.removeProperty('--crt-side-right-x')
+        root.style.removeProperty('--crt-wave-stretch')
+        root.style.removeProperty('--crt-trace-one-offset')
+        root.style.removeProperty('--crt-trace-two-offset')
+        root.style.removeProperty('--crt-trace-three-offset')
+        root.style.removeProperty('--crt-trace-two-opacity')
+        root.style.removeProperty('--crt-trace-three-opacity')
+        root.style.removeProperty('--crt-pixel-cyan-scale')
+        root.style.removeProperty('--crt-pixel-pink-scale')
+        root.style.removeProperty('--crt-pixel-green-scale')
+        root.style.removeProperty('--crt-pixel-amber-scale')
+        pixelStep = -1
+        return
+      }
+
+      const y = window.scrollY
+      const scrollRange = Math.max(1, document.documentElement.scrollHeight - window.innerHeight)
+      const progress = Math.min(1, Math.max(0, y / scrollRange))
+      const step = Math.min(7, Math.floor(progress * 8))
+      const pulseTwoProgress = Math.min(1, Math.max(0, (progress - 0.16) / 0.84))
+      const pulseThreeProgress = Math.min(1, Math.max(0, (progress - 0.34) / 0.66))
+      root.style.setProperty('--crt-side-left-y', '0px')
+      root.style.setProperty('--crt-side-right-y', '0px')
+      root.style.setProperty('--crt-side-left-x', `${(progress * -110).toFixed(2)}px`)
+      root.style.setProperty('--crt-side-right-x', `${(progress * 96).toFixed(2)}px`)
+      root.style.setProperty('--crt-wave-stretch', `${(progress * 160).toFixed(2)}px`)
+      root.style.setProperty('--crt-trace-one-offset', String(24 - progress * 124))
+      root.style.setProperty('--crt-trace-two-offset', String(24 - pulseTwoProgress * 124))
+      root.style.setProperty('--crt-trace-three-offset', String(24 - pulseThreeProgress * 124))
+      root.style.setProperty('--crt-trace-two-opacity', String(0.22 + pulseTwoProgress * 0.56))
+      root.style.setProperty('--crt-trace-three-opacity', String(0.16 + pulseThreeProgress * 0.56))
+      if (step !== pixelStep) {
+        pixelStep = step
+        root.style.setProperty('--crt-pixel-cyan-scale', String(CRT_PIXEL_SCALES.cyan[step]))
+        root.style.setProperty('--crt-pixel-pink-scale', String(CRT_PIXEL_SCALES.pink[step]))
+        root.style.setProperty('--crt-pixel-green-scale', String(CRT_PIXEL_SCALES.green[step]))
+        root.style.setProperty('--crt-pixel-amber-scale', String(CRT_PIXEL_SCALES.amber[step]))
+      }
+    }
+
+    const queueSideSignals = () => {
+      if (!frame) frame = window.requestAnimationFrame(paintSideSignals)
+    }
+
+    paintSideSignals()
+    window.addEventListener('scroll', queueSideSignals, { passive: true })
+    window.addEventListener('resize', queueSideSignals)
+    desktop.addEventListener('change', queueSideSignals)
+    reducedMotion.addEventListener('change', queueSideSignals)
+    return () => {
+      if (frame) window.cancelAnimationFrame(frame)
+      window.removeEventListener('scroll', queueSideSignals)
+      window.removeEventListener('resize', queueSideSignals)
+      desktop.removeEventListener('change', queueSideSignals)
+      reducedMotion.removeEventListener('change', queueSideSignals)
+      root.style.removeProperty('--crt-side-left-y')
+      root.style.removeProperty('--crt-side-right-y')
+      root.style.removeProperty('--crt-side-left-x')
+      root.style.removeProperty('--crt-side-right-x')
+      root.style.removeProperty('--crt-wave-stretch')
+      root.style.removeProperty('--crt-trace-one-offset')
+      root.style.removeProperty('--crt-trace-two-offset')
+      root.style.removeProperty('--crt-trace-three-offset')
+      root.style.removeProperty('--crt-trace-two-opacity')
+      root.style.removeProperty('--crt-trace-three-opacity')
+      root.style.removeProperty('--crt-pixel-cyan-scale')
+      root.style.removeProperty('--crt-pixel-pink-scale')
+      root.style.removeProperty('--crt-pixel-green-scale')
+      root.style.removeProperty('--crt-pixel-amber-scale')
+    }
+  }, [])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -178,7 +314,22 @@ export function AppShell() {
   return (
     <SportThemeProvider theme={theme}>
       <div className={`min-h-svh bg-page text-ink motif-${theme.motifs.background}`}>
-        <div className="broadcast-air" aria-hidden="true" />
+        <div className="broadcast-air" aria-hidden="true">
+          <span className="crt-side-signal crt-side-signal-left">
+            <CrtSignalTraces />
+            <span className="crt-pixel crt-pixel-cyan" />
+            <span className="crt-pixel crt-pixel-pink" />
+            <span className="crt-pixel crt-pixel-green" />
+            <span className="crt-pixel crt-pixel-amber" />
+          </span>
+          <span className="crt-side-signal crt-side-signal-right">
+            <CrtSignalTraces />
+            <span className="crt-pixel crt-pixel-cyan" />
+            <span className="crt-pixel crt-pixel-pink" />
+            <span className="crt-pixel crt-pixel-green" />
+            <span className="crt-pixel crt-pixel-amber" />
+          </span>
+        </div>
         {/* PERF: no backdrop-blur on the sticky header — blur over a fixed gradient forces a
             full-viewport recomposite on every scroll frame. Near-opaque surface instead. */}
         <header className="sticky top-0 z-40 border-b border-primary/15 bg-surface/95">

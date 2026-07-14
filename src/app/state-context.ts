@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'react'
 import type { User } from '@supabase/supabase-js'
-import type { Follow, Preferences } from '../lib/store'
+import type { Follow, Preferences, SurfaceMode } from '../lib/store'
 
 export type AppState = {
   follows: Follow[]
@@ -9,6 +9,7 @@ export type AppState = {
   followedLeagueIds: string[]
   followedCompetitorIds: string[]
   prefs: Preferences
+  surfaceMode: SurfaceMode
   setPrefs: (prefs: Preferences) => void
   auth: {
     ready: boolean

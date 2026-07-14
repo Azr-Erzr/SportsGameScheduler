@@ -4,11 +4,13 @@ import { AppStateContext } from './state-context'
 import {
   getFollows,
   getPreferences,
+  getSystemSurfaceMode,
   saveFollows,
   savePreferences,
   toggleFollow as storeToggleFollow,
   type Follow,
   type Preferences,
+  type SurfaceMode,
 } from '../lib/store'
 import { getSupabaseClient, isSupabaseConfigured } from '../lib/supabase'
 import {
@@ -27,6 +29,7 @@ import {
 export function AppStateProvider({ children }: PropsWithChildren) {
   const [follows, setFollows] = useState<Follow[]>(() => getFollows())
   const [prefs, setPrefsState] = useState<Preferences>(() => getPreferences())
+  const [systemSurfaceMode, setSystemSurfaceMode] = useState<SurfaceMode>(() => getSystemSurfaceMode())
   const [authReady, setAuthReady] = useState(!isSupabaseConfigured)
   const [user, setUser] = useState<User | null>(null)
 
@@ -54,6 +57,15 @@ export function AppStateProvider({ children }: PropsWithChildren) {
       mounted = false
       cleanup?.()
     }
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return
+    const media = window.matchMedia('(prefers-color-scheme: dark)')
+    const syncSystemTheme = () => setSystemSurfaceMode(media.matches ? 'broadcast' : 'program')
+    syncSystemTheme()
+    media.addEventListener('change', syncSystemTheme)
+    return () => media.removeEventListener('change', syncSystemTheme)
   }, [])
 
   // On sign-in: merge local follows into the account and adopt server preferences.
@@ -164,6 +176,7 @@ export function AppStateProvider({ children }: PropsWithChildren) {
       followedLeagueIds,
       followedCompetitorIds,
       prefs,
+      surfaceMode: prefs.themeMode === 'system' ? systemSurfaceMode : prefs.themeMode,
       setPrefs,
       auth: {
         ready: authReady,
@@ -181,6 +194,7 @@ export function AppStateProvider({ children }: PropsWithChildren) {
       followedLeagueIds,
       followedCompetitorIds,
       prefs,
+      systemSurfaceMode,
       setPrefs,
       signInWithGoogle,
       signInWithMagicLink,
