@@ -99,3 +99,41 @@ test.describe('accessibility smoke', () => {
     }
   })
 })
+
+test.describe('adaptive presentation', () => {
+  test('system theme changes are followed until the visitor chooses explicitly', async ({ page }) => {
+    await page.emulateMedia({ colorScheme: 'dark' })
+    await page.goto('/')
+    await expect.poll(() => page.locator('html').getAttribute('data-surface')).toBe('broadcast')
+
+    await page.emulateMedia({ colorScheme: 'light' })
+    await expect.poll(() => page.locator('html').getAttribute('data-surface')).toBe('program')
+
+    await page.getByRole('button', { name: /switch to broadcast dark/i }).click()
+    await expect(page.locator('html')).toHaveAttribute('data-surface', 'broadcast')
+    await page.reload()
+    await expect(page.locator('html')).toHaveAttribute('data-surface', 'broadcast')
+  })
+
+  test('mobile routes stay within the viewport and use the static effects path', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'mobile-chromium', 'mobile presentation regression')
+
+    for (const path of ['/', '/sports/basketball', '/other-sports']) {
+      await page.goto(path)
+      const presentation = await page.evaluate(() => ({
+        viewportWidth: window.innerWidth,
+        documentWidth: document.documentElement.scrollWidth,
+        effects: document.documentElement.dataset.visualEffects,
+        liveSignals: [...document.querySelectorAll<HTMLElement>('.page-signal-live')].filter(
+          (element) => getComputedStyle(element).display !== 'none',
+        ).length,
+      }))
+
+      expect(presentation.documentWidth, `${path} should not overflow horizontally`).toBeLessThanOrEqual(
+        presentation.viewportWidth,
+      )
+      expect(presentation.effects).toBe('reduced')
+      expect(presentation.liveSignals).toBe(0)
+    }
+  })
+})

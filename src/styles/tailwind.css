@@ -821,6 +821,30 @@
     }
   }
 
+  @media (max-width: 899px) {
+    /* Compact screens keep the CRT composition as a static backdrop. The live sweep and
+       breathing pixels add little at this scale and compete with touch scrolling. */
+    .page-signal-live {
+      display: none;
+    }
+
+    .page-pixel {
+      animation: none !important;
+    }
+
+    .silbo-scrollbar[class~='overflow-x-auto'] {
+      touch-action: pan-x pan-y;
+      overscroll-behavior-x: contain;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    :root[data-browser='enhanced'] .channel-tile::after,
+    :root[data-browser='enhanced'] .sport-asset-sheen,
+    :root[data-browser='enhanced'] .silbo-sheen {
+      display: none !important;
+    }
+  }
+
   /* Chrome display type — UI keeps it subtle; export posters use the loud variant. */
   .chrome-text {
     font-family: var(--font-head);
