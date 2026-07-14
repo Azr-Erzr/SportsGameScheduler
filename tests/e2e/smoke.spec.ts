@@ -105,9 +105,27 @@ test.describe('adaptive presentation', () => {
     test.skip(testInfo.project.name !== 'desktop-chromium', 'desktop scroll-motion regression')
 
     await page.goto('/')
+    await expect(page.getByRole('heading', { name: /one schedule for every sport you follow/i })).toBeVisible()
     const legLength = await page.evaluate(() => Math.max(1200, window.innerHeight * 1.75))
+    await expect
+      .poll(() =>
+        page.evaluate(() => ({
+          browser: document.documentElement.dataset.browser,
+          effects: document.documentElement.dataset.visualEffects,
+          initialized: getComputedStyle(document.documentElement).getPropertyValue('--crt-side-left-x').trim() !== '',
+        })),
+      )
+      .toEqual({ browser: 'enhanced', effects: 'enhanced', initialized: true })
+    await expect
+      .poll(() => page.evaluate(() => document.documentElement.scrollHeight - window.innerHeight))
+      .toBeGreaterThanOrEqual(legLength * 2)
+
     const sampleLeftOffset = async (scrollY: number) => {
-      await page.evaluate((top) => window.scrollTo({ top, behavior: 'instant' }), scrollY)
+      await page.evaluate((top) => {
+        window.scrollTo({ top, behavior: 'instant' })
+        window.dispatchEvent(new Event('scroll'))
+      }, scrollY)
+      await expect.poll(() => page.evaluate(() => window.scrollY)).toBeCloseTo(scrollY, 0)
       return expect
         .poll(() =>
           page.evaluate(() =>
