@@ -107,6 +107,67 @@ const CATALOG_RULES: CatalogRule[] = [
   { ruleKey: 'cricket_us_ca_willow', providerKey: 'willow_tv', label: 'Willow TV', countryCodes: ['US', 'CA'], sportKeys: ['cricket'], priority: 10 },
   { ruleKey: 'table_tennis_wtt_live', providerKey: 'wtt_live', label: 'World Table Tennis', countryCodes: ['US', 'CA', 'GB', 'DE', 'FR', 'IT', 'ES'], sportKeys: ['table_tennis'], priority: 30 },
 
+  // --- Broader supported-sport official routes. Prefer official league/federation watch hubs when
+  // rights are event-specific, geo-restricted, or not reliably exposed by our DB feed yet.
+  // WNBA
+  { ruleKey: 'wnba_global_leaguepass', providerKey: 'wnba_league_pass', label: 'WNBA League Pass', countryCodes: ['US', 'CA', 'GB', 'AU'], sportKeys: ['basketball', 'wnba'], leagueNamePattern: /\bwnba\b|women'?s national basketball/i, priority: 4 },
+  { ruleKey: 'wnba_us_prime', providerKey: 'prime_video', label: 'Prime Video', countryCodes: ['US'], sportKeys: ['basketball', 'wnba'], leagueNamePattern: /\bwnba\b|women'?s national basketball/i, priority: 1 },
+  { ruleKey: 'wnba_us_peacock', providerKey: 'peacock', label: 'Peacock', countryCodes: ['US'], sportKeys: ['basketball', 'wnba'], leagueNamePattern: /\bwnba\b|women'?s national basketball/i, priority: 2 },
+  { ruleKey: 'wnba_us_paramount', providerKey: 'paramount_plus', label: 'Paramount+', countryCodes: ['US'], sportKeys: ['basketball', 'wnba'], leagueNamePattern: /\bwnba\b|women'?s national basketball/i, priority: 3 },
+  { ruleKey: 'wnba_us_ion', providerKey: 'ion', label: 'ION', countryCodes: ['US'], sportKeys: ['basketball', 'wnba'], leagueNamePattern: /\bwnba\b|women'?s national basketball/i, priority: 5 },
+  { ruleKey: 'wnba_us_cbs', providerKey: 'cbs_sports', label: 'CBS Sports', countryCodes: ['US'], sportKeys: ['basketball', 'wnba'], leagueNamePattern: /\bwnba\b|women'?s national basketball/i, priority: 6 },
+  // CFL
+  { ruleKey: 'cfl_ca_tsn', providerKey: 'tsn', label: 'TSN', countryCodes: ['CA'], sportKeys: ['american_football', 'football', 'cfl'], leagueNamePattern: /\bcfl\b|canadian football league/i, priority: 1 },
+  { ruleKey: 'cfl_us_cbs', providerKey: 'cbs_sports', label: 'CBS Sports', countryCodes: ['US'], sportKeys: ['american_football', 'football', 'cfl'], leagueNamePattern: /\bcfl\b|canadian football league/i, priority: 1 },
+  { ruleKey: 'cfl_intl_cflplus', providerKey: 'cfl_plus', label: 'CFL+', countryCodes: ['US', 'GB', 'IE', 'DE', 'FR', 'IT', 'ES', 'MX', 'AU'], sportKeys: ['american_football', 'football', 'cfl'], leagueNamePattern: /\bcfl\b|canadian football league/i, priority: 2 },
+  // PWHL
+  { ruleKey: 'pwhl_ca_tsn', providerKey: 'tsn', label: 'TSN / RDS', countryCodes: ['CA'], sportKeys: ['hockey', 'pwhl'], leagueNamePattern: /\bpwhl\b|professional women'?s hockey/i, priority: 1 },
+  { ruleKey: 'pwhl_ca_cbc', providerKey: 'cbc_gem', label: 'CBC Gem', countryCodes: ['CA'], sportKeys: ['hockey', 'pwhl'], leagueNamePattern: /\bpwhl\b|professional women'?s hockey/i, priority: 2 },
+  { ruleKey: 'pwhl_ca_prime', providerKey: 'prime_video', label: 'Prime Video', countryCodes: ['CA'], sportKeys: ['hockey', 'pwhl'], leagueNamePattern: /\bpwhl\b|professional women'?s hockey/i, priority: 3 },
+  { ruleKey: 'pwhl_ca_sportsnet', providerKey: 'sportsnet_plus', label: 'Sportsnet+', countryCodes: ['CA'], sportKeys: ['hockey', 'pwhl'], leagueNamePattern: /\bpwhl\b|professional women'?s hockey/i, priority: 4 },
+  { ruleKey: 'pwhl_us_site', providerKey: 'pwhl_site', label: 'thePWHL.com', countryCodes: ['US'], sportKeys: ['hockey', 'pwhl'], leagueNamePattern: /\bpwhl\b|professional women'?s hockey/i, priority: 1 },
+  { ruleKey: 'pwhl_us_youtube', providerKey: 'pwhl_youtube', label: 'PWHL YouTube', countryCodes: ['US'], sportKeys: ['hockey', 'pwhl'], leagueNamePattern: /\bpwhl\b|professional women'?s hockey/i, priority: 2 },
+  { ruleKey: 'pwhl_us_ion', providerKey: 'ion', label: 'ION', countryCodes: ['US'], sportKeys: ['hockey', 'pwhl'], leagueNamePattern: /\bpwhl\b|professional women'?s hockey/i, priority: 3 },
+  { ruleKey: 'pwhl_global_site', providerKey: 'pwhl_site', label: 'thePWHL.com', countryCodes: ['GB', 'IE', 'DE', 'FR', 'IT', 'ES', 'AU', 'NZ'], sportKeys: ['hockey', 'pwhl'], leagueNamePattern: /\bpwhl\b|professional women'?s hockey/i, priority: 1 },
+  // Golf
+  { ruleKey: 'golf_global_pga', providerKey: 'pga_tour', label: 'PGA TOUR', countryCodes: [], sportKeys: ['golf'], leagueNamePattern: /pga|golf|masters|open championship|ryder cup|presidents cup/i, priority: 8 },
+  { ruleKey: 'golf_us_espn', providerKey: 'espn_plus', label: 'ESPN+', countryCodes: ['US'], sportKeys: ['golf'], leagueNamePattern: /pga|golf|masters|open championship|ryder cup|presidents cup/i, priority: 1 },
+  { ruleKey: 'golf_us_golfchannel', providerKey: 'golf_channel', label: 'Golf Channel', countryCodes: ['US'], sportKeys: ['golf'], leagueNamePattern: /pga|golf|masters|open championship|ryder cup|presidents cup/i, priority: 2 },
+  { ruleKey: 'golf_ca_tsn', providerKey: 'tsn', label: 'TSN', countryCodes: ['CA'], sportKeys: ['golf'], leagueNamePattern: /pga|golf|masters|open championship|ryder cup|presidents cup/i, priority: 1 },
+  { ruleKey: 'golf_gb_sky', providerKey: 'sky_sports', label: 'Sky Sports Golf', countryCodes: ['GB', 'IE'], sportKeys: ['golf'], leagueNamePattern: /pga|golf|masters|open championship|ryder cup|presidents cup/i, priority: 1 },
+  // Rugby
+  { ruleKey: 'rugby_global_rugbypass', providerKey: 'rugbypass_tv', label: 'RugbyPass TV', countryCodes: [], sportKeys: ['rugby'], priority: 12 },
+  { ruleKey: 'rugby_gb_itv', providerKey: 'itvx', label: 'ITVX', countryCodes: ['GB'], sportKeys: ['rugby'], priority: 8 },
+  // Tennis
+  { ruleKey: 'tennis_atp_tennistv', providerKey: 'tennis_tv', label: 'Tennis TV', countryCodes: [], sportKeys: ['tennis'], leagueNamePattern: /atp|masters|tour|open|tennis/i, priority: 10 },
+  { ruleKey: 'tennis_ca_tsn', providerKey: 'tsn', label: 'TSN', countryCodes: ['CA'], sportKeys: ['tennis'], leagueNamePattern: /atp|wta|grand slam|tennis|open|masters/i, priority: 3 },
+  { ruleKey: 'tennis_gb_sky', providerKey: 'sky_sports', label: 'Sky Sports Tennis', countryCodes: ['GB', 'IE'], sportKeys: ['tennis'], leagueNamePattern: /atp|wta|tennis|open|masters/i, priority: 3 },
+  // Volleyball
+  { ruleKey: 'volleyball_global_vbtv', providerKey: 'vbtv', label: 'VBTV', countryCodes: [], sportKeys: ['volleyball'], priority: 10 },
+  // Snooker
+  { ruleKey: 'snooker_global_wst', providerKey: 'wst_play', label: 'WST Play', countryCodes: [], sportKeys: ['snooker'], priority: 10 },
+  { ruleKey: 'snooker_eu_discovery', providerKey: 'discovery_plus', label: 'Discovery+ / Eurosport', countryCodes: ['GB', 'IE', 'DE', 'FR', 'IT', 'ES', 'NL', 'SE', 'NO', 'DK', 'FI', 'PL'], sportKeys: ['snooker'], priority: 2 },
+  // Darts
+  { ruleKey: 'darts_global_pdc', providerKey: 'pdc_tv', label: 'PDC TV', countryCodes: [], sportKeys: ['darts'], priority: 10 },
+  { ruleKey: 'darts_gb_sky', providerKey: 'sky_sports', label: 'Sky Sports', countryCodes: ['GB', 'IE'], sportKeys: ['darts'], priority: 1 },
+  { ruleKey: 'darts_ca_dazn', providerKey: 'dazn', label: 'DAZN', countryCodes: ['CA'], sportKeys: ['darts'], priority: 1 },
+  // Track / athletics and Olympic-event fallbacks
+  { ruleKey: 'athletics_global_worldathletics', providerKey: 'world_athletics_watch', label: 'World Athletics Watch', countryCodes: [], sportKeys: ['athletics', 'track'], priority: 10 },
+  { ruleKey: 'olympic_us_peacock', providerKey: 'peacock', label: 'Peacock', countryCodes: ['US'], sportKeys: ['olympic_sports', 'olympic', 'track'], leagueNamePattern: /olympic|paralympic|world athletics|diamond league/i, priority: 1 },
+  { ruleKey: 'olympic_us_nbc', providerKey: 'nbc_olympics', label: 'NBC Olympics', countryCodes: ['US'], sportKeys: ['olympic_sports', 'olympic', 'track'], leagueNamePattern: /olympic|paralympic/i, priority: 2 },
+  { ruleKey: 'olympic_ca_cbc', providerKey: 'cbc_gem', label: 'CBC Gem', countryCodes: ['CA'], sportKeys: ['olympic_sports', 'olympic', 'track'], leagueNamePattern: /olympic|paralympic/i, priority: 1 },
+  { ruleKey: 'olympic_gb_bbc', providerKey: 'bbc_iplayer', label: 'BBC iPlayer', countryCodes: ['GB'], sportKeys: ['olympic_sports', 'olympic', 'track'], leagueNamePattern: /olympic|paralympic/i, priority: 1 },
+  { ruleKey: 'olympic_eu_discovery', providerKey: 'discovery_plus', label: 'Discovery+ / Eurosport', countryCodes: ['GB', 'IE', 'DE', 'FR', 'IT', 'ES', 'NL', 'SE', 'NO', 'DK', 'FI', 'PL'], sportKeys: ['olympic_sports', 'olympic'], leagueNamePattern: /olympic|paralympic/i, priority: 2 },
+  { ruleKey: 'olympic_global_official', providerKey: 'olympics_com', label: 'Olympics.com', countryCodes: [], sportKeys: ['olympic_sports', 'olympic'], leagueNamePattern: /olympic|paralympic/i, priority: 9 },
+  // Combat sports / UFC
+  { ruleKey: 'ufc_us_espn', providerKey: 'espn_plus', label: 'ESPN+', countryCodes: ['US'], sportKeys: ['combat_sports', 'combat', 'mma'], leagueNamePattern: /\bufc\b|ultimate fighting/i, priority: 1 },
+  { ruleKey: 'ufc_global_fightpass', providerKey: 'ufc_fight_pass', label: 'UFC Fight Pass', countryCodes: [], sportKeys: ['combat_sports', 'combat', 'mma'], leagueNamePattern: /\bufc\b|ultimate fighting/i, priority: 3 },
+  // Esports
+  { ruleKey: 'esports_lol', providerKey: 'lolesports', label: 'LoL Esports', countryCodes: [], sportKeys: ['esports'], leagueNamePattern: /league of legends|\blol\b|mid-season invitational|\bmsi\b|worlds/i, priority: 1 },
+  { ruleKey: 'esports_valorant', providerKey: 'valorant_twitch', label: 'VALORANT Twitch', countryCodes: [], sportKeys: ['esports'], leagueNamePattern: /valorant|\bvct\b/i, priority: 1 },
+  { ruleKey: 'esports_blast', providerKey: 'blastpremier_twitch', label: 'BLAST Premier Twitch', countryCodes: [], sportKeys: ['esports'], leagueNamePattern: /counter-strike|cs2|blast/i, priority: 1 },
+  { ruleKey: 'esports_esl', providerKey: 'eslcs_twitch', label: 'ESL CS Twitch', countryCodes: [], sportKeys: ['esports'], leagueNamePattern: /\besl\b|\biem\b/i, priority: 2 },
+
   // --- Soccer leagues (docs/where-to-watch-rights-truth.md "Soccer Leagues And Competitions").
   // Official rights holders per market; matched on league name so no DB league_id is required.
   // English Premier League

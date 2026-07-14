@@ -7,7 +7,6 @@ import {
   Download,
   FileImage,
   FileSpreadsheet,
-  Globe2,
   Info,
   ListFilter,
   Plus,
@@ -65,6 +64,34 @@ type PreviewItem = {
 }
 
 const REVIEW_PAGE_SIZE = 8
+const REVIEW_SPORT_ICONS: Record<string, string> = {
+  american_football: '🏈',
+  athletics: '🏃',
+  baseball: '⚾',
+  basketball: '🏀',
+  combat_sports: '🥊',
+  cricket: '🏏',
+  cycling: '🚴',
+  darts: '🎯',
+  esports: '🎮',
+  golf: '⛳',
+  handball: '🤾',
+  hockey: '🏒',
+  motorsport: '🏎️',
+  olympic_sports: '🏅',
+  rugby: '🏉',
+  snooker: '🎱',
+  soccer: '⚽',
+  tennis: '🎾',
+  volleyball: '🏐',
+}
+
+function reviewSportGroupLabel(sportKey: string | null | undefined) {
+  if (!sportKey) return null
+  const words = sportKey.replace(/_/g, ' ')
+  const label = words.replace(/\b\w/g, (char) => char.toUpperCase())
+  return `${REVIEW_SPORT_ICONS[sportKey] ?? sportEmoji(sportKey)} ${label}`
+}
 
 const ranges: Array<{ key: RangeKey; labelKey: string }> = [
   { key: 'all', labelKey: 'schedule.range.all' },
@@ -408,7 +435,8 @@ export function MySchedulePage() {
     const leagueLabels = new Map<string, { label: string; group: string; count: number }>()
     const competitorLabels = new Map<string, { label: string; group: string; count: number }>()
     for (const event of myEvents.events) {
-      const group = event.sportKey ? `${sportEmoji(event.sportKey)} ${event.sportKey.replace(/_/g, ' ')}` : 'Live sports'
+      const group = reviewSportGroupLabel(event.sportKey)
+      if (!group) continue
       if (event.leagueId) {
         const current = leagueLabels.get(event.leagueId)
         leagueLabels.set(event.leagueId, {
@@ -427,16 +455,21 @@ export function MySchedulePage() {
       }
     }
 
+    const leaguePicks: ReviewPick[] = activeFollowedLeagueIds.flatMap((id) => {
+        const info = leagueLabels.get(id)
+        if (!info) return []
+        return [{ targetType: 'league' as const, targetId: id, label: info.label, group: info.group, count: info.count }]
+      })
+    const competitorPicks: ReviewPick[] = activeFollowedCompetitorIds.flatMap((id) => {
+        const info = competitorLabels.get(id)
+        if (!info) return []
+        return [{ targetType: 'competitor' as const, targetId: id, label: info.label, group: info.group, count: info.count }]
+      })
+
     return [
       ...followCounts.map(({ team, count }) => ({ targetType: 'team' as const, targetId: team, label: team, group: 'World Cup', count })),
-      ...activeFollowedLeagueIds.map((id) => {
-        const info = leagueLabels.get(id)
-        return { targetType: 'league' as const, targetId: id, label: info?.label ?? 'Saved league', group: info?.group ?? 'Live sports', count: info?.count ?? 0 }
-      }),
-      ...activeFollowedCompetitorIds.map((id) => {
-        const info = competitorLabels.get(id)
-        return { targetType: 'competitor' as const, targetId: id, label: info?.label ?? 'Saved team/player', group: info?.group ?? 'Live sports', count: info?.count ?? 0 }
-      }),
+      ...leaguePicks,
+      ...competitorPicks,
     ]
   }, [activeFollowedCompetitorIds, activeFollowedLeagueIds, followCounts, myEvents.events])
 
@@ -809,7 +842,7 @@ export function MySchedulePage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-start">
         <div>
           <h1 className="text-xl font-extrabold text-primary">{t('schedule.title', undefined, prefs.locale)}</h1>
           <p className="max-w-3xl text-sm text-ink/60">
@@ -817,14 +850,16 @@ export function MySchedulePage() {
             reminders from one place.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="grid w-full grid-cols-2 gap-2 md:w-auto md:grid-cols-[auto_auto]">
           <Link
             to="/settings/alerts"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-primary/20 px-3 py-2 text-sm font-semibold text-ink/75 hover:bg-primary/8"
+            className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg border border-primary/20 px-3 py-2 text-sm font-semibold text-ink/75 hover:bg-primary/8 md:justify-start"
           >
             <BellRing size={15} /> Reminders
           </Link>
-          <CityPicker />
+          <div className="col-span-2 md:col-span-1">
+            <CityPicker compact />
+          </div>
         </div>
       </div>
 
@@ -1015,7 +1050,7 @@ export function MySchedulePage() {
                       <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink/45">Timezone</p>
                       <p className="mt-1 text-sm font-semibold">{timeZone}</p>
                     </div>
-                    <CityPicker />
+                    <CityPicker compact />
                     <label className="flex items-center gap-2 rounded-lg border border-primary/20 bg-page/50 px-3 py-2 text-sm text-ink/70">
                       <input type="checkbox" checked={hidePast} onChange={(event) => setHidePast(event.target.checked)} />
                       Hide finished matches
@@ -1084,22 +1119,29 @@ export function MySchedulePage() {
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
         <section className="min-w-0 space-y-3">
-          <Panel>
-            <div className="flex flex-wrap items-center gap-2">
-              <ListFilter size={16} className="text-primary" />
-              {ranges.map((item) => (
-                <Button key={item.key} variant={range === item.key ? 'solid' : 'ghost'} onClick={() => setRange(item.key)}>
-                  {t(item.labelKey, undefined, prefs.locale)}
-                </Button>
-              ))}
-              <label className="ml-1 flex items-center gap-2 text-sm text-ink/70">
-                <input type="checkbox" checked={hidePast} onChange={(event) => setHidePast(event.target.checked)} />
-                {t('schedule.hideFinished', undefined, prefs.locale)}
-              </label>
-              <span className="flex-1" />
-              <span className="inline-flex items-center gap-1 text-xs font-semibold text-ink/45">
-                <Globe2 size={13} /> {cityLabel}
-              </span>
+          <Panel className="p-3 sm:p-4">
+            <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-center">
+              <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+                {ranges.map((item) => (
+                  <Button
+                    key={item.key}
+                    className="min-h-10 px-3 py-2"
+                    variant={range === item.key ? 'solid' : 'ghost'}
+                    onClick={() => setRange(item.key)}
+                  >
+                    {t(item.labelKey, undefined, prefs.locale)}
+                  </Button>
+                ))}
+              </div>
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-primary/10 pt-2 sm:border-t-0 sm:pt-0">
+                <span className="inline-flex items-center gap-1 text-xs font-semibold text-ink/45">
+                  <ListFilter size={13} className="text-primary" /> {cityLabel}
+                </span>
+                <label className="flex items-center gap-2 text-sm text-ink/70">
+                  <input type="checkbox" checked={hidePast} onChange={(event) => setHidePast(event.target.checked)} />
+                  {t('schedule.hideFinished', undefined, prefs.locale)}
+                </label>
+              </div>
             </div>
           </Panel>
 
@@ -1173,7 +1215,7 @@ export function MySchedulePage() {
         </section>
 
         <Panel className="h-fit space-y-3 xl:sticky xl:top-20">
-          <PanelHeading title="Included picks" subtitle={`${followCount} active follows`} />
+          <PanelHeading title="Included picks" subtitle={`${reviewPicks.length} shown from ${followCount} active follows`} />
           {undoTarget && (
             <div className="flex items-center gap-2 rounded-lg border border-primary/25 bg-primary/8 px-3 py-2 text-xs text-ink/70">
               <span className="min-w-0 flex-1 truncate">Removed {undoTarget.label}.</span>
@@ -1182,11 +1224,11 @@ export function MySchedulePage() {
               </button>
             </div>
           )}
-          <div className="space-y-3">
+          <div className="space-y-2.5 md:space-y-3">
             {reviewGroups.map(([group, picks]) => (
               <div key={group} className="space-y-1.5">
                 <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink/45">{group}</p>
-                <div className="flex flex-wrap gap-1.5">
+                <div className="flex max-h-24 flex-wrap gap-1.5 overflow-y-auto pr-1 md:max-h-none">
                   {picks.map((pick) => (
                     <span
                       key={reviewKey(pick)}

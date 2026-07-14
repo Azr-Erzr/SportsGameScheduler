@@ -15,16 +15,17 @@ import { Link } from 'react-router-dom'
 import { useAppState } from '../app/state-context'
 import { GlobalEventBoard, PosterFeatureStrip } from '../components/PosterMotifs'
 import { GlobalSearch } from '../components/GlobalSearch'
+import { HomeSportTickets } from '../components/SportTicketsPanel'
 import { Button, Panel, PanelHeading } from '../components/ui'
 import { WorldClock } from '../components/WorldClock'
 import { filterMatchesForTeams, filterUpcomingMatches, useMatches } from '../data/liveMatches'
 import { featuredTeams } from '../data/worldcup'
-import { dedupeSpotlightBySport, useSpotlightEvents, type SpotlightEvent } from '../data/spotlight'
+import { dedupeSpotlightBySport, useSpotlightEvents } from '../data/spotlight'
 import { brand } from '../domain/brand'
+import { getSport } from '../domain/sports'
 import { aboutContent, faqContent, howItWorksContent } from '../content/siteContent'
 import { associationFootballLabel, t } from '../lib/i18n'
 import { formatLongDate, formatTime } from '../lib/time'
-import { getTheme, withSurfaceMode } from '../theme/themes'
 
 const exportPaths = [
   { icon: CalendarDays, titleKey: 'home.export.liveTitle', bodyKey: 'home.export.liveBody' },
@@ -33,57 +34,10 @@ const exportPaths = [
   { icon: Bell, titleKey: 'home.export.alertsTitle', bodyKey: 'home.export.alertsBody' },
 ]
 
-function ProgramCoverCard({
-  event,
-  index,
-  surfaceMode,
-}: {
-  event: SpotlightEvent
-  index: number
-  surfaceMode: 'broadcast' | 'program'
-}) {
-  const theme = withSurfaceMode(getTheme(event.sportKey), surfaceMode)
-  const live = event.label === 'Live now'
-  const statusColor = live ? 'var(--color-flap-ok)' : index % 2 ? 'var(--color-flap-tbd)' : 'var(--color-flap-chg)'
-
-  return (
-    <Link to={event.href} className="w-[286px] min-w-[286px] snap-start sm:w-[344px] sm:min-w-[344px]">
-      <article
-        className="group relative h-[152px] overflow-hidden border-y border-r bg-surface/72 px-4 py-3 transition-colors hover:bg-primary/6"
-        style={{
-          borderColor: `${theme.colors.primary}44`,
-          borderLeft: `5px solid ${theme.colors.primary}`,
-          clipPath: 'polygon(0 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 0 100%)',
-        }}
-      >
-        <div className="absolute inset-x-0 top-0 h-px opacity-70" style={{ background: theme.colors.primary }} aria-hidden="true" />
-        <div className="relative flex h-full flex-col justify-between">
-          <div className="flex items-center justify-between gap-3">
-            <span
-              className="font-mono text-[10px] font-bold uppercase tracking-[0.2em]"
-              style={{ color: statusColor }}
-            >
-              {event.label}
-            </span>
-            <span className="font-mono text-[10px] uppercase tracking-[0.24em] text-ink/35">
-              Ch {String(index + 1).padStart(2, '0')}
-            </span>
-          </div>
-          <div>
-            <div className="mb-3 grid grid-cols-[2.75rem_1fr] items-center gap-3" aria-hidden="true">
-              <span className="h-px" style={{ background: theme.colors.primary }} />
-              <span className="h-px bg-ink/10" />
-            </div>
-            <h3 className="max-w-[17rem] text-[1.05rem] font-black leading-tight sm:text-lg" style={{ color: theme.colors.primary }}>
-              {event.title}
-            </h3>
-            <p className="mt-2 line-clamp-2 text-[13px] leading-relaxed text-ink/62">{event.detail}</p>
-          </div>
-        </div>
-      </article>
-    </Link>
-  )
-}
+const homeTicketSports = ['football', 'soccer', 'baseball', 'basketball'].flatMap((key) => {
+  const sport = getSport(key)
+  return sport ? [sport] : []
+})
 
 export function HomePage() {
   const { followedTeams, toggleFollow, prefs } = useAppState()
@@ -104,10 +58,9 @@ export function HomePage() {
   }
 
   const footballLabel = associationFootballLabel(prefs.locale, prefs.regionCode)
-
   return (
     <div className="space-y-6">
-      <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_390px]">
+      <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_390px]" data-home-section="hero">
         <div className="broadcast-tune-panel rounded-card border border-primary/15 bg-surface p-5 shadow-sm sm:p-7">
           <div className="motion-only broadcast-lock-board" aria-hidden="true">
             <span className="broadcast-lock-line" />
@@ -137,14 +90,14 @@ export function HomePage() {
                   {t('home.popularNations', undefined, prefs.locale)}
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  {suggestions.map((team) => {
+                  {suggestions.map((team, index) => {
                     const selected = followedTeams.includes(team)
                     return (
                       <button
                         type="button"
                         key={team}
                         onClick={() => toggleTeam(team)}
-                        className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors ${
+                        className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors ${index > 5 ? 'max-sm:hidden' : ''} ${
                           prefs.themeMode === 'program'
                             ? selected
                               ? 'bg-primary text-ticket-stub-text shadow-[0_8px_18px_color-mix(in_srgb,var(--mp-primary)_18%,transparent)]'
@@ -174,7 +127,7 @@ export function HomePage() {
                 </Link>
               </div>
 
-              <div className="mt-6 grid gap-4 rounded-xl border border-primary/20 bg-page/60 p-4 sm:grid-cols-[auto_1fr]">
+              <div className="mt-6 hidden gap-4 rounded-xl border border-primary/20 bg-page/60 p-4 sm:grid sm:grid-cols-[auto_1fr]">
                 <div className="manifesto-bars h-3 min-h-0 sm:h-auto sm:min-h-28" aria-hidden="true">
                   {['#54ff9f', '#46e8ff', '#ffd34d', '#ff4fd8', '#ff5247'].map((color) => (
                     <span key={color} style={{ backgroundColor: color }} />
@@ -233,35 +186,22 @@ export function HomePage() {
         </Panel>
       </section>
 
-      <GlobalEventBoard events={spotlightBySport} variant="room" />
+      <div className="home-board hidden sm:block" data-home-section="world-board">
+        <GlobalEventBoard events={spotlightBySport} variant="room" />
+      </div>
 
-      <section>
-        <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
-          <div>
-            <h2 className="text-lg font-extrabold text-primary">{t('home.spotlightTitle', undefined, prefs.locale)}</h2>
-            <p className="text-sm text-ink/60">{t('home.spotlightSubtitle', undefined, prefs.locale)}</p>
-          </div>
-          <Link to="/explore" className="text-sm font-bold text-primary">
-            {t('home.exploreAll', undefined, prefs.locale)}
-          </Link>
-        </div>
-        <div className="silbo-scrollbar flex snap-x gap-3 overflow-x-auto pb-3">
-          {spotlightBySport.map((event, index) => (
-            <ProgramCoverCard key={event.title} event={event} index={index} surfaceMode={prefs.themeMode} />
-          ))}
-        </div>
-      </section>
+      <HomeSportTickets sports={homeTicketSports} regionCode={prefs.regionCode} />
 
-      <section className="grid gap-4 lg:grid-cols-[1fr_320px]">
+      <section className="grid gap-4 lg:grid-cols-[1fr_320px]" data-home-section="tools">
         <div className="grid gap-3 sm:grid-cols-2">
           {exportPaths.map(({ icon: Icon, titleKey, bodyKey }) => (
-            <Panel key={titleKey} className="flex gap-3">
+            <Panel key={titleKey} className="flex gap-3 max-sm:p-3">
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
                 <Icon size={19} />
               </span>
               <div>
-                <h3 className="font-bold text-primary">{t(titleKey, undefined, prefs.locale)}</h3>
-                <p className="mt-1 text-sm text-ink/60">{t(bodyKey, undefined, prefs.locale)}</p>
+                <h3 className="text-sm font-bold text-primary sm:text-base">{t(titleKey, undefined, prefs.locale)}</h3>
+                <p className="mt-1 hidden text-sm text-ink/60 sm:block">{t(bodyKey, undefined, prefs.locale)}</p>
               </div>
             </Panel>
           ))}
@@ -289,7 +229,9 @@ export function HomePage() {
         </div>
       </section>
 
-      <PosterFeatureStrip />
+      <div className="hidden sm:block">
+        <PosterFeatureStrip />
+      </div>
 
       <HomeExplainer />
     </div>
@@ -301,7 +243,28 @@ export function HomePage() {
 // lives in src/content/siteContent.ts; deeper detail is on /about, /how-it-works and /faq.
 function HomeExplainer() {
   return (
-    <section aria-labelledby="home-explainer-heading" className="mt-2 space-y-6 border-t border-primary/15 pt-6">
+    <section aria-labelledby="home-explainer-heading" className="mt-2 border-t border-primary/15 pt-6" data-home-section="explainer">
+      <details className="rounded-card border border-primary/15 bg-surface p-4 sm:hidden">
+        <summary className="cursor-pointer text-sm font-black uppercase tracking-[0.14em] text-primary">
+          About, help, and FAQs
+        </summary>
+        <div className="mt-4 space-y-4 text-sm leading-relaxed text-ink/75">
+          <p>{aboutContent.intro}</p>
+          <Link to="/about" className="inline-flex items-center gap-1 font-bold text-primary">
+            More about Silbo Sports <ChevronRight size={15} />
+          </Link>
+          <div className="grid gap-2">
+            <Link to="/how-it-works" className="inline-flex items-center justify-between rounded-lg bg-page/60 px-3 py-2 font-bold text-primary">
+              How it works <ChevronRight size={15} />
+            </Link>
+            <Link to="/faq" className="inline-flex items-center justify-between rounded-lg bg-page/60 px-3 py-2 font-bold text-primary">
+              Common questions <ChevronRight size={15} />
+            </Link>
+          </div>
+        </div>
+      </details>
+
+      <div className="hidden space-y-6 sm:block">
       {/* Intro and the how-it-works steps sit side by side on desktop so the section fills the page
           width like the rest of the home page and stays short. Text stays readable via max-w caps. */}
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)] lg:items-start">
@@ -345,6 +308,7 @@ function HomeExplainer() {
         <Link to="/faq" className="inline-flex items-center gap-1 text-sm font-bold text-primary">
           See all FAQs <ChevronRight size={15} />
         </Link>
+      </div>
       </div>
     </section>
   )

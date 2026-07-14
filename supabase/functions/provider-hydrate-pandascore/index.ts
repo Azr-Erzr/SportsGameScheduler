@@ -8,7 +8,7 @@
 // Security: PANDASCORE_TOKEN is read from Supabase secrets and never sent to clients.
 // Docs: https://developers.pandascore.co  (auth: Authorization: Bearer <token>)
 
-import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2'
+import { createClient } from 'npm:@supabase/supabase-js@2'
 
 const PROVIDER_KEY = 'pandascore'
 const SPORT_KEY = 'esports'
@@ -156,14 +156,6 @@ async function ensureCompetitors(sportId: string, leagueId: string | null, match
   return map
 }
 
-async function replaceParticipants(db: SupabaseClient, eventId: string, homeId?: string, awayId?: string) {
-  await db.from('event_competitors').delete().eq('event_id', eventId)
-  const rows = []
-  if (homeId) rows.push({ event_id: eventId, competitor_id: homeId, role: 'home' })
-  if (awayId) rows.push({ event_id: eventId, competitor_id: awayId, role: 'away' })
-  if (rows.length) await db.from('event_competitors').insert(rows)
-}
-
 async function upsertMatches(sportId: string, game: string, matches: PsMatch[], counters: Counters) {
   if (!matches.length) return
   // Group by league so each event points at the right league row.
@@ -182,6 +174,18 @@ async function upsertMatches(sportId: string, game: string, matches: PsMatch[], 
 
   // Resolve competitors once across all matches in this game batch.
   const competitorMap = await ensureCompetitors(sportId, null, matches)
+
+  // Batched writes, flushed once per game batch instead of once per event: unchanged rows share a
+  // single last_checked_at UPDATE, and participant rewrites share one DELETE + one INSERT.
+  const unchangedIds: string[] = []
+  const participantEventIds = new Set<string>()
+  const participantRows: { event_id: string; competitor_id: string; role: string }[] = []
+  const queueParticipants = (eventId: string, homeId?: string, awayId?: string) => {
+    if (participantEventIds.has(eventId)) return
+    participantEventIds.add(eventId)
+    if (homeId) participantRows.push({ event_id: eventId, competitor_id: homeId, role: 'home' })
+    if (awayId && awayId !== homeId) participantRows.push({ event_id: eventId, competitor_id: awayId, role: 'away' })
+  }
 
   for (const match of matches) {
     const leagueKey = String(match.league?.id ?? '')
@@ -235,13 +239,13 @@ async function upsertMatches(sportId: string, game: string, matches: PsMatch[], 
         .select('id')
         .single()
       if (error) throw error
-      await replaceParticipants(supabase, inserted.id, homeId, awayId)
+      queueParticipants(inserted.id, homeId, awayId)
       counters.changed += 1
       continue
     }
 
     if (prior.payload_hash === hash) {
-      await supabase.from('events').update({ last_checked_at: checkedAt }).eq('id', prior.id)
+      unchangedIds.push(prior.id)
       continue
     }
 
@@ -262,7 +266,7 @@ async function upsertMatches(sportId: string, game: string, matches: PsMatch[], 
     }
     if (visibleChange) updatePayload.updated_at = checkedAt
     await supabase.from('events').update(updatePayload).eq('id', prior.id)
-    await replaceParticipants(supabase, prior.id, homeId, awayId)
+    queueParticipants(prior.id, homeId, awayId)
     if (prior.starts_at !== iso || prior.status !== status) {
       await supabase.from('event_status_history').insert({
         event_id: prior.id,
@@ -274,6 +278,25 @@ async function upsertMatches(sportId: string, game: string, matches: PsMatch[], 
       })
     }
     counters.changed += 1
+  }
+
+  if (unchangedIds.length) {
+    const { error } = await supabase
+      .from('events')
+      .update({ last_checked_at: new Date().toISOString() })
+      .in('id', unchangedIds)
+    if (error) console.error(`pandascore ${game} last_checked_at batch failed:`, error.message)
+  }
+
+  if (participantEventIds.size) {
+    // Skip the insert if the delete failed so a retry next tick can't leave duplicate rows.
+    const { error: delError } = await supabase.from('event_competitors').delete().in('event_id', [...participantEventIds])
+    if (delError) {
+      console.error(`pandascore ${game} participant delete batch failed:`, delError.message)
+    } else if (participantRows.length) {
+      const { error: insError } = await supabase.from('event_competitors').insert(participantRows)
+      if (insError) console.error(`pandascore ${game} participant insert batch failed:`, insError.message)
+    }
   }
 }
 

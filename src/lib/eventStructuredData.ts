@@ -22,7 +22,16 @@ function eventStatusUrl(status?: string | null) {
 }
 
 function personOrTeamType(kind?: string | null) {
-  return kind === 'person' ? 'Person' : 'SportsTeam'
+  return kind === 'person' ? 'Person' : 'PerformingGroup'
+}
+
+function inferredMatchPerformers(title: string) {
+  const names = title
+    .split(/\s+(?:vs\.?|versus|v\.?)\s+/i)
+    .map((name) => name.trim())
+    .filter(Boolean)
+  if (names.length !== 2 || names.some((name) => /^(?:tbd|tbc|unknown)$/i.test(name))) return []
+  return names.map((name) => ({ '@type': 'PerformingGroup', name }))
 }
 
 export function eventDescription(event: StructuredEventInput) {
@@ -37,12 +46,13 @@ export function eventDescription(event: StructuredEventInput) {
 export function eventStructuredData(event: StructuredEventInput) {
   const url = `${SEO_ORIGIN}/events/${event.id}`
   const endDate = new Date(event.startsAt.getTime() + sportTiming(event.sportKey).typicalMin * 60_000)
-  const performers = (event.competitors ?? [])
+  const explicitPerformers = (event.competitors ?? [])
     .filter((competitor) => competitor.name.trim())
     .map((competitor) => ({
       '@type': personOrTeamType(competitor.kind),
       name: competitor.name,
     }))
+  const performers = explicitPerformers.length ? explicitPerformers : inferredMatchPerformers(event.title)
 
   // A SportsEvent is physical: it needs a real Place location. Without venue/city/country we can't
   // emit a valid one, so we skip the JSON-LD (null) rather than emit an invalid item Google flags.
@@ -61,7 +71,9 @@ export function eventStructuredData(event: StructuredEventInput) {
               : event.venue,
         }
       : null
-  if (!location) return null
+  // Google recommends a named Person/PerformingGroup for Event markup. A match title can safely
+  // supply both sides when provider links are missing; races/sessions without entrant data cannot.
+  if (!location || !performers.length) return null
 
   return {
     '@context': 'https://schema.org',
@@ -74,7 +86,8 @@ export function eventStructuredData(event: StructuredEventInput) {
     eventStatus: eventStatusUrl(event.status),
     eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
     location,
-    ...(performers.length ? { performer: performers, competitor: performers } : {}),
+    performer: performers,
+    competitor: performers,
     organizer: {
       '@type': 'Organization',
       name: event.leagueName || 'Silbo Sports',

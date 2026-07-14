@@ -1,13 +1,16 @@
 import { Home, ListChecks, Moon, PlusCircle, Sun, Trophy } from 'lucide-react'
 import { Link, NavLink, Outlet, useLocation, useParams } from 'react-router-dom'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { AuthButton } from '../components/AuthButton'
 import { ConsentBanner } from '../components/ConsentBanner'
+import { InstallAppPrompt } from '../components/InstallAppPrompt'
 import { LanguageMenu } from '../components/LanguageMenu'
 import { LiveTicker } from '../components/LiveTicker'
 import { Onboarding } from '../components/Onboarding'
+import { SpotlightRail } from '../components/PosterMotifs'
 import { SilboBrandMark } from '../components/SilboMark'
 import { SportSwitcher } from '../components/SportSwitcher'
+import { dedupeSpotlightBySport, useSpotlightEvents } from '../data/spotlight'
 import { adsConfigured } from '../lib/ads'
 import { initConsent, resetConsent } from '../lib/consent'
 import { hasOnboarded } from '../lib/onboarding'
@@ -81,9 +84,9 @@ function MobileNav({ locale }: { locale?: string | null }) {
   return (
     <nav
       aria-label="Primary mobile navigation"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-primary/15 bg-surface px-2 pb-[calc(env(safe-area-inset-bottom)+0.55rem)] pt-2 shadow-[0_-8px_22px_rgba(0,0,0,0.24)] md:hidden"
+      className="fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+0.65rem)] z-40 rounded-2xl border border-primary/15 bg-surface/98 px-2 py-2 shadow-[0_-8px_22px_rgba(0,0,0,0.24)] md:hidden"
     >
-      <div className="mx-auto flex max-w-md items-center justify-between gap-1">
+      <div className="mx-auto flex max-w-[21.5rem] items-center justify-between gap-1">
         {mobileNavItems.map(({ to, labelKey, mobileLabelKey, icon: Icon }) => (
           <NavLink
             key={to}
@@ -91,9 +94,9 @@ function MobileNav({ locale }: { locale?: string | null }) {
             end={to === '/'}
             aria-label={t(labelKey, undefined, locale)}
             className={({ isActive }) =>
-              `group flex h-12 min-w-12 items-center justify-center gap-1.5 rounded-2xl px-2 text-[10px] font-bold leading-none transition-colors ${
+              `group flex h-11 min-w-11 items-center justify-center gap-1.5 rounded-xl px-2 text-[10px] font-bold leading-none transition-colors ${
                 isActive
-                  ? 'min-w-[5.35rem] bg-primary text-void shadow-[0_-1px_12px_color-mix(in_srgb,var(--mp-primary)_16%,transparent)]'
+                  ? 'min-w-[4.85rem] bg-primary text-void shadow-[0_-1px_12px_color-mix(in_srgb,var(--mp-primary)_16%,transparent)]'
                   : 'text-ink/55 hover:bg-primary/10 hover:text-primary'
               }`
             }
@@ -145,6 +148,8 @@ export function AppShell() {
   const { sportKey } = useParams()
   const location = useLocation()
   const { prefs, setPrefs, follows } = useAppState()
+  const spotlightEvents = useSpotlightEvents(prefs.regionCode)
+  const footerSpotlightEvents = useMemo(() => dedupeSpotlightBySport(spotlightEvents), [spotlightEvents])
   // First-run onboarding: only for a brand-new visitor (no prior pass, nothing followed yet).
   // Decided once at mount from the synchronously-loaded follows/flag — no effect needed.
   const [showOnboarding, setShowOnboarding] = useState(() => !hasOnboarded() && follows.length === 0)
@@ -164,6 +169,11 @@ export function AppShell() {
 
   // Restore the AdSense script if the user accepted advertising in a previous session.
   useEffect(() => initConsent(), [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    window.scrollTo(0, 0)
+  }, [location.pathname])
 
   return (
     <SportThemeProvider theme={theme}>
@@ -198,6 +208,10 @@ export function AppShell() {
           <Outlet />
         </main>
 
+        <div className="relative z-[1] mx-auto hidden w-full max-w-[1460px] px-4 pb-3 md:block">
+          <SpotlightRail events={footerSpotlightEvents} />
+        </div>
+
         <footer className="relative z-[1] mx-auto w-full max-w-[1460px] px-4 pb-40 pt-4 md:pb-8">
           <div className="border-t border-primary/15 pt-5">
             <div className="color-bars mb-4 h-1.5 w-28 opacity-70" aria-hidden="true" />
@@ -226,6 +240,7 @@ export function AppShell() {
         </footer>
 
         <MobileNav locale={prefs.locale} />
+        <InstallAppPrompt />
         <ConsentBanner />
         {showOnboarding && onboardingEligible && <Onboarding onClose={() => setShowOnboarding(false)} />}
       </div>

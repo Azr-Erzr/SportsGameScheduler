@@ -50,8 +50,8 @@ describe('eventStructuredData', () => {
       },
     })
     expect(data!.performer).toEqual([
-      { '@type': 'SportsTeam', name: 'Arsenal' },
-      { '@type': 'SportsTeam', name: 'Barcelona' },
+      { '@type': 'PerformingGroup', name: 'Arsenal' },
+      { '@type': 'PerformingGroup', name: 'Barcelona' },
     ])
   })
 
@@ -70,6 +70,10 @@ describe('eventStructuredData', () => {
       name: 'Vikingsvollur',
       address: 'Vikingsvollur',
     })
+    expect(data!.performer).toEqual([
+      { '@type': 'PerformingGroup', name: 'Vikingur Reykjavik' },
+      { '@type': 'PerformingGroup', name: 'Gyori ETO' },
+    ])
     // No leagueId → organizer url falls back to the site origin, still a valid absolute URL.
     expect(data!.organizer).toMatchObject({ name: 'UEFA Champions League', url: 'https://silbosports.com' })
   })
@@ -103,6 +107,18 @@ describe('eventStructuredData', () => {
       startsAt: new Date('2026-08-01T02:00:00Z'),
       sportKey: 'soccer',
       leagueName: 'FIFA World Cup',
+    })
+    expect(data).toBeNull()
+  })
+
+  it('returns null when a race has no real or safely inferred performers', () => {
+    const data = eventStructuredData({
+      id: 'event-5',
+      title: 'Tokyo ePrix Qualifying',
+      startsAt: new Date('2026-07-26T06:40:00Z'),
+      sportKey: 'motorsport',
+      leagueName: 'Formula E',
+      venue: 'Tokyo Street Circuit',
     })
     expect(data).toBeNull()
   })

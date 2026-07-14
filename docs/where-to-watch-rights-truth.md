@@ -1,6 +1,6 @@
 # Where-To-Watch Rights Truth
 
-Last verified: 2026-06-22
+Last verified: 2026-07-10
 Implementation seed: `supabase/migrations/20260622193000_broadcast_rights_truth_seed.sql`
 
 This is the working truth document for Silbo's where-to-watch database. It should only contain official rights holders, official league/federation watch pages, and official broadcaster destinations. Do not use unofficial stream aggregators or scraped pirate-stream pages. If a sport has no clearly published broadcast-rights table, use the official competition watch/live page as the safest link target.
@@ -68,6 +68,34 @@ Primary source: FIFA's `FWC26 Media Rights Licensees Overview` PDF, last modifie
 | Tennis / Wimbledon | Wimbledon TV Coverage page | 220+ territories | Use tournament official pages for Slam-specific rights. |
 | Cricket / ICC T20 WC 2026 | Willow TV; ICC.tv only where ICC lists Rest of World/eligible streaming | USA/Canada for Willow; territory-specific elsewhere | ICC official broadcaster page lists Willow for USA & Canada. Do not expose ICC.tv broadly where ICC names a local broadcaster. |
 | Table tennis | World Table Tennis live video | Global where available | Use WTT official live-video/events pages before any third-party stream source; wire only to table-tennis-specific events/keys. |
+| WNBA | WNBA League Pass, Prime Video, Peacock, Paramount+, ION, CBS Sports | USA first; League Pass also useful in Canada/UK/Australia where available | WNBA's 2026 release names ABC/ESPN, NBC/Peacock/NBCSN, Prime Video, CBS/Paramount+, ION, USA Network, NBA TV, and WNBA League Pass. Canadian broadcast schedule was still marked as later release in the WNBA note, so Canada should prefer DB broadcasts when present. |
+| CFL | TSN, CBS Sports, CFL+ | Canada, USA, international | Canada defaults to TSN. US/international rows should use official CFL schedule/partner rows or CFL+ where eligible. |
+| PWHL | Canada: TSN/RDS, CBC Gem, Prime Video, Sportsnet+. USA/world: thePWHL.com, PWHL YouTube, ION finals/local TV | Canada, USA, global outside excluded territories | PWHL publishes a detailed where-to-watch page; Canada has named national partners, US has local/regional partners plus PWHL YouTube/thePWHL.com availability outside Canada/Czechia/Slovakia. |
+| Golf / PGA Tour | ESPN+, Golf Channel, PGA TOUR watch hub, TSN, Sky Sports Golf | USA, Canada, UK/Ireland, global hub | Event rights vary sharply by tour and major; use official event/league broadcast rows whenever available. PGA TOUR watch hub is the safe global fallback for generic golf cards. |
+| Rugby | RugbyPass TV, ITVX where relevant | Global official hub, UK event-specific | RugbyPass TV is the official World Rugby-style fallback for events without a specific broadcaster row. Keep Six Nations, Rugby World Cup, club rugby, and domestic competitions event-specific. |
+| Tennis / ATP | Tennis TV, TSN, Sky Sports Tennis, Wimbledon coverage page | Global, Canada, UK/Ireland, Slam-specific | ATP's TV schedule names Tennis TV as the live ATP Tour stream and publishes territory broadcasters. Slam and WTA rights should remain tournament-specific. |
+| Volleyball | VBTV | Global where available | Volleyball World/VBTV is the official stream/schedule hub for VNL and Volleyball World events. |
+| Snooker | WST Play, Discovery+ / Eurosport | Global and Europe | WST Watch Live is the official fallback; Eurosport/Discovery should be shown in supported European regions. |
+| Darts | PDC TV, Sky Sports, DAZN Canada | Global, UK/Ireland, Canada | PDC TV is the official route for generic darts; Sky/DAZN are useful regional routes where rights match. |
+| Track / athletics | World Athletics Watch, Peacock/NBC Olympics/CBC/BBC/Discovery for Olympic properties | Global official hub, Olympics by region | World Athletics says event live streams can be geo-restricted and directs users to event "where to watch" pages; use the official Watch hub as the safe generic destination. |
+| Esports | LoL Esports, VALORANT Twitch, BLAST Premier Twitch, ESL CS Twitch | Global official/organizer channels | Use official league/organizer channels only; do not use restreams. |
+
+## Ticketing Infrastructure
+
+Ticket buttons are separate from broadcast rights. They are not factual broadcasters and should be presented as ticket-search helpers with availability/fees caveats.
+
+Current frontend routes:
+
+- `src/data/ticketLinks.ts` builds provider links from `title + leagueName + venue`.
+- Ticketmaster is the primary provider with regional direct-search domains for US, Canada, UK/Ireland, Australia, New Zealand, and Mexico.
+- StubHub, SeatGeek, and Vivid Seats remain secondary marketplace searches where supported.
+- Affiliate swaps are environment-only: set `VITE_TICKET_AFFILIATE_TICKETMASTER`, `VITE_TICKET_AFFILIATE_STUBHUB`, etc. to an approved full affiliate URL when accepted. Do not hardcode affiliate URLs.
+
+Render surfaces:
+
+- `src/pages/EventDetail.tsx` renders the full ticket panel.
+- `src/pages/SportPage.tsx` renders compact ticket buttons inside expanded quick details.
+- `src/components/MatchCard.tsx` renders compact ticket buttons inside expanded World Cup ticket stubs.
 
 ## Implementation Notes
 
@@ -124,3 +152,16 @@ and pass `prefs.broadcastRegion || prefs.regionCode` as `regionCode` so region f
 - Wimbledon TV coverage: https://www.wimbledon.com/en_GB/about/tv_coverage
 - ICC Men's T20 World Cup 2026 official broadcasters: https://www.icc-cricket.com/tournaments/mens-t20-world-cup-2026/official-broadcasters
 - World Table Tennis live video: https://www.worldtabletennis.com/livevideo
+- WNBA 2026 national broadcast schedule: https://www.wnba.com/news/broadcast-schedule-release-2026
+- PWHL where to watch: https://www.thepwhl.com/en/where-to-watch
+- CFL 2026 broadcast schedule: https://www.cfl.ca/2026-cfl-broadcast-schedule/
+- ATP TV schedule: https://www.atptour.com/en/tournaments/tv-schedule
+- RugbyPass TV: https://rugbypass.tv/
+- Volleyball World / VBTV: https://tv.volleyballworld.com/
+- World Snooker Tour watch live: https://www.wst.tv/watch-live/
+- World Athletics watch live: https://worldathletics.org/watch/live
+- UFC Fight Pass: https://www.ufcfightpass.com/
+- LoL Esports: https://lolesports.com/
+- VALORANT Twitch: https://www.twitch.tv/valorant
+- BLAST Premier Twitch: https://www.twitch.tv/blastpremier
+- ESL CS Twitch: https://www.twitch.tv/eslcs

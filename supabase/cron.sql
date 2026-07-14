@@ -67,12 +67,13 @@ select cron.schedule(
   $$
 );
 
--- PandaScore esports hydration every 30 minutes. One upcoming-matches call per game per tick
--- (LoL/Dota2/CS/COD/R6), well under the ~1k req/hour Schedules-plan limit. Requires the
--- PANDASCORE_TOKEN edge-function secret.
+-- PandaScore esports hydration hourly (at :21, offset from the other hydrators). One
+-- upcoming-matches call per game per tick (LoL/Dota2/CS/COD/R6), well under the ~1k req/hour
+-- Schedules-plan limit. Esports schedules rarely move intra-hour, so hourly keeps freshness while
+-- halving the DB write footprint. Requires the PANDASCORE_TOKEN edge-function secret.
 select cron.schedule(
   'provider-hydrate-pandascore',
-  '*/30 * * * *',
+  '21 * * * *',
   $$
   select net.http_post(
     url := 'https://<project-ref>.supabase.co/functions/v1/provider-hydrate-pandascore',

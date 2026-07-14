@@ -89,6 +89,7 @@ export function EventDetailPage() {
     ? `${formatLongDate(event.startsAt, prefs.timezone, timeOpts)} · ${formatTime(event.startsAt, prefs.timezone, timeOpts)}`
     : t('event.timeTbd', undefined, prefs.locale)
   const venue = [event.venue, event.venueCity, event.venueCountry].filter(Boolean).join(', ')
+  const ticketmasterEventUrl = ticketUrlFromMetadata(event.metadata)
   const leagueFollowed = event.leagueId ? followedLeagueIds.includes(event.leagueId) : false
   const regionCode = prefs.regionCode
 
@@ -275,8 +276,11 @@ export function EventDetailPage() {
         <TicketOptionsPanel
           title={event.title}
           leagueName={event.leagueName}
-          venue={event.venue}
+          venue={venue}
           regionCode={prefs.regionCode}
+          eventId={event.id}
+          placement="web-event-detail"
+          ticketmasterUrl={ticketmasterEventUrl}
         />
       </Panel>
     </div>
@@ -397,6 +401,14 @@ function factFromMetadata(metadata: Record<string, unknown>, key: string, label:
 function readableFact(value: string) {
   if (value.toLowerCase() === 'thesportsdb') return 'TheSportsDB'
   return value.replace(/_/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase())
+}
+
+function ticketUrlFromMetadata(metadata: Record<string, unknown>) {
+  for (const key of ['ticketmaster_url', 'ticket_url', 'tickets_url']) {
+    const value = metadata[key]
+    if (typeof value === 'string' && value.trim()) return value.trim()
+  }
+  return null
 }
 
 // disclosure. Useful even unmonetized — it answers "where could I watch this?".

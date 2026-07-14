@@ -86,6 +86,17 @@ Email alerts need a Resend account, a verified sending domain, and these functio
 supabase secrets set RESEND_API_KEY=<resend-api-key> EMAIL_FROM="Silbo Sports <alerts@yourdomain>"
 ```
 
+Approved Ticketmaster links can also be added to reminder emails as regional function secrets. Use the
+full Impact `/c/{partner}/{ad}/{campaign}` URL; the notification worker supplies the event destination and
+reporting Sub IDs automatically:
+
+```powershell
+supabase secrets set TICKETMASTER_AFFILIATE_US="<full-impact-link>" TICKETMASTER_AFFILIATE_CA="<full-impact-link>"
+```
+
+See `docs/monetization-ticket-affiliates.md` for the complete territory map, disclosure rules, and rollout
+checklist. Ticket buttons are omitted when a matching approved regional secret is absent.
+
 The deployed notification worker also accepts `RESENDAPI` for compatibility with the current
 dashboard secret name. Prefer `RESEND_API_KEY` for new environments.
 

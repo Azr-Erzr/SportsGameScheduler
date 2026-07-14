@@ -1,6 +1,7 @@
 import type { PropsWithChildren, ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { brand } from '../domain/brand'
+import { useDocumentMeta } from '../lib/seo'
 
 // Public legal surfaces required before a public beta that collects emails, sends magic links,
 // and (soon) serves ads. Content is written to match what the app actually does — see
@@ -50,6 +51,13 @@ function Section({ id, heading, children }: PropsWithChildren<{ id: string; head
 }
 
 export function PrivacyPage() {
+  useDocumentMeta({
+    title: 'Privacy Policy - Silbo Sports',
+    description:
+      'How Silbo Sports handles account details, schedules, alerts, cookies, advertising consent, and your privacy choices.',
+    canonicalPath: '/privacy',
+  })
+
   return (
     <LegalLayout
       title="Privacy Policy"
@@ -151,6 +159,13 @@ export function PrivacyPage() {
 }
 
 export function TermsPage() {
+  useDocumentMeta({
+    title: 'Terms of Service - Silbo Sports',
+    description:
+      'The terms for using Silbo Sports schedules, calendar exports, reminders, community leagues, and third-party links.',
+    canonicalPath: '/terms',
+  })
+
   return (
     <LegalLayout
       title="Terms of Service"

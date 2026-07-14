@@ -7,8 +7,8 @@
 // AI engines no citable facts. That kills the most viral surface during a tournament (links
 // dropped in group chats) and starves answer engines of schedule data.
 //
-// This Worker runs FIRST only for the entity routes /events/*, /leagues/*, /sports/*, /teams/*
-// (see `run_worker_first` in wrangler.jsonc). For those it fetches the static shell, looks the
+// This Worker runs first for every request so HTTP and www variants can be redirected to the one
+// canonical HTTPS host. For entity routes it fetches the static shell, looks the
 // entity up in Supabase, rewrites title/description/canonical/OG/Twitter, and injects a plain-text
 // fixture list (matches, local-time note, where-to-watch, add-to-calendar) plus sport→league→team
 // →event internal links into the body. React replaces #root on hydration, so real users never see
@@ -112,8 +112,15 @@ const CANON_TO_ROUTE: Record<string, string> = Object.fromEntries(
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
+    const requestUrl = new URL(request.url)
+    if (requestUrl.protocol !== 'https:' || requestUrl.hostname === 'www.silbosports.com') {
+      requestUrl.protocol = 'https:'
+      requestUrl.hostname = 'silbosports.com'
+      return Response.redirect(requestUrl.toString(), 308)
+    }
+
     if (request.method === 'GET' || request.method === 'HEAD') {
-      const { pathname } = new URL(request.url)
+      const { pathname } = requestUrl
       const entity =
         idFrom(pathname, 'events', 'event') ??
         idFrom(pathname, 'leagues', 'league') ??
@@ -307,6 +314,7 @@ type EventRow = {
   starts_at: string | null
   starts_at_tbd: boolean | null
   status: string | null
+  kind: string | null
   league_id: string | null
   leagues: { name: string | null } | null
   sports: { key: string | null } | null
@@ -324,7 +332,16 @@ function eventStatusUrl(status: string | null): string {
 }
 
 function performerType(kind: string | null): string {
-  return kind === 'person' ? 'Person' : 'SportsTeam'
+  return kind === 'person' ? 'Person' : 'PerformingGroup'
+}
+
+function inferredMatchPerformers(title: string): Array<{ '@type': string; name: string }> {
+  const names = title
+    .split(/\s+(?:vs\.?|versus|v\.?)\s+/i)
+    .map((name) => name.trim())
+    .filter(Boolean)
+  if (names.length !== 2 || names.some((name) => /^(?:tbd|tbc|unknown)$/i.test(name))) return []
+  return names.map((name) => ({ '@type': 'PerformingGroup', name }))
 }
 
 function eventStructuredData(row: EventRow, performers: Array<{ name: string; kind: string | null }>): Record<string, unknown> | undefined {
@@ -334,11 +351,13 @@ function eventStructuredData(row: EventRow, performers: Array<{ name: string; ki
   const url = `${ORIGIN}/events/${row.id}`
   const end = new Date(start.getTime() + (SPORT_TIMING_MINUTES[row.sports?.key ?? ''] ?? 120) * 60_000)
   const venue = row.venues
-  const mappedPerformers = performers.map((performer) => ({ '@type': performerType(performer.kind), name: performer.name }))
-  const location = venue?.name
+  const explicitPerformers = performers.map((performer) => ({ '@type': performerType(performer.kind), name: performer.name }))
+  const mappedPerformers = explicitPerformers.length ? explicitPerformers : inferredMatchPerformers(row.title)
+  const location =
+    venue?.name || venue?.city || venue?.country
     ? {
         '@type': 'Place',
-        name: venue.name,
+        name: venue.name || venue.city || row.leagues?.name || 'Venue to be confirmed',
         address:
           venue.city || venue.country
             ? {
@@ -348,7 +367,8 @@ function eventStructuredData(row: EventRow, performers: Array<{ name: string; ki
               }
             : venue.name,
       }
-    : { '@type': 'VirtualLocation', url }
+    : null
+  if (!location || !mappedPerformers.length) return undefined
   const descriptionParts = [
     row.title,
     row.leagues?.name ? `in ${row.leagues.name}` : null,
@@ -364,10 +384,15 @@ function eventStructuredData(row: EventRow, performers: Array<{ name: string; ki
     startDate: start.toISOString(),
     endDate: end.toISOString(),
     eventStatus: eventStatusUrl(row.status),
-    eventAttendanceMode: venue?.name ? 'https://schema.org/OfflineEventAttendanceMode' : 'https://schema.org/MixedEventAttendanceMode',
+    eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
     location,
-    ...(mappedPerformers.length ? { performer: mappedPerformers, competitor: mappedPerformers } : {}),
-    ...(row.leagues?.name ? { organizer: { '@type': 'Organization', name: row.leagues.name } } : {}),
+    performer: mappedPerformers,
+    competitor: mappedPerformers,
+    organizer: {
+      '@type': 'Organization',
+      name: row.leagues?.name || 'Silbo Sports',
+      url: row.league_id ? `${ORIGIN}/leagues/${row.league_id}` : ORIGIN,
+    },
     offers: {
       '@type': 'Offer',
       name: 'Free Silbo Sports schedule page',
@@ -384,7 +409,7 @@ function eventStructuredData(row: EventRow, performers: Array<{ name: string; ki
 async function eventMeta(env: Env, id: string): Promise<Meta | null> {
   const rows = await supabaseSelect<EventRow>(
     env,
-    `events?id=eq.${encodeURIComponent(id)}&select=id,title,starts_at,starts_at_tbd,status,league_id,leagues(name),sports(key),venues(name,city,country)&limit=1`,
+    `events?id=eq.${encodeURIComponent(id)}&select=id,title,starts_at,starts_at_tbd,status,kind,league_id,leagues(name),sports(key),venues(name,city,country)&limit=1`,
   )
   const row = rows?.[0]
   if (!row?.title) return null

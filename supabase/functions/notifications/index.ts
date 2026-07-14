@@ -6,6 +6,11 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { alertCopyFor } from '../_shared/alert-copy.ts'
 import { renderSilboAlertEmail, type WatchOption } from '../_shared/email-template.ts'
+import {
+  buildTicketmasterEmailLink,
+  ticketmasterContractEnvKey,
+  ticketUrlFromMetadata,
+} from '../_shared/ticket-links.ts'
 import { encryptWebPushPayload } from '../_shared/web-push.ts'
 
 const supabase = createClient(
@@ -38,6 +43,7 @@ type EventForAlert = {
   venues: { name: string | null } | null
   leagues: { name: string | null } | null
   sports: { key: string | null } | null
+  metadata: Record<string, unknown> | null
 }
 
 // Last line of defense against alerting on concluded events (the DB trigger, materializer, and
@@ -123,11 +129,36 @@ function buildCalendarUrl(title: string, startsAt: string | null, venue: string 
   return `https://calendar.google.com/calendar/render?${params.toString()}`
 }
 
-// Region for where-to-watch: profiles only stores locale + timezone, so mirror the app and derive
-// the country from the locale (en-US → US), defaulting to US.
-function regionFromLocale(locale: string | null | undefined) {
-  const part = locale?.split('-')[1]
+// Region for watch and ticket links. Prefer a recognized timezone because browser language can be
+// en-US outside the US; then use the locale region and finally the existing US default.
+const TIMEZONE_REGIONS: Record<string, string> = {
+  'America/Edmonton': 'CA',
+  'America/Halifax': 'CA',
+  'America/Regina': 'CA',
+  'America/St_Johns': 'CA',
+  'America/Toronto': 'CA',
+  'America/Vancouver': 'CA',
+  'America/Winnipeg': 'CA',
+  'Europe/Dublin': 'IE',
+  'Europe/London': 'GB',
+  'Pacific/Auckland': 'NZ',
+}
+
+function regionFromProfile(locale: string | null | undefined, timezone: string | null | undefined) {
+  const timezoneRegion = timezone ? TIMEZONE_REGIONS[timezone] : undefined
+  if (timezoneRegion) return timezoneRegion
+  if (timezone?.startsWith('Australia/')) return 'AU'
+  const part = locale?.split(/[-_]/)[1]
   return (part || 'US').toUpperCase()
+}
+
+function ticketmasterTrackingUrl(region: string) {
+  const regional = Deno.env.get(ticketmasterContractEnvKey(region))
+  if (regional) return regional
+  // The generic Ticketmaster agreement is the North American fallback. Other territories need
+  // their own campaign link so clicks do not cross program or allowed-domain boundaries.
+  if (region === 'US' || region === 'CA') return Deno.env.get('TICKETMASTER_AFFILIATE_DEFAULT')
+  return undefined
 }
 
 // Official where-to-watch destinations from the DB (watch_links + watch_providers), scoped to the
@@ -187,7 +218,7 @@ async function sendReminderEmail(delivery: Delivery) {
     supabase.auth.admin.getUserById(delivery.user_id),
     supabase
       .from('events')
-      .select('title, status, starts_at, timezone, league_id, venues(name), leagues(name), sports(key)')
+      .select('title, status, starts_at, timezone, league_id, metadata, venues(name), leagues(name), sports(key)')
       .eq('id', delivery.event_id)
       .single(),
     supabase
@@ -211,11 +242,24 @@ async function sendReminderEmail(delivery: Delivery) {
     throw new SkipDelivery(`Event already started or finished (${row.status}, ${row.starts_at})`)
   }
   const prefs = (profile ?? {}) as { default_timezone: string | null; locale: string | null; hour12: boolean | null }
-  const region = regionFromLocale(prefs.locale)
+  const region = regionFromProfile(prefs.locale, prefs.default_timezone)
   const manageUrl = `${APP_URL}/settings/alerts`
   const eventUrl = `${APP_URL}/events/${delivery.event_id}`
   const watch = await fetchWatchOptions(delivery.event_id, row.league_id, row.sports?.key ?? null, region)
   const calendarUrl = buildCalendarUrl(row.title, row.starts_at, row.venues?.name ?? null, eventUrl)
+  const ticket =
+    delivery.kind === 'cancellation' || row.status === 'cancelled' || row.status === 'postponed'
+      ? null
+      : buildTicketmasterEmailLink({
+          trackingUrl: ticketmasterTrackingUrl(region),
+          region,
+          title: row.title,
+          leagueName: row.leagues?.name ?? null,
+          venue: row.venues?.name ?? null,
+          eventId: delivery.event_id,
+          ticketmasterUrl: ticketUrlFromMetadata(row.metadata),
+          placement: `email-${delivery.kind}`,
+        })
 
   const copy = alertCopyFor(
     delivery.kind,
@@ -249,6 +293,7 @@ async function sendReminderEmail(delivery: Delivery) {
     region,
     watch,
     calendarUrl,
+    ticket,
   })
 
   const request: RequestInit = {

@@ -5,6 +5,7 @@ import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import './styles/tailwind.css'
 import { AppShell } from './app/AppShell'
 import { AppStateProvider } from './app/state'
+import { registerServiceWorker } from './lib/pwa'
 
 function applyRuntimeBrowserFlags() {
   const isFirefox = /\b(Firefox|FxiOS|Focus)\//.test(navigator.userAgent)
@@ -15,6 +16,7 @@ function applyRuntimeBrowserFlags() {
 }
 
 applyRuntimeBrowserFlags()
+registerServiceWorker()
 
 window.matchMedia?.('(prefers-reduced-motion: reduce)').addEventListener('change', applyRuntimeBrowserFlags)
 

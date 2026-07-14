@@ -203,17 +203,6 @@ export function TournamentCapsule({
   )
 }
 
-// Per-card pip start positions: each pip begins scattered up in the "orbit" zone above the
-// cards and scroll-lands onto its card (see .poster-pip + pip-land in tailwind.css).
-const PIP_ORBITS: Array<{ x: number; y: number }> = [
-  { x: -120, y: -300 },
-  { x: 96, y: -250 },
-  { x: -54, y: -340 },
-  { x: 132, y: -288 },
-  { x: -150, y: -262 },
-  { x: 40, y: -322 },
-]
-
 // Memoized so a change to the board's active index only re-renders the two cards whose
 // `active` flips — not all ~11 cards (each of which renders a sport asset). Without this,
 // sweeping the mouse across the board re-rendered the whole stack on every pointer move.
@@ -221,44 +210,39 @@ const EventPosterCard = memo(function EventPosterCard({
   event,
   index,
   active = false,
-  iconVariant,
   onActivate,
 }: {
   event: PosterEvent
   index: number
   active?: boolean
-  iconVariant: 'brush' | 'neon3d'
   onActivate?: (index: number) => void
 }) {
   const theme = getTheme(event.sportKey)
   const focus = onActivate ? () => onActivate(index) : undefined
-  const orbit = PIP_ORBITS[index % PIP_ORBITS.length]
   const wrapperStyle = {
     '--poster-primary': theme.colors.primary,
     '--poster-accent': theme.colors.accent,
-    '--pip-x': `${orbit.x}px`,
-    '--pip-y': `${orbit.y}px`,
-    // Used by the non-Chromium entrance fallback to stagger each pip's land-in.
-    '--pip-index': index,
   } as CSSProperties
+  const sportLabel = getSport(event.sportKey)?.label ?? theme.label
 
   const inner = (
-    <>
-      <span className={`poster-pip ${active ? 'is-active' : ''}`} aria-hidden="true">
-        <SportAssetIcon sportKey={event.sportKey} size="xs" variant={iconVariant} />
-      </span>
-      <article className={`event-poster-card ${active ? 'is-active' : ''}`}>
-        <div className="event-poster-art" aria-hidden="true">
-          <span className="event-poster-number">{String(index + 1).padStart(2, '0')}</span>
-          <EventBlueprint sportKey={event.sportKey} />
-        </div>
+    <article className={`event-poster-card ${active ? 'is-active' : ''}`}>
+      <div className="event-poster-art" aria-hidden="true">
+        <span className="event-poster-number">{String(index + 1).padStart(2, '0')}</span>
+        <EventBlueprint sportKey={event.sportKey} />
+      </div>
+      <div className="event-poster-copy">
         <div>
           <p>{event.label}</p>
           <h3>{event.title}</h3>
           <span>{event.detail}</span>
         </div>
-      </article>
-    </>
+        <em>
+          {sportLabel}
+          <ArrowRight size={13} />
+        </em>
+      </div>
+    </article>
   )
 
   return event.href ? (
@@ -279,6 +263,48 @@ function fitCount(containerWidth: number, viewportWidth: number, variant: 'compa
   const cardW = variant === 'room' ? Math.min(285, Math.max(230, viewportWidth * 0.19)) : 210
   const n = Math.floor((containerWidth + gap) / (cardW + gap))
   return Math.max(1, Math.min(n, total))
+}
+
+export function SpotlightRail({ events }: { events: PosterEvent[] }) {
+  const { prefs } = useAppState()
+  const iconVariant = prefs.themeMode === 'program' ? 'brush' : 'neon3d'
+  const visibleEvents = events.slice(0, 6)
+
+  if (!visibleEvents.length) return null
+
+  return (
+    <section className="site-spotlight-rail" aria-labelledby="site-spotlight-title">
+      <div className="site-spotlight-header">
+        <div>
+          <p className="board-label text-neon-magenta">Around the schedules</p>
+          <h2 id="site-spotlight-title">Big games coming up</h2>
+        </div>
+        <Link to="/explore">
+          Explore all <ArrowRight size={14} />
+        </Link>
+      </div>
+      <div className="site-spotlight-grid">
+        {visibleEvents.map((event) => {
+          const theme = getTheme(event.sportKey)
+          return (
+            <Link
+              key={`${event.sportKey}-${event.title}`}
+              to={event.href ?? '/explore'}
+              className="site-spotlight-card"
+              style={{ '--spotlight-primary': theme.colors.primary, '--spotlight-accent': theme.colors.accent } as CSSProperties}
+            >
+              <SportAssetIcon sportKey={event.sportKey} size="sm" variant={iconVariant} />
+              <div>
+                <p>{event.label}</p>
+                <strong>{event.title}</strong>
+                <span>{event.detail}</span>
+              </div>
+            </Link>
+          )
+        })}
+      </div>
+    </section>
+  )
 }
 
 export function GlobalEventBoard({ events, variant = 'compact' }: { events: PosterEvent[]; variant?: 'compact' | 'room' }) {
@@ -396,7 +422,6 @@ export function GlobalEventBoard({ events, variant = 'compact' }: { events: Post
             event={event}
             index={index}
             active={index === activeIndex}
-            iconVariant={iconVariant}
             onActivate={activate}
           />
         ))}

@@ -29,6 +29,7 @@ const staticRoutes = [
     description: 'Your followed teams, leagues, players, drivers, and fighters in one local-time schedule.',
     priority: '0.6',
     changefreq: 'daily',
+    robots: 'noindex, follow',
   },
   {
     path: '/calendar',
@@ -43,6 +44,7 @@ const staticRoutes = [
     description: 'Create and share local league schedules for families, teams, clubs, and community sports.',
     priority: '0.5',
     changefreq: 'monthly',
+    robots: 'noindex, follow',
   },
   {
     path: '/about',
@@ -75,6 +77,22 @@ const staticRoutes = [
       'News and explainers on the leagues, teams, and events you follow, each linking to the local-time schedule and where to watch on Silbo Sports.',
     priority: '0.6',
     changefreq: 'daily',
+  },
+  {
+    path: '/privacy',
+    title: 'Privacy Policy - Silbo Sports',
+    description:
+      'How Silbo Sports handles account details, schedules, alerts, cookies, advertising consent, and your privacy choices.',
+    priority: '0.3',
+    changefreq: 'monthly',
+  },
+  {
+    path: '/terms',
+    title: 'Terms of Service - Silbo Sports',
+    description:
+      'The terms for using Silbo Sports schedules, calendar exports, reminders, community leagues, and third-party links.',
+    priority: '0.3',
+    changefreq: 'monthly',
   },
 ]
 
@@ -193,6 +211,95 @@ function ssrSection(heading, innerHtml) {
   )
 }
 
+function paragraphsHtml(paragraphs) {
+  return paragraphs.map((paragraph) => `<p>${escapeXml(paragraph)}</p>`).join('')
+}
+
+function staticPageBody(routePath, blogBody = '') {
+  const bodies = {
+    '/': ssrSection(
+      'Silbo Sports - every game, in your calendar',
+      paragraphsHtml([
+        'Silbo Sports brings fixtures from the teams, leagues, tournaments, races, and fight cards you follow into one personal schedule. Every start time is converted to your local timezone, with calendar sync, reminders, exports, and regional where-to-watch links.',
+        'The service covers soccer, basketball, American football, hockey, baseball, tennis, golf, motorsport, combat sports, athletics, Olympic sports, cricket, rugby, cycling, and esports. Schedules are best-effort and should be confirmed with an official source before travel or purchases.',
+      ]) +
+        '<p><a href="/explore">Explore sports schedules</a> | <a href="/how-it-works">How Silbo Sports works</a> | <a href="/about">About Silbo Sports</a></p>',
+    ),
+    '/explore': ssrSection(
+      'Explore sports schedules',
+      paragraphsHtml([
+        'Browse upcoming events by sport, then follow the competitions and teams you care about. Silbo Sports converts each published start time to your local timezone and lets you add fixtures to your calendar or set a reminder.',
+      ]) +
+        `<ul>${sportRoutes.map((route) => `<li><a href="${escapeXml(route.path)}">${escapeXml(route.title.replace(' - Silbo Sports', ''))}</a></li>`).join('')}</ul>`,
+    ),
+    '/calendar': ssrSection(
+      'Live sports calendar sync',
+      paragraphsHtml([
+        'A Silbo calendar subscription is a private feed of the teams and leagues you follow. Add it once to Apple Calendar, Google Calendar, Outlook, or another calendar app and future schedule changes can update the same entries instead of requiring a new download.',
+        'You choose what appears in the feed and can revoke or regenerate its private address from Silbo Sports. For a single fixture, use the one-time calendar download on that event page instead.',
+      ]) + '<p><a href="/how-it-works">Read how schedule sync works</a></p>',
+    ),
+    '/about': ssrSection(
+      'About Silbo Sports',
+      '<h2>Why we built it</h2>' +
+        paragraphsHtml([
+          'Following more than one sport means juggling schedules published on different sites, in different formats and timezones. Silbo Sports removes that arithmetic by assembling the events you choose into one local-time schedule.',
+          'Follow teams, leagues, players, drivers, fighters, and tournaments across sports. You can sync upcoming events to a calendar, export a schedule, share it, or receive an optional reminder before the start.',
+        ]) +
+        '<h2>Coverage and accuracy</h2>' +
+        paragraphsHtml([
+          'Silbo covers major professional, international, college, federation, and community sports. Times, venues, and broadcast details are aggregated from public or licensed third-party sources and may change, so important travel and purchase decisions should be confirmed with the official organizer.',
+          'Silbo Sports is free. Advertising loads only after advertising consent, affiliate destinations are labelled, and paid ads are kept off community and custom-league surfaces.',
+        ]),
+    ),
+    '/how-it-works': ssrSection(
+      'How Silbo Sports works',
+      '<h2>1. Follow what you care about</h2>' +
+        paragraphsHtml(['Choose teams, leagues, players, drivers, fighters, or tournaments across multiple sports. An account is optional; signing in syncs your choices across devices.']) +
+        '<h2>2. See every start in your local timezone</h2>' +
+        paragraphsHtml(['Silbo converts each published kickoff, tip-off, first pitch, race start, and fight card to your selected timezone. Event pages also show available venue and regional broadcast information.']) +
+        '<h2>3. Sync, export, or get reminded</h2>' +
+        paragraphsHtml(['Download one event, subscribe to a private updating calendar feed, export a schedule as an image or text, or opt into an email or push reminder.']) +
+        '<p><a href="/explore">Explore sports schedules</a> | <a href="/faq">Read common questions</a></p>',
+    ),
+    '/faq': ssrSection(
+      'Silbo Sports frequently asked questions',
+      '<h2>Is Silbo Sports free?</h2><p>Yes. The service is supported by consent-gated advertising and clearly labelled affiliate links.</p>' +
+        '<h2>Do I need an account?</h2><p>No. Your choices can stay in your browser; signing in adds cross-device sync and optional alerts.</p>' +
+        '<h2>How accurate are schedules?</h2><p>Schedules are best-effort and may change. Confirm important details with the official league, team, venue, or broadcaster.</p>' +
+        '<h2>How does calendar sync work?</h2><p>A private subscription feed can update existing calendar entries when a published time changes. One-time downloads do not update automatically.</p>' +
+        '<h2>What data is collected?</h2><p>Without an account, preferences stay in local browser storage. Signed-in accounts store the information needed to sync follows and deliver alerts you request. Advertising cookies do not load before consent.</p>' +
+        '<p><a href="/privacy">Read the Privacy Policy</a> | <a href="/about">About Silbo Sports</a></p>',
+    ),
+    '/privacy': ssrSection(
+      'Silbo Sports Privacy Policy',
+      paragraphsHtml([
+        'You can use Silbo Sports without an account, in which case follows and display preferences stay in your browser. If you sign in, Silbo stores your email, follows, preferences, calendar-feed settings, and alerts needed to provide the features you request.',
+        'Silbo Sports does not sell personal data. Advertising technology is not loaded until advertising consent is given. Google AdSense and other disclosed service providers may process identifiers according to their own policies when their features are enabled.',
+        'You can decline advertising cookies and continue using the service. Account data and private calendar-feed access can be managed from the account page. Privacy questions can be sent to privacy@silbosports.com.',
+      ]),
+    ),
+    '/terms': ssrSection(
+      'Silbo Sports Terms of Service',
+      paragraphsHtml([
+        'Silbo Sports provides schedules, timezone conversion, calendar exports, reminders, and third-party destination links on a best-effort basis. Event times, venues, participants, and broadcast availability can change without notice and should be confirmed with the official source before travel or purchases.',
+        'Users are responsible for content they publish through community league features and must have permission to share it. Silbo may remove unlawful, abusive, misleading, or privacy-invasive content and may suspend access that harms the service or other users.',
+        'Third-party broadcaster, ticket, and affiliate links are provided for convenience. Their services, availability, prices, and policies are controlled by those third parties. Questions can be sent to privacy@silbosports.com.',
+      ]),
+    ),
+  }
+
+  if (routePath === '/blog') {
+    return ssrSection(
+      'Silbo Sports articles and schedule explainers',
+      paragraphsHtml([
+        'Original Silbo Sports articles explain major schedule releases, local start times, calendar planning, and where-to-watch details. Each article is reviewed before publication and links back to the relevant live schedule.',
+      ]) + (blogBody || '<p>New articles are being prepared.</p>'),
+    )
+  }
+  return bodies[routePath] ?? null
+}
+
 function readEnvFile() {
   return fs
     .readFile(path.join(root, '.env'), 'utf8')
@@ -260,6 +367,9 @@ function injectMeta(baseHtml, route) {
   html = setTag(html, /<meta\s+property="og:description"\s+content="[^"]*"\s*\/?>/, `<meta property="og:description" content="${escapeXml(route.description)}" />`)
   html = setTag(html, /<meta\s+name="twitter:title"\s+content="[^"]*"\s*\/?>/, `<meta name="twitter:title" content="${escapeXml(route.title)}" />`)
   html = setTag(html, /<meta\s+name="twitter:description"\s+content="[^"]*"\s*\/?>/, `<meta name="twitter:description" content="${escapeXml(route.description)}" />`)
+  if (route.robots) {
+    html = setTag(html, /<meta\s+name="robots"\s+content="[^"]*"\s*\/?>/, `<meta name="robots" content="${escapeXml(route.robots)}" />`)
+  }
   return html
 }
 
@@ -285,7 +395,16 @@ function eventStatusUrl(status) {
 }
 
 function performerType(kind) {
-  return kind === 'person' ? 'Person' : 'SportsTeam'
+  return kind === 'person' ? 'Person' : 'PerformingGroup'
+}
+
+function inferredMatchPerformers(title) {
+  const names = title
+    .split(/\s+(?:vs\.?|versus|v\.?)\s+/i)
+    .map((name) => name.trim())
+    .filter(Boolean)
+  if (names.length !== 2 || names.some((name) => /^(?:tbd|tbc|unknown)$/i.test(name))) return []
+  return names.map((name) => ({ '@type': 'PerformingGroup', name }))
 }
 
 function eventStructuredData(event, performers) {
@@ -295,9 +414,10 @@ function eventStructuredData(event, performers) {
   const url = `${origin}/events/${event.id}`
   const sportKey = event.sports?.key
   const end = new Date(start.getTime() + (SPORT_TIMING_MINUTES[sportKey] ?? 120) * 60_000)
-  const mappedPerformers = (performers ?? [])
+  const explicitPerformers = (performers ?? [])
     .filter((competitor) => competitor.name)
     .map((competitor) => ({ '@type': performerType(competitor.kind), name: competitor.name }))
+  const mappedPerformers = explicitPerformers.length ? explicitPerformers : inferredMatchPerformers(event.title)
   const venue = event.venues
   // A SportsEvent is physical: it needs a real Place location. If we have no venue/city/country we
   // can't emit a valid one — skip the JSON-LD entirely (a page with no rich result beats an invalid
@@ -317,7 +437,7 @@ function eventStructuredData(event, performers) {
               : venue.name,
         }
       : null
-  if (!location) return null
+  if (!location || !mappedPerformers.length) return null
   const descriptionParts = [
     event.title,
     event.leagues?.name ? `in ${event.leagues.name}` : null,
@@ -335,7 +455,8 @@ function eventStructuredData(event, performers) {
     eventStatus: eventStatusUrl(event.status),
     eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
     location,
-    ...(mappedPerformers.length ? { performer: mappedPerformers, competitor: mappedPerformers } : {}),
+    performer: mappedPerformers,
+    competitor: mappedPerformers,
     organizer: {
       '@type': 'Organization',
       name: event.leagues?.name || 'Silbo Sports',
@@ -359,14 +480,14 @@ async function fetchDbRoutes() {
   await readWranglerPublicSupabaseEnv()
   const url = process.env.VITE_SUPABASE_URL
   const key = process.env.VITE_SUPABASE_PUBLISHABLE_KEY
-  if (!url || !key) return { routes: [], sportBodies: new Map() }
+  if (!url || !key) return { routes: [], sportBodies: new Map(), blogBody: '' }
 
   const supabase = createClient(url, key)
   const nowIso = new Date(Date.now() - 3 * 3600_000).toISOString()
   const [eventsRes, leaguesRes, teamsRes] = await Promise.all([
     supabase
       .from('events')
-      .select('id, title, starts_at, starts_at_tbd, status, league_id, leagues(name), sports(key), venues(name, city, country)')
+      .select('id, title, starts_at, starts_at_tbd, status, kind, league_id, leagues(name), sports(key), venues(name, city, country)')
       .eq('visibility', 'public')
       .gte('starts_at', nowIso)
       .order('starts_at', { ascending: true })
@@ -489,11 +610,16 @@ async function fetchDbRoutes() {
     changefreq: 'monthly',
   }))
 
-  return { routes: [...leagueRoutes, ...eventRoutes, ...teamRoutes, ...blogRoutes], sportBodies }
+  const blogBody = blogRoutes.length
+    ? `<ul>${blogRoutes.map((route) => `<li><a href="${escapeXml(route.path)}">${escapeXml(route.description)}</a></li>`).join('')}</ul>`
+    : ''
+
+  return { routes: [...leagueRoutes, ...eventRoutes, ...teamRoutes, ...blogRoutes], sportBodies, blogBody }
 }
 
 async function writeSitemap(routes) {
   const urls = routes
+    .filter((route) => !route.robots?.includes('noindex'))
     .map(
       (route) =>
         `  <url><loc>${escapeXml(`${origin}${route.path === '/' ? '/' : route.path}`)}</loc><changefreq>${route.changefreq}</changefreq><priority>${route.priority}</priority></url>`,
@@ -506,7 +632,7 @@ async function writeSitemap(routes) {
 }
 
 const baseHtml = await fs.readFile(path.join(distDir, 'index.html'), 'utf8')
-const { routes: dbRoutes, sportBodies } = await fetchDbRoutes()
+const { routes: dbRoutes, sportBodies, blogBody } = await fetchDbRoutes()
 
 // Attach the live fixture body to each static /sports shell (the path the Worker serves on error).
 const sportRoutesWithBodies = sportRoutes.map((route) => {
@@ -515,7 +641,12 @@ const sportRoutesWithBodies = sportRoutes.map((route) => {
   return inner ? { ...route, bodyHtml: ssrSection(route.title.replace(' - Silbo Sports', ''), inner) } : route
 })
 
-const routes = [...staticRoutes, ...sportRoutesWithBodies, ...dbRoutes]
+const staticRoutesWithBodies = staticRoutes.map((route) => ({
+  ...route,
+  bodyHtml: staticPageBody(route.path, blogBody),
+}))
+
+const routes = [...staticRoutesWithBodies, ...sportRoutesWithBodies, ...dbRoutes]
 await Promise.all(routes.map((route) => writeRouteHtml(baseHtml, route)))
 await writeSitemap(routes)
 await writeBrandAssets(distDir, { rootDir: root })

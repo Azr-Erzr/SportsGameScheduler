@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import { alertCopyFor, normalizeAlertKind } from '../../../supabase/functions/_shared/alert-copy'
-import { renderSilboAlertEmail } from '../../../supabase/functions/_shared/email-template'
+import { AFFILIATE_DISCLOSURE, renderSilboAlertEmail } from '../../../supabase/functions/_shared/email-template'
+import { buildTicketmasterEmailLink } from '../../../supabase/functions/_shared/ticket-links'
 
 describe('alert copy', () => {
   test('renders participant/bracket updates as matchup-set alerts', () => {
@@ -52,5 +53,40 @@ describe('alert copy', () => {
     expect(email.html).toContain('Silbo Sports')
     expect(email.html).toContain('View event')
     expect(email.html).toContain('BMO Field')
+  })
+
+  test('renders an event-specific paid Ticketmaster link with an adjacent disclosure', () => {
+    const event = {
+      title: 'Buffalo Bills vs Miami Dolphins',
+      starts_at: '2026-09-20T17:00:00.000Z',
+      timezone: 'America/New_York',
+      venue_name: 'Highmark Stadium',
+      league_name: 'NFL',
+    }
+    const copy = alertCopyFor('new_event', event, 'https://silbosports.com/settings/alerts')
+    const ticket = buildTicketmasterEmailLink({
+      trackingUrl: 'https://ticketmaster.evyy.net/c/7423477/123456/4272',
+      region: 'US',
+      title: event.title,
+      leagueName: event.league_name,
+      venue: event.venue_name,
+      eventId: 'event-123',
+      placement: 'email-new-event',
+    })
+    const email = renderSilboAlertEmail({
+      appUrl: 'https://silbosports.com',
+      copy,
+      event,
+      manageUrl: 'https://silbosports.com/settings/alerts',
+      ticket,
+    })
+
+    expect(ticket).not.toBeNull()
+    expect(email.text).toContain('Tickets (paid link): Ticketmaster')
+    expect(email.text).toContain(AFFILIATE_DISCLOSURE)
+    expect(email.html).toContain('Check Ticketmaster')
+    expect(email.html).toContain('<strong>Paid link:</strong>')
+    expect(ticket?.url).toContain('subId1=email-new-event')
+    expect(ticket?.url).toContain('subId2=event-123')
   })
 })

@@ -1,4 +1,4 @@
-import { ArrowUpRight, Bell, Check, ChevronDown, Download, Flag, Search, Sparkles, Star, Timer, Trophy, Tv, Users, X } from 'lucide-react'
+import { ArrowUpRight, Bell, Check, ChevronDown, Download, Flag, Search, Sparkles, Star, Ticket, Timer, Trophy, Tv, Users, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useAppState } from '../app/state-context'
@@ -6,6 +6,8 @@ import { CityPicker } from '../components/CityPicker'
 import { CountryFlagMark } from '../components/CountryFlagMark'
 import { MatchCard } from '../components/MatchCard'
 import { SportChannelBanner } from '../components/SportChannelBanner'
+import { SportWatchTicketsPanel } from '../components/SportTicketsPanel'
+import { TicketOptionsPanel } from '../components/TicketOptionsPanel'
 import { WatchOptionsPanel } from '../components/WatchOptionsPanel'
 import { WatchProviderBadges } from '../components/WatchProviderBadges'
 import { Badge, Button, EmptyState, Panel, PanelHeading } from '../components/ui'
@@ -29,6 +31,7 @@ import { formatDate, formatLongDate, formatTime, relativeTimeFromNow } from '../
 
 const INDIVIDUAL_SPORTS = ['tennis', 'golf', 'athletics', 'combat_sports']
 const SCHEDULE_PAGE_SIZE = 24
+const SOCCER_SPORT = getSport('soccer')!
 
 type SeasonReturnMarker = {
   id: string
@@ -162,8 +165,6 @@ function SchedulePagination({
     </nav>
   )
 }
-
-const SKYLINE_COLORS = ['var(--mp-primary)', 'var(--mp-accent)', 'var(--color-neon-magenta)', 'var(--mp-export)']
 
 export function SportPage() {
   const { sportKey = 'soccer' } = useParams()
@@ -371,7 +372,7 @@ function WorldCupPlanner() {
   const [query, setQuery] = useState('')
   const [savedMatchKeys, setSavedMatchKeys] = useState<string[]>(() => getSavedMatchKeys())
   const [matchPager, setMatchPager] = useState({ key: 'all', page: 1 })
-  const [kitWallCollapsed, setKitWallCollapsed] = useState(false)
+  const [kitWallCollapsed, setKitWallCollapsed] = useState(true)
   const timeZone = prefs.timezone
   const { matches, source } = useMatches()
 
@@ -416,12 +417,6 @@ function WorldCupPlanner() {
     setMatchPager({ key: matchPageKey, page })
   }
 
-  // Host-city capsules: real venue counts from the full fixture list (incl. knockout slots).
-  const hostCities = useMemo(() => {
-    const counts = new Map<string, number>()
-    for (const match of allMatches) counts.set(match.ground, (counts.get(match.ground) ?? 0) + 1)
-    return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6)
-  }, [])
   const venueCount = useMemo(() => new Set(allMatches.map((match) => match.ground)).size, [])
   const confirmedTeamCount = useMemo(() => deriveTeams(matches).length, [matches])
 
@@ -470,50 +465,24 @@ function WorldCupPlanner() {
         ]}
       />
 
-      <Panel className="border-primary/20 bg-surface/85">
-        <PanelHeading title={`Where to watch in ${prefs.regionCode || 'US'}`} subtitle="Official World Cup broadcaster routes">
-          <Tv size={18} className="text-primary" />
-        </PanelHeading>
-        <WatchOptionsPanel
-          leagueName="FIFA World Cup 2026"
-          sportKey="soccer"
-          regionCode={prefs.broadcastRegion || prefs.regionCode}
-          locale={prefs.locale}
-          limit={4}
-          compact
-        />
-      </Panel>
-
-      {/* Host-city capsules (moodboard city badges) with real venue counts. */}
-      <div className="silbo-scrollbar flex snap-x gap-2.5 overflow-x-auto pb-1">
-        {hostCities.map(([city, count], index) => (
-          <div
-            key={city}
-            className="flex min-w-[120px] snap-start flex-col items-center gap-1.5 rounded-xl border-2 border-primary/20 bg-surface px-3 pb-2.5 pt-3"
-            style={{ color: SKYLINE_COLORS[index % SKYLINE_COLORS.length] }}
-          >
-            <span className="flex h-6 items-end gap-0.5" aria-hidden="true">
-              {[...city.replace(/[^A-Za-z]/g, '').slice(0, 5)].map((char, barIndex) => (
-                <i
-                  key={barIndex}
-                  className="block w-1.5 rounded-t-sm"
-                  style={{ height: `${8 + ((char.charCodeAt(0) * 7 + barIndex * 13) % 16)}px`, background: 'currentColor' }}
-                />
-              ))}
-            </span>
-            <span className="max-w-[120px] truncate text-[11px] font-bold uppercase tracking-wide text-ink">
-              {city.split(' (')[0]}
-            </span>
-            <span className="h-0.5 w-10 rounded-full" style={{ background: 'currentColor' }} aria-hidden="true" />
-            <span className="font-mono text-[9px] tracking-[0.18em] text-ink/50">{count} MATCHES</span>
-          </div>
-        ))}
-      </div>
+      <SportWatchTicketsPanel
+        sport={SOCCER_SPORT}
+        regionCode={prefs.regionCode}
+        broadcastRegionCode={prefs.broadcastRegion || prefs.regionCode}
+        placement="web-sport-soccer-tickets"
+        watchTitle="Official World Cup broadcaster routes"
+        watchSubtitle={`Region: ${(prefs.broadcastRegion || prefs.regionCode || 'US').toUpperCase()}`}
+        leagueName="FIFA World Cup 2026"
+        sportKey="soccer"
+        locale={prefs.locale}
+      />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-ink/60">Pick your nations from the kit wall.</p>
+        <p className="text-sm text-ink/60">
+          {kitWallCollapsed ? 'Open the kit wall when you want to change followed nations.' : 'Pick your nations from the kit wall.'}
+        </p>
         <div className="flex flex-wrap items-center gap-2">
-          <CityPicker />
+          <CityPicker compact />
           <Button
             variant={popularPicksActive ? 'solid' : 'subtle'}
             onClick={toggleFeatured}
@@ -717,6 +686,18 @@ function LiveSportPage({ sport }: { sport: SportInfo }) {
         ctaLabel="Sync schedule"
         ctaTo="/calendar"
         stats={stats}
+      />
+
+      <SportWatchTicketsPanel
+        sport={sport}
+        regionCode={prefs.regionCode}
+        broadcastRegionCode={prefs.broadcastRegion || prefs.regionCode}
+        placement={`web-sport-${sport.key}-tickets`}
+        watchTitle={`${sport.label} broadcaster routes`}
+        watchSubtitle="Availability varies by league and listing"
+        leagueName={sport.flagshipLeague}
+        sportKey={sport.key}
+        locale={prefs.locale}
       />
 
       {!configured ? (
@@ -2090,6 +2071,14 @@ function EventTicket({
   )
 }
 
+function ticketUrlFromMetadata(metadata: Record<string, unknown>) {
+  for (const key of ['ticketmaster_url', 'ticket_url', 'tickets_url']) {
+    const value = metadata[key]
+    if (typeof value === 'string' && value.trim()) return value.trim()
+  }
+  return null
+}
+
 function EventQuickDetails({ eventId }: { eventId: string }) {
   const { prefs, followedLeagueIds, toggleFollow } = useAppState()
   const { event, loading, configured } = useEvent(eventId)
@@ -2160,18 +2149,38 @@ function EventQuickDetails({ eventId }: { eventId: string }) {
       </dl>
 
       <div className="rounded-lg border border-dashed border-primary/25 bg-page/45 p-3">
-        <p className="mb-1 flex items-center gap-2 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-ink/55">
-          <Tv size={13} /> Where to watch
-        </p>
-        <WatchOptionsPanel
-          eventId={detail.id}
-          leagueId={detail.leagueId}
-          leagueName={detail.leagueName}
-          sportKey={detail.sportKey}
-          regionCode={prefs.broadcastRegion || prefs.regionCode}
-          locale={prefs.locale}
-          compact
-        />
+        <div className="grid gap-3 lg:grid-cols-2">
+          <section>
+            <p className="mb-1 flex items-center gap-2 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-ink/55">
+              <Tv size={13} /> Where to watch
+            </p>
+            <WatchOptionsPanel
+              eventId={detail.id}
+              leagueId={detail.leagueId}
+              leagueName={detail.leagueName}
+              sportKey={detail.sportKey}
+              regionCode={prefs.broadcastRegion || prefs.regionCode}
+              locale={prefs.locale}
+              compact
+            />
+          </section>
+          <section>
+            <p className="mb-1 flex items-center gap-2 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-ink/55">
+              <Ticket size={13} /> Tickets
+            </p>
+            <TicketOptionsPanel
+              title={detail.title}
+              leagueName={detail.leagueName}
+              venue={venue}
+              regionCode={prefs.regionCode}
+              eventId={detail.id}
+              placement="web-sport-quick-details"
+              ticketmasterUrl={ticketUrlFromMetadata(event.metadata)}
+              limit={3}
+              compact
+            />
+          </section>
+        </div>
         <p className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-ink/70">
           <Bell size={12} /> Alert settings can watch time, participant, venue, and broadcast updates.
         </p>

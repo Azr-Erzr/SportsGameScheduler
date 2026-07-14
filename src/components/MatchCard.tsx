@@ -1,4 +1,4 @@
-import { AlertTriangle, Bell, ChevronDown, Download, MapPin, RadioTower, Tv } from 'lucide-react'
+import { AlertTriangle, Bell, ChevronDown, Download, MapPin, RadioTower, Ticket, Tv } from 'lucide-react'
 import { useState } from 'react'
 import { CountryFlagMark } from './CountryFlagMark'
 import type { Match } from '../domain/match'
@@ -6,6 +6,7 @@ import type { OverlapTier } from '../lib/sportTiming'
 import { formatDate, formatLongDate, formatTime } from '../lib/time'
 import { WatchOptionsPanel } from './WatchOptionsPanel'
 import { WatchProviderBadges } from './WatchProviderBadges'
+import { TicketOptionsPanel } from './TicketOptionsPanel'
 
 // Schedule events render as TICKETS (Channel S rule): cream paper on the broadcast void,
 // deep sport-specific time stub with perforated edge, ink type. The on-screen card, the
@@ -197,22 +198,38 @@ export function MatchCard({
             </div>
           </div>
 
-          <div className="rounded-lg border border-paper-ink/15 bg-paper-ink/4 p-3">
-            <p className="mb-2 flex items-center gap-2 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-paper-ink">
-              <Tv size={13} /> Where to watch
-            </p>
-            <WatchOptionsPanel
-              leagueName="FIFA World Cup 2026"
-              sportKey="soccer"
-              regionCode={regionCode}
-              locale={locale}
-              limit={4}
-              compact
-              variant="paper"
-            />
-            <p className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-paper-ink">
-              <Bell size={12} /> Alert settings can watch time, team, venue, and watch-info changes.
-            </p>
+          <div className="space-y-3">
+            <div className="rounded-lg border border-paper-ink/15 bg-paper-ink/4 p-3">
+              <p className="mb-2 flex items-center gap-2 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-paper-ink">
+                <Tv size={13} /> Where to watch
+              </p>
+              <WatchOptionsPanel
+                leagueName="FIFA World Cup 2026"
+                sportKey="soccer"
+                regionCode={regionCode}
+                locale={locale}
+                limit={4}
+                compact
+                variant="paper"
+              />
+              <p className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-paper-ink">
+                <Bell size={12} /> Alert settings can watch time, team, venue, and watch-info changes.
+              </p>
+            </div>
+            <div className="rounded-lg border border-paper-ink/15 bg-paper-ink/4 p-3">
+              <p className="mb-2 flex items-center gap-2 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-paper-ink">
+                <Ticket size={13} /> Tickets
+              </p>
+              <TicketOptionsPanel
+                title={title}
+                leagueName="FIFA World Cup 2026"
+                venue={match.ground}
+                regionCode={regionCode}
+                placement="web-worldcup-match-card"
+                limit={3}
+                compact
+              />
+            </div>
           </div>
         </div>
       )}

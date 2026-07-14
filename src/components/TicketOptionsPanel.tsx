@@ -6,6 +6,9 @@ type TicketOptionsPanelProps = {
   leagueName?: string | null
   venue?: string | null
   regionCode?: string | null
+  eventId?: string | null
+  placement?: string | null
+  ticketmasterUrl?: string | null
   limit?: number
   compact?: boolean
 }
@@ -22,11 +25,23 @@ export function TicketOptionsPanel({
   leagueName,
   venue,
   regionCode,
+  eventId,
+  placement,
+  ticketmasterUrl,
   limit = 4,
   compact = false,
 }: TicketOptionsPanelProps) {
   const region = (regionCode ?? 'US').toUpperCase()
-  const links = ticketOptionsFor({ title, leagueName, venue, regionCode: region, limit })
+  const links = ticketOptionsFor({
+    title,
+    leagueName,
+    venue,
+    regionCode: region,
+    eventId,
+    placement,
+    ticketmasterUrl,
+    limit,
+  })
   const anyAffiliate = links.some((link) => link.affiliate)
   if (!links.length) return null
 
@@ -35,6 +50,12 @@ export function TicketOptionsPanel({
       {!compact && (
         <p className="text-sm text-ink/55">
           Search primary and resale ticket marketplaces. Listings, fees, and availability vary by provider.
+        </p>
+      )}
+      {anyAffiliate && (
+        <p className="rounded-md border border-ticket-stub/30 bg-ticket-stub/10 px-2.5 py-2 text-xs leading-relaxed text-ink/65">
+          <strong className="text-ink">Paid links:</strong> Silbo Sports may earn a commission if you buy through a marked
+          link, at no extra cost to you.
         </p>
       )}
       <div className="flex flex-wrap gap-2">
@@ -52,6 +73,11 @@ export function TicketOptionsPanel({
                 {style.label}
               </span>
               <span className="max-w-[170px] truncate">{link.name}</span>
+              {link.affiliate && (
+                <span className="rounded bg-ticket-stub/15 px-1.5 py-0.5 font-mono text-[9px] font-black uppercase text-ink/65">
+                  Paid link
+                </span>
+              )}
               <ExternalLink size={13} className="shrink-0 opacity-55 transition-opacity group-hover:opacity-90" />
             </a>
           )
@@ -59,13 +85,8 @@ export function TicketOptionsPanel({
       </div>
       <p className="flex items-start gap-1.5 font-mono text-[10px] uppercase tracking-wide text-ink/40">
         <Ticket size={12} className="mt-0.5 shrink-0" />
-        {region} ticket search - direct links - no guaranteed inventory
+        {region} ticket search - {anyAffiliate ? 'paid links marked' : 'direct links'} - no guaranteed inventory
       </p>
-      {anyAffiliate && (
-        <p className="text-[11px] text-ink/40">
-          Some ticket links may be sponsored or affiliate links.
-        </p>
-      )}
     </div>
   )
 }

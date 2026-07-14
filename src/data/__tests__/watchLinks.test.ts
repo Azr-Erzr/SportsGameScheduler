@@ -50,6 +50,23 @@ describe('fallbackWatchOptions league-specific rights', () => {
     expect(names('US', 'table_tennis', 'World Table Tennis')).toContain('World Table Tennis')
   })
 
+  it('newer supported leagues map to official watch hubs', () => {
+    expect(names('US', 'basketball', 'WNBA')).toEqual(expect.arrayContaining(['Prime Video', 'WNBA League Pass', 'ION']))
+    expect(names('CA', 'american_football', 'CFL')).toContain('TSN')
+    expect(names('US', 'hockey', 'PWHL')).toEqual(expect.arrayContaining(['thePWHL.com', 'PWHL YouTube']))
+    expect(names('US', 'golf', 'PGA Tour')).toEqual(expect.arrayContaining(['ESPN+', 'Golf Channel', 'PGA TOUR']))
+  })
+
+  it('smaller sport routes use official federation or tour destinations', () => {
+    expect(names('US', 'rugby', 'Rugby')).toContain('RugbyPass TV')
+    expect(names('CA', 'tennis', 'ATP Tour')).toEqual(expect.arrayContaining(['TSN', 'Tennis TV']))
+    expect(names('US', 'volleyball', 'Volleyball Nations League')).toContain('VBTV')
+    expect(names('GB', 'snooker', 'World Snooker Tour')).toEqual(expect.arrayContaining(['Discovery+ / Eurosport', 'WST Play']))
+    expect(names('GB', 'darts', 'PDC World Darts Championship')).toEqual(expect.arrayContaining(['Sky Sports', 'PDC TV']))
+    expect(names('US', 'athletics', 'Diamond League')).toEqual(expect.arrayContaining(['Peacock', 'World Athletics Watch']))
+    expect(names('US', 'esports', 'League of Legends Worlds')).toContain('LoL Esports')
+  })
+
   it('every resolved link is a real https destination', () => {
     for (const option of fallbackWatchOptions('US', 'soccer', 6, 'Premier League')) {
       expect(option.href).toMatch(/^https:\/\//)

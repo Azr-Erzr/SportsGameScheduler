@@ -20,6 +20,9 @@ supabase/.temp/
 docs/*.zip
 docs/*icons.png
 design/incoming/
+design/qa-*.png
+design/sweep-*.png
+design/verify-*.png
 
 # Editor directories and files
 .vscode/*
