@@ -101,6 +101,27 @@ test.describe('accessibility smoke', () => {
 })
 
 test.describe('adaptive presentation', () => {
+  test('desktop homepage CRT artwork loops on long scrolls', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'desktop-chromium', 'desktop scroll-motion regression')
+
+    await page.goto('/')
+    const legLength = await page.evaluate(() => Math.max(1200, window.innerHeight * 1.75))
+    const sampleLeftOffset = async (scrollY: number) => {
+      await page.evaluate((top) => window.scrollTo({ top, behavior: 'instant' }), scrollY)
+      return expect
+        .poll(() =>
+          page.evaluate(() =>
+            Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--crt-side-left-x')),
+          ),
+        )
+    }
+
+    await (await sampleLeftOffset(legLength / 2)).toBeCloseTo(-55, 0)
+    await (await sampleLeftOffset(legLength)).toBeCloseTo(-110, 0)
+    await (await sampleLeftOffset(legLength * 1.5)).toBeCloseTo(-55, 0)
+    await (await sampleLeftOffset(legLength * 2)).toBeCloseTo(0, 0)
+  })
+
   test('system theme changes are followed until the visitor chooses explicitly', async ({ page }) => {
     await page.emulateMedia({ colorScheme: 'dark' })
     await page.goto('/')

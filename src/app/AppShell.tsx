@@ -18,6 +18,7 @@ import { useAppState } from './state-context'
 import { brand } from '../domain/brand'
 import { getSport } from '../domain/sports'
 import { t } from '../lib/i18n'
+import { getLoopingScrollProgress } from '../lib/scrollMotion'
 import { getTheme, withSurfaceMode } from '../theme/themes'
 import { SportThemeProvider } from '../theme/SportThemeProvider'
 
@@ -299,9 +300,9 @@ export function AppShell() {
         return
       }
 
-      const y = window.scrollY
-      const scrollRange = Math.max(1, document.documentElement.scrollHeight - window.innerHeight)
-      const progress = Math.min(1, Math.max(0, y / scrollRange))
+      // Repeat the side-art sequence every few viewports. A ping-pong loop keeps the return
+      // continuous, so very long pages never leave the traces or pixels frozen at an endpoint.
+      const progress = getLoopingScrollProgress(window.scrollY, window.innerHeight)
       const step = Math.min(7, Math.floor(progress * 8))
       const pulseTwoProgress = Math.min(1, Math.max(0, (progress - 0.16) / 0.84))
       const pulseThreeProgress = Math.min(1, Math.max(0, (progress - 0.34) / 0.66))
