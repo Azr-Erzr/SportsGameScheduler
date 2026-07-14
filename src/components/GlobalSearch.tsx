@@ -87,7 +87,7 @@ export function GlobalSearch({ placeholder, autoFocus }: { placeholder: string; 
         <div
           id={listId}
           role="listbox"
-          className="absolute left-0 right-0 z-40 mt-2 max-h-80 overflow-y-auto rounded-xl border border-primary/20 bg-surface p-1.5 shadow-xl"
+          className="silbo-popover-panel absolute left-0 right-0 z-40 mt-2 max-h-80 overflow-y-auto rounded-xl border border-primary/20 bg-surface p-1.5 shadow-xl"
         >
           {results.length === 0 ? (
             <p className="px-3 py-3 text-sm text-ink/50">

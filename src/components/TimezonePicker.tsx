@@ -91,7 +91,7 @@ export function TimezonePicker({
         <div
           id={listId}
           role="listbox"
-          className="absolute left-0 right-0 z-50 mt-1 max-h-72 overflow-y-auto rounded-xl border border-primary/20 bg-surface p-1.5 shadow-xl"
+          className="silbo-popover-panel absolute left-0 right-0 z-50 mt-1 max-h-72 overflow-y-auto rounded-xl border border-primary/20 bg-surface p-1.5 shadow-xl"
         >
           {results.length === 0 ? (
             <p className="px-3 py-2 text-sm text-ink/50">No city or timezone matches “{query.trim()}”.</p>

@@ -320,11 +320,11 @@
   @media (min-width: 900px) and (prefers-reduced-motion: no-preference) {
     /* Enhanced desktop uses the scroll-reactive side crops exclusively. Keeping the full-screen
        copy underneath produced doubled lines and pixel clusters as the moving layer drifted. */
-    :root[data-browser='enhanced'] .broadcast-air::after {
+    :root[data-browser='enhanced'] .app-scene-home .broadcast-air::after {
       display: none;
     }
 
-    :root[data-browser='enhanced'] .crt-side-signal {
+    :root[data-browser='enhanced'] .app-scene-home .crt-side-signal {
       display: block;
     }
   }
@@ -480,6 +480,345 @@
 
   [data-paper] .silbo-modal-backdrop {
     background: color-mix(in srgb, var(--mp-text) 38%, transparent);
+  }
+
+  /* Every non-home route gets its own low-cost broadcast atmosphere. These traces sweep in
+     place instead of following the scroll, so tool and editorial pages feel related to the
+     homepage without inheriting its more involved motion system. */
+  .page-scene {
+    --page-scene-a: #20d77b;
+    --page-scene-b: #45c7d4;
+    --page-scene-c: #ef6baf;
+  }
+
+  .page-scene-discovery {
+    --page-scene-a: #ef6baf;
+    --page-scene-b: #45c7d4;
+    --page-scene-c: #20d77b;
+  }
+
+  .page-scene-sport {
+    --page-scene-a: #20d77b;
+    --page-scene-b: #f0b93f;
+    --page-scene-c: #45c7d4;
+  }
+
+  .page-scene-tools {
+    --page-scene-a: #45c7d4;
+    --page-scene-b: #ef6baf;
+    --page-scene-c: #20d77b;
+  }
+
+  .page-scene-community {
+    --page-scene-a: #f0b93f;
+    --page-scene-b: #20d77b;
+    --page-scene-c: #ef6baf;
+  }
+
+  .page-scene-editorial {
+    --page-scene-a: #20d77b;
+    --page-scene-b: #ef6baf;
+    --page-scene-c: #45c7d4;
+  }
+
+  .page-scene-account {
+    --page-scene-a: #8f6fe8;
+    --page-scene-b: #45c7d4;
+    --page-scene-c: #20d77b;
+  }
+
+  .page-signal-layer {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    border-radius: clamp(18px, 2.4vw, 38px);
+    pointer-events: none;
+  }
+
+  .page-signal-layer::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(520px 300px at 96% 12%, color-mix(in srgb, var(--page-scene-a) 9%, transparent), transparent 72%),
+      radial-gradient(600px 360px at 3% 58%, color-mix(in srgb, var(--page-scene-b) 8%, transparent), transparent 74%),
+      radial-gradient(460px 300px at 88% 90%, color-mix(in srgb, var(--page-scene-c) 7%, transparent), transparent 72%);
+    opacity: 0.9;
+  }
+
+  [data-paper] .page-signal-layer::before {
+    opacity: 1;
+  }
+
+  .page-signal {
+    position: absolute;
+    width: clamp(380px, 52vw, 720px);
+    height: 92px;
+    overflow: visible;
+    fill: none;
+    color: var(--page-scene-a);
+    opacity: 0.5;
+  }
+
+  .page-signal-top {
+    right: -12%;
+    top: clamp(12rem, 24vh, 18rem);
+  }
+
+  .page-signal-low {
+    left: -14%;
+    top: clamp(42rem, 66vh, 62rem);
+    color: var(--page-scene-b);
+    opacity: 0.42;
+  }
+
+  .page-signal-ghost,
+  .page-signal-live {
+    vector-effect: non-scaling-stroke;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .page-signal-ghost {
+    stroke-width: 1.15;
+    opacity: 0.22;
+  }
+
+  .page-signal-live {
+    stroke-width: 2.3;
+    stroke-dasharray: 10 90;
+    stroke-dashoffset: 100;
+    animation: page-signal-sweep 8.5s linear infinite;
+  }
+
+  .page-signal-live-secondary {
+    animation-delay: -4.25s;
+    animation-duration: 10.5s;
+  }
+
+  :root[data-browser='enhanced'] .page-signal-live {
+    filter: drop-shadow(0 0 4px color-mix(in srgb, currentColor 48%, transparent));
+  }
+
+  @keyframes page-signal-sweep {
+    to { stroke-dashoffset: -100; }
+  }
+
+  .page-pixel-cluster {
+    position: absolute;
+    width: 68px;
+    height: 58px;
+    opacity: 0.68;
+  }
+
+  .page-pixel-cluster-a {
+    right: 2.5%;
+    top: 11.5rem;
+  }
+
+  .page-pixel-cluster-b {
+    left: 2%;
+    top: clamp(48rem, 76vh, 70rem);
+    transform: scale(0.82) rotate(180deg);
+    opacity: 0.48;
+  }
+
+  .page-pixel {
+    position: absolute;
+    display: block;
+    border-radius: 2px;
+    transform-origin: center;
+    animation: page-pixel-breathe 8s steps(4, end) infinite;
+  }
+
+  .page-pixel:nth-child(1) { left: 0; top: 9px; }
+  .page-pixel:nth-child(2) { left: 27px; top: 25px; animation-delay: -2s; }
+  .page-pixel:nth-child(3) { left: 46px; top: 2px; animation-delay: -4s; }
+  .page-pixel:nth-child(4) { left: 56px; top: 36px; animation-delay: -6s; }
+  .page-pixel-cyan { width: 18px; height: 18px; background: #45c7d4; }
+  .page-pixel-pink { width: 11px; height: 11px; background: #ef6baf; }
+  .page-pixel-green { width: 14px; height: 14px; background: #20d77b; }
+  .page-pixel-amber { width: 8px; height: 8px; background: #f0b93f; }
+
+  @keyframes page-pixel-breathe {
+    0%, 100% { transform: scale(0.72); opacity: 0.58; }
+    28% { transform: scale(1.24); opacity: 0.9; }
+    62% { transform: scale(0.9); opacity: 0.72; }
+  }
+
+  /* Panels keep enough transparency for the route-specific signals to read through, while the
+     color line gives repeated cards a consistent cyan/pink/green/amber finish. */
+  .page-scene-content .silbo-glass-panel {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .page-scene-content .silbo-glass-panel::before {
+    content: '';
+    position: absolute;
+    inset: 0 12% auto;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--page-scene-a), var(--page-scene-b), var(--page-scene-c), transparent);
+    opacity: 0.32;
+    pointer-events: none;
+  }
+
+  .page-scene-content .silbo-glass-panel:nth-child(3n + 2)::before {
+    transform: scaleX(-1);
+  }
+
+  .editorial-surface,
+  .editorial-index > header {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--mp-primary) 16%, transparent);
+    border-radius: var(--radius-card);
+    background:
+      radial-gradient(circle at 4% 4%, color-mix(in srgb, #45c7d4 7%, transparent), transparent 160px),
+      radial-gradient(circle at 98% 96%, color-mix(in srgb, #ef6baf 6%, transparent), transparent 180px),
+      color-mix(in srgb, var(--mp-surface) 76%, transparent);
+    box-shadow: inset 0 1px 0 color-mix(in srgb, #f0b93f 12%, transparent), 0 12px 30px rgba(5, 15, 10, 0.08);
+  }
+
+  .editorial-surface {
+    padding: clamp(1.15rem, 3vw, 2.6rem);
+  }
+
+  .editorial-index > header {
+    padding: clamp(1.15rem, 2.5vw, 2rem);
+  }
+
+  .editorial-surface::before,
+  .editorial-index > header::before {
+    content: '';
+    position: absolute;
+    left: 7%;
+    right: 7%;
+    top: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #20d77b, #45c7d4, #ef6baf, #f0b93f, transparent);
+    opacity: 0.48;
+  }
+
+  [data-paper] .editorial-surface,
+  [data-paper] .editorial-index > header {
+    background:
+      radial-gradient(circle at 4% 4%, color-mix(in srgb, #45c7d4 8%, transparent), transparent 160px),
+      radial-gradient(circle at 98% 96%, color-mix(in srgb, #ef6baf 7%, transparent), transparent 180px),
+      color-mix(in srgb, var(--mp-surface) 82%, transparent);
+    box-shadow: inset 0 1px 0 color-mix(in srgb, #f0b93f 16%, transparent), 0 12px 28px rgba(49, 68, 59, 0.08);
+  }
+
+  /* Dialogs, dropdowns, install/consent cards, and header popovers share the same translucent
+     CRT-glass treatment. The small pixel signature sits out of the interaction path. */
+  .silbo-modal-panel,
+  .silbo-floating-panel,
+  .silbo-popover-panel,
+  .sport-switcher-menu,
+  .auth-popover {
+    isolation: isolate;
+    border-color: color-mix(in srgb, var(--mp-primary) 28%, transparent) !important;
+    background:
+      repeating-linear-gradient(0deg, color-mix(in srgb, var(--mp-primary) 4%, transparent) 0 1px, transparent 1px 5px),
+      radial-gradient(circle at 3% 5%, color-mix(in srgb, #45c7d4 10%, transparent), transparent 120px),
+      radial-gradient(circle at 98% 96%, color-mix(in srgb, #ef6baf 8%, transparent), transparent 140px),
+      color-mix(in srgb, var(--mp-surface) 94%, transparent) !important;
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, #f0b93f 18%, transparent),
+      inset 1px 0 0 color-mix(in srgb, #45c7d4 16%, transparent),
+      inset -1px 0 0 color-mix(in srgb, #ef6baf 14%, transparent),
+      0 18px 44px rgba(4, 12, 8, 0.28) !important;
+  }
+
+  .silbo-modal-panel::before,
+  .silbo-floating-panel::before,
+  .silbo-popover-panel::before,
+  .sport-switcher-menu::before,
+  .auth-popover::before {
+    content: '';
+    position: absolute;
+    left: 10%;
+    right: 10%;
+    top: 0;
+    z-index: 2;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #20d77b, #45c7d4, #ef6baf, transparent);
+    opacity: 0.56;
+    pointer-events: none;
+  }
+
+  .silbo-modal-panel::after,
+  .silbo-floating-panel::after,
+  .silbo-popover-panel::after,
+  .sport-switcher-menu::after,
+  .auth-popover::after {
+    content: '';
+    position: absolute;
+    right: 16px;
+    bottom: 13px;
+    width: 5px;
+    height: 5px;
+    z-index: -1;
+    border-radius: 1px;
+    background: #45c7d4;
+    box-shadow: 9px -5px 0 #ef6baf, 18px 1px 0 #f0b93f, 27px -8px 0 #20d77b;
+    opacity: 0.42;
+    pointer-events: none;
+  }
+
+  [data-paper] .silbo-modal-panel,
+  [data-paper] .silbo-floating-panel,
+  [data-paper] .silbo-popover-panel,
+  [data-paper] .sport-switcher-menu,
+  [data-paper] .auth-popover {
+    background:
+      repeating-linear-gradient(0deg, rgba(31, 85, 70, 0.035) 0 1px, transparent 1px 5px),
+      radial-gradient(circle at 3% 5%, color-mix(in srgb, #45c7d4 9%, transparent), transparent 120px),
+      radial-gradient(circle at 98% 96%, color-mix(in srgb, #ef6baf 7%, transparent), transparent 140px),
+      color-mix(in srgb, var(--mp-surface) 96%, #fff) !important;
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, #f0b93f 20%, transparent),
+      inset 1px 0 0 color-mix(in srgb, #45c7d4 18%, transparent),
+      inset -1px 0 0 color-mix(in srgb, #ef6baf 16%, transparent),
+      0 18px 42px rgba(43, 63, 54, 0.18) !important;
+  }
+
+  :root[data-browser='firefox'] .page-signal-live,
+  :root[data-browser='firefox'] .page-pixel {
+    animation: none !important;
+  }
+
+  :root[data-browser='firefox'] .page-signal-live {
+    display: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .page-signal-live,
+    .page-pixel {
+      animation: none !important;
+    }
+
+    .page-signal-live {
+      display: none;
+    }
+  }
+
+  @media (max-width: 767px) {
+    .page-signal {
+      display: none;
+    }
+
+    .page-pixel-cluster-a {
+      right: 1%;
+      top: 9rem;
+      transform: scale(0.72);
+    }
+
+    .page-pixel-cluster-b {
+      display: none;
+    }
   }
 
   /* Chrome display type — UI keeps it subtle; export posters use the loud variant. */

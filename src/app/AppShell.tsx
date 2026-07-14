@@ -63,6 +63,54 @@ function CrtSignalTraces() {
   )
 }
 
+type PageScene = 'home' | 'schedule' | 'discovery' | 'sport' | 'tools' | 'community' | 'editorial' | 'account'
+
+function pageSceneForPath(pathname: string): PageScene {
+  if (pathname === '/') return 'home'
+  if (pathname === '/my-schedule') return 'schedule'
+  if (pathname === '/explore' || pathname === '/other-sports') return 'discovery'
+  if (/^\/(sports|leagues|teams|events)\//.test(pathname)) return 'sport'
+  if (pathname === '/calendar' || pathname === '/exports' || pathname.startsWith('/settings/')) return 'tools'
+  if (pathname.startsWith('/custom-leagues') || pathname.startsWith('/s/')) return 'community'
+  if (pathname === '/account' || pathname === '/admin') return 'account'
+  return 'editorial'
+}
+
+function PageAtmosphere({ scene }: { scene: PageScene }) {
+  if (scene === 'home') return null
+  return (
+    <div className="page-signal-layer" aria-hidden="true">
+      <svg className="page-signal page-signal-top" viewBox="0 0 640 92" preserveAspectRatio="none" focusable="false">
+        <path
+          className="page-signal-ghost"
+          pathLength="100"
+          d="M2 48H104L126 48L139 66L153 12L169 78L186 48H232C272 48 280 23 318 23C356 23 366 64 405 64C444 64 455 31 495 31C535 31 548 48 638 48"
+        />
+        <path
+          className="page-signal-live"
+          pathLength="100"
+          d="M2 48H104L126 48L139 66L153 12L169 78L186 48H232C272 48 280 23 318 23C356 23 366 64 405 64C444 64 455 31 495 31C535 31 548 48 638 48"
+        />
+      </svg>
+      <svg className="page-signal page-signal-low" viewBox="0 0 640 92" preserveAspectRatio="none" focusable="false">
+        <path className="page-signal-ghost" pathLength="100" d="M2 49H118V25H192V67H266V34H342V58H416V18H490V49H638" />
+        <path className="page-signal-live page-signal-live-secondary" pathLength="100" d="M2 49H118V25H192V67H266V34H342V58H416V18H490V49H638" />
+      </svg>
+      <span className="page-pixel-cluster page-pixel-cluster-a">
+        <i className="page-pixel page-pixel-cyan" />
+        <i className="page-pixel page-pixel-pink" />
+        <i className="page-pixel page-pixel-green" />
+        <i className="page-pixel page-pixel-amber" />
+      </span>
+      <span className="page-pixel-cluster page-pixel-cluster-b">
+        <i className="page-pixel page-pixel-pink" />
+        <i className="page-pixel page-pixel-green" />
+        <i className="page-pixel page-pixel-cyan" />
+      </span>
+    </div>
+  )
+}
+
 const mobileNavItems = [
   { to: '/', labelKey: 'nav.home', mobileLabelKey: 'nav.mobile.home', icon: Home },
   { to: '/explore', labelKey: 'nav.sports', mobileLabelKey: 'nav.mobile.sports', icon: Trophy },
@@ -203,6 +251,7 @@ export function AppShell() {
   )
   const theme = withSurfaceMode(baseTheme, surfaceMode)
   const programMode = surfaceMode === 'program'
+  const pageScene = pageSceneForPath(location.pathname)
 
   // Restore the AdSense script if the user accepted advertising in a previous session.
   useEffect(() => initConsent(), [])
@@ -218,6 +267,7 @@ export function AppShell() {
 
   useEffect(() => {
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return
+    if (pageScene !== 'home') return
     const root = document.documentElement
     // Firefox keeps the lightweight static CRT artwork, but skips the extra side layers and
     // this scroll listener entirely. Its compositor is much more sensitive to fixed artwork
@@ -304,7 +354,7 @@ export function AppShell() {
       root.style.removeProperty('--crt-pixel-green-scale')
       root.style.removeProperty('--crt-pixel-amber-scale')
     }
-  }, [])
+  }, [pageScene])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -313,7 +363,7 @@ export function AppShell() {
 
   return (
     <SportThemeProvider theme={theme}>
-      <div className={`min-h-svh bg-page text-ink motif-${theme.motifs.background}`}>
+      <div className={`app-scene-${pageScene} min-h-svh bg-page text-ink motif-${theme.motifs.background}`}>
         <div className="broadcast-air" aria-hidden="true">
           <span className="crt-side-signal crt-side-signal-left">
             <CrtSignalTraces />
@@ -354,9 +404,12 @@ export function AppShell() {
           </div>
         </header>
 
-        <main className="relative z-[1] mx-auto w-full max-w-[1460px] px-4 pb-28 pt-5 md:py-6">
-          <LiveTicker />
-          <Outlet />
+        <main className={`page-scene page-scene-${pageScene} relative z-[1] isolate mx-auto w-full max-w-[1460px] px-4 pb-28 pt-5 md:py-6`}>
+          <PageAtmosphere scene={pageScene} />
+          <div className="page-scene-content relative z-[1]">
+            <LiveTicker />
+            <Outlet />
+          </div>
         </main>
 
         <div className="relative z-[1] mx-auto hidden w-full max-w-[1460px] px-4 pb-3 md:block">

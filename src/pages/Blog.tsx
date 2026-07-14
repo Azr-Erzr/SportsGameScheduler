@@ -145,7 +145,7 @@ export function BlogIndexPage() {
   })
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
+    <div className="editorial-index mx-auto max-w-4xl space-y-6">
       <header className="border-b border-primary/15 pb-6">
         <p className="board-label mb-2 text-xs uppercase tracking-[0.2em] text-primary/70">{brand.appName}</p>
         <h1 className="font-display text-3xl tracking-wide text-ink sm:text-4xl">The Silbo Sports blog</h1>
@@ -221,7 +221,7 @@ export function BlogPostPage() {
   const midCtaAfter = post.relatedEventId && blocks.length > 3 ? 1 : -1
 
   return (
-    <article className="mx-auto max-w-3xl">
+    <article className="editorial-surface mx-auto max-w-3xl">
       <header className="mb-8 border-b border-primary/15 pb-6">
         <p className="board-label mb-2 text-xs uppercase tracking-[0.2em] text-primary/70">
           <Link to="/blog" className="hover:text-primary">{brand.appName} blog</Link>

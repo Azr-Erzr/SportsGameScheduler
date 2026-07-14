@@ -45,7 +45,7 @@ export function InstallAppPrompt() {
   }
 
   return (
-    <aside className="fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+5rem)] z-50 mx-auto max-w-md rounded-card border border-primary/25 bg-surface/95 p-3 shadow-[0_-8px_28px_rgba(0,0,0,0.28)] md:bottom-5">
+    <aside className="silbo-floating-panel fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+5rem)] z-50 mx-auto max-w-md rounded-card border border-primary/25 bg-surface/95 p-3 shadow-[0_-8px_28px_rgba(0,0,0,0.28)] md:bottom-5">
       <div className="flex items-start gap-3">
         <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/12 text-primary">
           <Download size={18} />
