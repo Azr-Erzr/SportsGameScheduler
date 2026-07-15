@@ -93,8 +93,8 @@ function WorldRouteMap({ color = 'var(--mp-primary)' }: { color?: string }) {
 function PosterGlyph({ sportKey }: { sportKey: string }) {
   const sport = getSport(sportKey) ?? getSport('soccer')
   const theme = getTheme(sportKey)
-  const { prefs } = useAppState()
-  const iconVariant = prefs.themeMode === 'program' ? 'brush' : 'neon3d'
+  const { surfaceMode } = useAppState()
+  const iconVariant = surfaceMode === 'program' ? 'brush' : 'neon3d'
 
   if (!sport) return null
 
@@ -138,8 +138,8 @@ export function SportObjectIcon({
 
 function EventBlueprint({ sportKey }: { sportKey: string }) {
   const kind = sportObjectKind(sportKey)
-  const { prefs } = useAppState()
-  const iconVariant = prefs.themeMode === 'program' ? 'brush' : 'neon3d'
+  const { surfaceMode } = useAppState()
+  const iconVariant = surfaceMode === 'program' ? 'brush' : 'neon3d'
 
   return (
     <div className={`event-blueprint event-blueprint-${kind}`}>
@@ -266,8 +266,8 @@ function fitCount(containerWidth: number, viewportWidth: number, variant: 'compa
 }
 
 export function SpotlightRail({ events }: { events: PosterEvent[] }) {
-  const { prefs } = useAppState()
-  const iconVariant = prefs.themeMode === 'program' ? 'brush' : 'neon3d'
+  const { surfaceMode } = useAppState()
+  const iconVariant = surfaceMode === 'program' ? 'brush' : 'neon3d'
   const visibleEvents = events.slice(0, 6)
 
   if (!visibleEvents.length) return null
@@ -310,10 +310,10 @@ export function SpotlightRail({ events }: { events: PosterEvent[] }) {
 export function GlobalEventBoard({ events, variant = 'compact' }: { events: PosterEvent[]; variant?: 'compact' | 'room' }) {
   const [activeIndex, setActiveIndex] = useState(0)
   const [isMobileCarousel, setIsMobileCarousel] = useState(false)
-  const { prefs } = useAppState()
+  const { surfaceMode } = useAppState()
   const activeEvent = events[activeIndex] ?? events[0]
   const activeTheme = getTheme(activeEvent?.sportKey ?? 'neutral')
-  const iconVariant = prefs.themeMode === 'program' ? 'brush' : 'neon3d'
+  const iconVariant = surfaceMode === 'program' ? 'brush' : 'neon3d'
   const activate = useCallback((index: number) => setActiveIndex((current) => (current === index ? current : index)), [])
 
   // Render only the cards that fit the viewport — no horizontal scroll on any screen.
@@ -486,8 +486,8 @@ export function ManifestoPoster() {
 
 export function SportIdentityTile({ sportKey }: { sportKey: string }) {
   const sport = getSport(sportKey) ?? getSport('soccer')
-  const { prefs } = useAppState()
-  const iconVariant = prefs.themeMode === 'program' ? 'brush' : 'neon3d'
+  const { surfaceMode } = useAppState()
+  const iconVariant = surfaceMode === 'program' ? 'brush' : 'neon3d'
 
   if (!sport) return null
 

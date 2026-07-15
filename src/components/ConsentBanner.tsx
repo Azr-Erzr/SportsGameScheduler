@@ -22,7 +22,7 @@ export function ConsentBanner() {
       aria-live="polite"
       className="fixed inset-x-0 bottom-0 z-50 px-3 pb-[calc(env(safe-area-inset-bottom)+4.5rem)] md:pb-4"
     >
-      <div className="mx-auto flex max-w-3xl flex-col gap-3 rounded-card border border-primary/25 bg-surface/98 p-4 shadow-[0_8px_30px_rgba(0,0,0,0.35)] sm:flex-row sm:items-center">
+      <div className="silbo-floating-panel mx-auto flex max-w-3xl flex-col gap-3 rounded-card border border-primary/25 bg-surface/98 p-4 shadow-[0_8px_30px_rgba(0,0,0,0.35)] sm:flex-row sm:items-center">
         <div className="flex items-start gap-3">
           <Cookie size={20} className="mt-0.5 shrink-0 text-primary" aria-hidden="true" />
           <p className="text-sm leading-relaxed text-ink/80">

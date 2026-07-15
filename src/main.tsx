@@ -10,15 +10,17 @@ import { registerServiceWorker } from './lib/pwa'
 function applyRuntimeBrowserFlags() {
   const isFirefox = /\b(Firefox|FxiOS|Focus)\//.test(navigator.userAgent)
   const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
+  const compactScreen = window.matchMedia?.('(max-width: 899px)').matches ?? false
 
   document.documentElement.dataset.browser = isFirefox ? 'firefox' : 'enhanced'
-  document.documentElement.dataset.visualEffects = isFirefox || reduceMotion ? 'reduced' : 'enhanced'
+  document.documentElement.dataset.visualEffects = isFirefox || reduceMotion || compactScreen ? 'reduced' : 'enhanced'
 }
 
 applyRuntimeBrowserFlags()
 registerServiceWorker()
 
 window.matchMedia?.('(prefers-reduced-motion: reduce)').addEventListener('change', applyRuntimeBrowserFlags)
+window.matchMedia?.('(max-width: 899px)').addEventListener('change', applyRuntimeBrowserFlags)
 
 // PERF: keep the shell small. Page modules load by route; export studio pulls the canvas
 // poster pipeline, sport pages pull banner assets, and Supabase loads only when configured.

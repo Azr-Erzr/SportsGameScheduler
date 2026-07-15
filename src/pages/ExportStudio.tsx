@@ -27,11 +27,11 @@ const templates: Array<{ key: ExportTemplate; labelKey: string; hint: string }> 
 type ExportMode = 'static' | 'sync'
 
 export function ExportStudioPage() {
-  const { followedTeams, followedLeagueIds, followedCompetitorIds, prefs } = useAppState()
+  const { followedTeams, followedLeagueIds, followedCompetitorIds, prefs, surfaceMode } = useAppState()
   const [mode, setMode] = useState<ExportMode>('static')
   const [template, setTemplate] = useState<ExportTemplate>('poster')
   const [posterVariant, setPosterVariant] = useState<PosterVariant>(
-    prefs.themeMode === 'program' ? 'light' : 'dark',
+    surfaceMode === 'program' ? 'light' : 'dark',
   )
   const [message, setMessage] = useState('')
 

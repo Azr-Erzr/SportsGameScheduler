@@ -49,7 +49,7 @@ export function LanguageMenu() {
       {open && (
         <div
           role="menu"
-          className="absolute right-0 top-[calc(100%+8px)] z-50 w-44 rounded-xl border border-primary/20 bg-surface p-1.5 shadow-xl"
+          className="silbo-popover-panel absolute right-0 top-[calc(100%+8px)] z-50 w-44 rounded-xl border border-primary/20 bg-surface p-1.5 shadow-xl"
         >
           {localeOptions.map((locale) => {
             const selected = locale.code === active

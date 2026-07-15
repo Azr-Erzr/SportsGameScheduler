@@ -99,3 +99,80 @@ test.describe('accessibility smoke', () => {
     }
   })
 })
+
+test.describe('adaptive presentation', () => {
+  test('desktop homepage CRT artwork loops on long scrolls', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'desktop-chromium', 'desktop scroll-motion regression')
+
+    await page.goto('/')
+    await expect(page.getByRole('heading', { name: /one schedule for every sport you follow/i })).toBeVisible()
+    const legLength = await page.evaluate(() => Math.max(1200, window.innerHeight * 1.75))
+    await expect
+      .poll(() =>
+        page.evaluate(() => ({
+          browser: document.documentElement.dataset.browser,
+          effects: document.documentElement.dataset.visualEffects,
+          initialized: getComputedStyle(document.documentElement).getPropertyValue('--crt-side-left-x').trim() !== '',
+        })),
+      )
+      .toEqual({ browser: 'enhanced', effects: 'enhanced', initialized: true })
+    await expect
+      .poll(() => page.evaluate(() => document.documentElement.scrollHeight - window.innerHeight))
+      .toBeGreaterThanOrEqual(legLength * 2)
+
+    const sampleLeftOffset = async (scrollY: number) => {
+      await page.evaluate((top) => {
+        window.scrollTo({ top, behavior: 'instant' })
+        window.dispatchEvent(new Event('scroll'))
+      }, scrollY)
+      await expect.poll(() => page.evaluate(() => window.scrollY)).toBeCloseTo(scrollY, 0)
+      return expect
+        .poll(() =>
+          page.evaluate(() =>
+            Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--crt-side-left-x')),
+          ),
+        )
+    }
+
+    await (await sampleLeftOffset(legLength / 2)).toBeCloseTo(-55, 0)
+    await (await sampleLeftOffset(legLength)).toBeCloseTo(-110, 0)
+    await (await sampleLeftOffset(legLength * 1.5)).toBeCloseTo(-55, 0)
+    await (await sampleLeftOffset(legLength * 2)).toBeCloseTo(0, 0)
+  })
+
+  test('system theme changes are followed until the visitor chooses explicitly', async ({ page }) => {
+    await page.emulateMedia({ colorScheme: 'dark' })
+    await page.goto('/')
+    await expect.poll(() => page.locator('html').getAttribute('data-surface')).toBe('broadcast')
+
+    await page.emulateMedia({ colorScheme: 'light' })
+    await expect.poll(() => page.locator('html').getAttribute('data-surface')).toBe('program')
+
+    await page.getByRole('button', { name: /switch to broadcast dark/i }).click()
+    await expect(page.locator('html')).toHaveAttribute('data-surface', 'broadcast')
+    await page.reload()
+    await expect(page.locator('html')).toHaveAttribute('data-surface', 'broadcast')
+  })
+
+  test('mobile routes stay within the viewport and use the static effects path', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'mobile-chromium', 'mobile presentation regression')
+
+    for (const path of ['/', '/sports/basketball', '/other-sports']) {
+      await page.goto(path)
+      const presentation = await page.evaluate(() => ({
+        viewportWidth: window.innerWidth,
+        documentWidth: document.documentElement.scrollWidth,
+        effects: document.documentElement.dataset.visualEffects,
+        liveSignals: [...document.querySelectorAll<HTMLElement>('.page-signal-live')].filter(
+          (element) => getComputedStyle(element).display !== 'none',
+        ).length,
+      }))
+
+      expect(presentation.documentWidth, `${path} should not overflow horizontally`).toBeLessThanOrEqual(
+        presentation.viewportWidth,
+      )
+      expect(presentation.effects).toBe('reduced')
+      expect(presentation.liveSignals).toBe(0)
+    }
+  })
+})

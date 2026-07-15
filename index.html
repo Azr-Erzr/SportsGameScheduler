@@ -12,7 +12,22 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#0b0a08" />
+    <meta name="theme-color" content="#f4ead8" />
+    <script>
+      // Resolve the surface before React paints: system preference by default, light if the
+      // preference API is unavailable, and persisted explicit light/dark choices when present.
+      ;(() => {
+        let surface = 'program'
+        try {
+          const saved = JSON.parse(localStorage.getItem('mp.prefs') || '{}').themeMode
+          if (saved === 'broadcast' || saved === 'program') surface = saved
+          else if (typeof matchMedia === 'function' && matchMedia('(prefers-color-scheme: dark)').matches) surface = 'broadcast'
+        } catch {}
+        document.documentElement.dataset.surface = surface
+        document.documentElement.style.colorScheme = surface === 'broadcast' ? 'dark' : 'light'
+        document.querySelector('meta[name="theme-color"]')?.setAttribute('content', surface === 'broadcast' ? '#171b18' : '#f4ead8')
+      })()
+    </script>
     <meta name="google-adsense-account" content="ca-pub-1076235663167007" />
     <meta name="fo-verify" content="0c2d6f16-4b8b-46ee-b2e8-65c64c0c5ad8" />
     <!-- AdSense is loaded at runtime only after advertising consent — see src/lib/consent.ts. -->
@@ -31,7 +46,7 @@
       property="og:description"
       content="One schedule for every sport you follow. Local times, live calendar feeds, poster exports, and alerts."
     />
-    <meta property="og:image" content="https://silbosports.com/og-cover-2026-07.png" />
+    <meta property="og:image" content="https://silbosports.com/og-cover-2026-07-crt.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content="Silbo Sports social preview showing one schedule for every sport you follow." />
@@ -41,7 +56,7 @@
       name="twitter:description"
       content="One schedule for every sport you follow. Local times, live calendar feeds, poster exports, and alerts."
     />
-    <meta name="twitter:image" content="https://silbosports.com/og-cover-2026-07.png" />
+    <meta name="twitter:image" content="https://silbosports.com/og-cover-2026-07-crt.png" />
     <meta name="twitter:image:alt" content="Silbo Sports social preview showing one schedule for every sport you follow." />
     <!-- Structured data: brand + site search. Per-page SportsEvent JSON-LD is injected at
          runtime on event pages (see src/lib/seo.ts). -->

@@ -26,10 +26,10 @@ const backlogSports = [
 ]
 
 function LiveRouteCard({ sport, dense = false }: { sport: SportInfo; dense?: boolean }) {
-  const { prefs } = useAppState()
+  const { prefs, surfaceMode } = useAppState()
   const schedule = useSportSchedule(sport.canonicalSportKey)
-  const theme = withSurfaceMode(getTheme(sport.key), prefs.themeMode)
-  const iconVariant = prefs.themeMode === 'program' ? 'brush' : 'neon3d'
+  const theme = withSurfaceMode(getTheme(sport.key), surfaceMode)
+  const iconVariant = surfaceMode === 'program' ? 'brush' : 'neon3d'
   const liveReady = schedule.configured && !schedule.loading && (schedule.leagues.length > 0 || schedule.events.length > 0)
   const route = sport.key === 'custom' ? '/other-sports' : `/sports/${sport.key}`
 

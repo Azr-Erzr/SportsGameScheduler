@@ -14,10 +14,10 @@ type TicketOptionsPanelProps = {
 }
 
 const BADGE_STYLES: Record<string, { label: string; className: string }> = {
-  ticketmaster: { label: 'TM', className: 'border-[#026cdf]/35 bg-[#026cdf] text-white' },
-  stubhub: { label: 'STUB', className: 'border-[#3f2b96]/35 bg-[#3f2b96] text-white' },
-  seatgeek: { label: 'SG', className: 'border-[#00b050]/35 bg-[#00b050] text-white' },
-  vivid_seats: { label: 'VIV', className: 'border-[#e11d48]/35 bg-[#e11d48] text-white' },
+  ticketmaster: { label: 'TM', className: 'ticket-provider-badge ticket-provider-ticketmaster border-[#026cdf]/35 bg-[#026cdf] text-white' },
+  stubhub: { label: 'STUB', className: 'ticket-provider-badge ticket-provider-stubhub border-[#3f2b96]/35 bg-[#3f2b96] text-white' },
+  seatgeek: { label: 'SG', className: 'ticket-provider-badge ticket-provider-seatgeek border-[#00b050]/35 bg-[#00b050] text-white' },
+  vivid_seats: { label: 'VIV', className: 'ticket-provider-badge ticket-provider-vivid border-[#e11d48]/35 bg-[#e11d48] text-white' },
 }
 
 export function TicketOptionsPanel({

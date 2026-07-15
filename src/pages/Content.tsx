@@ -12,7 +12,7 @@ import { aboutContent, faqContent, howItWorksContent, type Faq } from '../conten
 
 function ContentLayout({ title, intro, children }: PropsWithChildren<{ title: string; intro: ReactNode }>) {
   return (
-    <article className="mx-auto max-w-3xl">
+    <article className="editorial-surface mx-auto max-w-3xl">
       <header className="mb-8 border-b border-primary/15 pb-6">
         <p className="board-label mb-2 text-xs uppercase tracking-[0.2em] text-primary/70">{brand.appName}</p>
         <h1 className="font-display text-3xl tracking-wide text-ink sm:text-4xl">{title}</h1>

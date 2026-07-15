@@ -14,6 +14,9 @@ export type Follow = {
   intent: 'watch' | 'attend' | 'track'
 }
 
+export type ThemePreference = 'system' | 'broadcast' | 'program'
+export type SurfaceMode = Exclude<ThemePreference, 'system'>
+
 export type Preferences = {
   timezone: string
   city: string
@@ -21,7 +24,7 @@ export type Preferences = {
   locale: string
   regionCode: string
   broadcastRegion: string
-  themeMode: 'broadcast' | 'program'
+  themeMode: ThemePreference
 }
 
 export type CalendarFeed = {
@@ -160,9 +163,16 @@ export function getPreferences(): Preferences {
     locale: guessedLocale,
     regionCode: guessedRegion,
     broadcastRegion: guessedRegion,
-    themeMode: 'broadcast',
+    // New visitors follow the operating-system preference. `program` is the safe fallback
+    // when matchMedia is unavailable; explicit light/dark choices continue to be persisted.
+    themeMode: 'system',
     ...read<Partial<Preferences>>(KEYS.prefs, {}),
   }
+}
+
+export function getSystemSurfaceMode(): SurfaceMode {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return 'program'
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'broadcast' : 'program'
 }
 
 export function savePreferences(prefs: Preferences) {

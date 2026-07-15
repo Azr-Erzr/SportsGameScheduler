@@ -1645,7 +1645,7 @@ function LeagueFilter({
       </div>
 
       {open && (
-        <div className="absolute z-40 mt-2 w-72 rounded-xl border border-primary/20 bg-surface p-2 shadow-xl">
+        <div className="silbo-popover-panel absolute z-40 mt-2 w-72 rounded-xl border border-primary/20 bg-surface p-2 shadow-xl">
           <label className="mb-2 flex items-center gap-2 rounded-lg border border-primary/20 bg-page/60 px-3 py-2">
             <Search size={14} className="text-ink/40" />
             <input

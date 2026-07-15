@@ -40,7 +40,7 @@ const homeTicketSports = ['football', 'soccer', 'baseball', 'basketball'].flatMa
 })
 
 export function HomePage() {
-  const { followedTeams, toggleFollow, prefs } = useAppState()
+  const { followedTeams, toggleFollow, prefs, surfaceMode } = useAppState()
   const { matches } = useMatches()
   const spotlightEvents = useSpotlightEvents(prefs.regionCode)
   // One card per sport on the homepage board/strip — no sport (e.g. soccer) showing up twice.
@@ -61,7 +61,7 @@ export function HomePage() {
   return (
     <div className="space-y-6">
       <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_390px]" data-home-section="hero">
-        <div className="broadcast-tune-panel rounded-card border border-primary/15 bg-surface p-5 shadow-sm sm:p-7">
+        <div className="silbo-glass-panel broadcast-tune-panel rounded-card border border-primary/15 bg-surface p-5 shadow-sm sm:p-7">
           <div className="motion-only broadcast-lock-board" aria-hidden="true">
             <span className="broadcast-lock-line" />
             <span className="broadcast-lock-line" />
@@ -98,7 +98,7 @@ export function HomePage() {
                         key={team}
                         onClick={() => toggleTeam(team)}
                         className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors ${index > 5 ? 'max-sm:hidden' : ''} ${
-                          prefs.themeMode === 'program'
+                          surfaceMode === 'program'
                             ? selected
                               ? 'bg-primary text-ticket-stub-text shadow-[0_8px_18px_color-mix(in_srgb,var(--mp-primary)_18%,transparent)]'
                               : 'bg-paper text-primary hover:bg-primary hover:text-ticket-stub-text'
@@ -117,13 +117,13 @@ export function HomePage() {
 
               <div className="mt-5 flex flex-wrap gap-2">
                 <Link to="/sports/soccer">
-                  <Button>{t('home.worldCupCta', { footballLabel }, prefs.locale)}</Button>
+                  <Button variant="ghost" className="home-cta">{t('home.worldCupCta', { footballLabel }, prefs.locale)}</Button>
                 </Link>
                 <Link to="/explore">
-                  <Button variant="ghost">{t('home.exploreSports', undefined, prefs.locale)}</Button>
+                  <Button variant="ghost" className="home-cta">{t('home.exploreSports', undefined, prefs.locale)}</Button>
                 </Link>
                 <Link to="/custom-leagues">
-                  <Button variant="subtle">{t('home.createCustomLeague', undefined, prefs.locale)}</Button>
+                  <Button variant="ghost" className="home-cta">{t('home.createCustomLeague', undefined, prefs.locale)}</Button>
                 </Link>
               </div>
 

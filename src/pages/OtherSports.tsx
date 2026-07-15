@@ -111,18 +111,18 @@ function SportGlyph({
 }
 
 function OtherSportRouteCard({ sport }: { sport: SportInfo }) {
-  const { prefs } = useAppState()
+  const { surfaceMode } = useAppState()
   const schedule = useSportSchedule(sport.canonicalSportKey)
   const liveReady = schedule.configured && !schedule.loading && (schedule.leagues.length > 0 || schedule.events.length > 0)
   const status = schedule.loading ? 'Checking' : liveReady ? 'Live route' : 'Queued'
   const href = `/sports/${sport.key}`
-  const theme = withSurfaceMode(getTheme(sport.key), prefs.themeMode)
+  const theme = withSurfaceMode(getTheme(sport.key), surfaceMode)
   const Glyph = providerIcons[sport.key] ?? IconTargetArrow
 
   return (
     <Link
       to={href}
-      className="group grid h-full min-h-[188px] grid-rows-[auto_1fr_auto] rounded-card border-2 border-primary/20 bg-surface/72 p-4 transition-colors hover:border-primary/50 hover:bg-primary/6"
+      className="group grid h-full min-h-[188px] w-full min-w-0 grid-cols-[minmax(0,1fr)] grid-rows-[auto_1fr_auto] rounded-card border-2 border-primary/20 bg-surface/72 p-4 transition-colors hover:border-primary/50 hover:bg-primary/6"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
@@ -141,14 +141,14 @@ function OtherSportRouteCard({ sport }: { sport: SportInfo }) {
 
       <p className="mt-3 line-clamp-3 text-sm leading-relaxed text-ink/64">{sport.tagline}</p>
 
-      <div className="mt-4 grid grid-cols-[auto_auto_minmax(3.5rem,1fr)] items-center gap-x-3 gap-y-1 border-t border-primary/12 pt-3">
+      <div className="mt-4 grid min-w-0 grid-cols-2 items-center gap-x-3 gap-y-1 border-t border-primary/12 pt-3 sm:grid-cols-[auto_auto_minmax(3.5rem,1fr)]">
         <span className="whitespace-nowrap font-mono text-[9px] uppercase tracking-[0.14em] text-ink/45">
           {schedule.loading ? '...' : `${schedule.leagues.length} leagues`}
         </span>
         <span className="whitespace-nowrap font-mono text-[9px] uppercase tracking-[0.14em] text-ink/45">
           {schedule.loading ? '...' : `${schedule.events.length} upcoming`}
         </span>
-        <span className="inline-flex items-center justify-self-end whitespace-nowrap text-sm font-bold text-primary">
+        <span className="col-span-2 inline-flex items-center justify-self-start whitespace-nowrap text-sm font-bold text-primary sm:col-span-1 sm:justify-self-end">
           Open <ArrowRight size={14} />
         </span>
       </div>
@@ -157,10 +157,10 @@ function OtherSportRouteCard({ sport }: { sport: SportInfo }) {
 }
 
 export function OtherSportsPage() {
-  const { prefs } = useAppState()
+  const { surfaceMode } = useAppState()
   const [query, setQuery] = useState('')
   const [lane, setLane] = useState<'all' | CommunitySport['lane']>('all')
-  const theme = withSurfaceMode(getTheme('custom'), prefs.themeMode)
+  const theme = withSurfaceMode(getTheme('custom'), surfaceMode)
 
   const filteredCommunitySports = useMemo(() => {
     const q = query.trim().toLowerCase()

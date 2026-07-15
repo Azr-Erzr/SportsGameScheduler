@@ -3,68 +3,93 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <meta name="color-scheme" content="light dark" />
-    <meta name="supported-color-schemes" content="light dark" />
+    <meta name="color-scheme" content="light only" />
+    <meta name="supported-color-schemes" content="light" />
     <title>Sign in to Silbo Sports</title>
     <style>
       @import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Space+Grotesk:wght@400;500;700&display=swap');
-      body { -webkit-font-smoothing: antialiased; }
-      @media (prefers-color-scheme: light) {
-        body, .email-bg { background:#e9ddc3 !important; }
-        .panel { border:1px solid #d8c9ad !important; }
+      body { margin:0; padding:0; -webkit-font-smoothing:antialiased; }
+      table { border-collapse:separate; }
+      a { color:inherit; }
+      .email-bg {
+        background-color:#f3eddd;
+        background-image:repeating-linear-gradient(0deg,rgba(20,58,48,.035) 0,rgba(20,58,48,.035) 1px,transparent 1px,transparent 5px),linear-gradient(120deg,#edf5e8 0%,#f7f0df 52%,#e9f5f3 100%);
       }
-      @media only screen and (max-width: 480px) {
+      .broadcast-header {
+        background-color:#171b18;
+        background-image:repeating-linear-gradient(0deg,rgba(84,255,159,.04) 0,rgba(84,255,159,.04) 1px,transparent 1px,transparent 5px),linear-gradient(120deg,#171b18 0%,#12261d 68%,#20201d 100%);
+      }
+      @media only screen and (max-width:480px) {
         .email-bg { padding:8px 0 !important; }
         .panel { width:100% !important; max-width:100% !important; border-radius:0 !important; }
-        .header, .section-pad { padding-left:16px !important; padding-right:16px !important; }
+        .header, .section-pad, .footer { padding-left:18px !important; padding-right:18px !important; }
         .brand-lockup { width:210px !important; max-width:100% !important; height:auto !important; }
+        .title { font-size:28px !important; line-height:1.04 !important; }
         .primary-button { display:block !important; box-sizing:border-box !important; width:100% !important; text-align:center !important; }
       }
-      a { color:inherit; }
     </style>
   </head>
-  <body style="margin:0;background:#0b0a08;color:#1d1812;font-family:'Space Grotesk','Segoe UI',Arial,sans-serif;">
-    <!-- Preheader (hidden preview text) -->
+  <body style="margin:0;background:#f3eddd;color:#17352d;font-family:'Space Grotesk','Segoe UI',Arial,sans-serif;">
     <div style="display:none;max-height:0;overflow:hidden;color:transparent;opacity:0;">
       Your secure one-time sign-in link for Silbo Sports.
     </div>
-    <table class="email-bg" role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#0b0a08;padding:28px 10px;">
+    <table class="email-bg" role="presentation" width="100%" cellspacing="0" cellpadding="0" style="width:100%;background-color:#f3eddd;padding:34px 12px;">
       <tr>
         <td align="center">
-          <table class="panel" role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;background:#f4ead8;border-radius:12px;overflow:hidden;">
+          <table class="panel" role="presentation" width="100%" cellspacing="0" cellpadding="0" style="width:100%;max-width:600px;background:#fffaf0;border:1px solid #b9cdbd;border-radius:16px;overflow:hidden;box-shadow:0 18px 46px rgba(37,61,51,.14);">
             <tr>
-              <td class="header" style="padding:22px 28px 20px;background:#0b0a08;border-bottom:4px solid #54ff9f;">
+              <td style="padding:0;line-height:0;">
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="width:100%;table-layout:fixed;">
+                  <tr>
+                    <td style="height:6px;background:#54ff9f;line-height:6px;">&nbsp;</td>
+                    <td style="height:6px;background:#45c7d4;line-height:6px;">&nbsp;</td>
+                    <td style="height:6px;background:#f0b93f;line-height:6px;">&nbsp;</td>
+                    <td style="height:6px;background:#ef6baf;line-height:6px;">&nbsp;</td>
+                    <td style="height:6px;background:#ff5252;line-height:6px;">&nbsp;</td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+            <tr>
+              <td class="header broadcast-header" style="padding:24px 30px 23px;background-color:#171b18;border-bottom:1px solid #2a6d4c;">
                 <img class="brand-lockup" src="https://silbosports.com/assets/brand/silbo-email-lockup.png" width="240" height="54" alt="Silbo Sports" style="display:block;width:240px;max-width:100%;height:auto;border:0;outline:none;text-decoration:none;" />
-                <div style="margin-top:12px;color:#c9bfa9;font:700 11px/1.4 'Space Grotesk','Segoe UI',Arial,sans-serif;text-transform:uppercase;letter-spacing:.14em;">Every game, match, race, and card in your calendar</div>
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="width:100%;margin-top:16px;">
+                  <tr>
+                    <td style="color:#b9c7bd;font:700 10px/1.4 'Space Grotesk','Segoe UI',Arial,sans-serif;text-transform:uppercase;letter-spacing:.18em;">Whistle to whistle / in your timezone</td>
+                    <td align="right" style="white-space:nowrap;">
+                      <span style="display:inline-block;width:7px;height:7px;background:#45c7d4;border-radius:1px;">&nbsp;</span>
+                      <span style="display:inline-block;width:11px;height:11px;background:#54ff9f;border-radius:1px;margin-left:4px;">&nbsp;</span>
+                      <span style="display:inline-block;width:6px;height:6px;background:#ef6baf;border-radius:1px;margin-left:4px;">&nbsp;</span>
+                      <span style="display:inline-block;width:8px;height:8px;background:#f0b93f;border-radius:1px;margin-left:4px;">&nbsp;</span>
+                    </td>
+                  </tr>
+                </table>
               </td>
             </tr>
             <tr>
-              <td class="section-pad" style="padding:28px 28px 6px;">
-                <h1 style="margin:0;color:#1d1812;font:400 24px/1.15 'Archivo Black','Arial Black',Arial,sans-serif;text-transform:uppercase;letter-spacing:-.01em;">Sign in to Silbo&nbsp;Sports</h1>
-                <p style="margin:14px 0 0;color:#5f5544;font:400 15px/1.6 'Space Grotesk','Segoe UI',Arial,sans-serif;">
-                  Tap the button below to sign in. This link works once and expires shortly — if it has timed out, just request a new one from the app.
+              <td class="section-pad" style="padding:30px 30px 8px;">
+                <div style="color:#e83b97;font:700 10px/1.2 'Space Grotesk','Segoe UI',Arial,sans-serif;text-transform:uppercase;letter-spacing:.2em;">Secure signal / one-time link</div>
+                <h1 class="title" style="margin:10px 0 0;color:#14382f;font:400 34px/1.03 'Archivo Black','Arial Black',Arial,sans-serif;text-transform:uppercase;letter-spacing:-.02em;">Step back into your schedule.</h1>
+                <p style="margin:16px 0 0;color:#53675f;font:400 15px/1.65 'Space Grotesk','Segoe UI',Arial,sans-serif;">
+                  Use this secure link to sign in and keep following every game, match, race, and card in your local time. It works once and expires shortly.
                 </p>
               </td>
             </tr>
             <tr>
-              <td class="section-pad" style="padding:22px 28px 6px;">
-                <a class="primary-button" href="{{ .ConfirmationURL }}" style="display:inline-block;background:#0b6f44;color:#fff3d7;text-decoration:none;font:700 15px/1 'Space Grotesk','Segoe UI',Arial,sans-serif;padding:15px 26px;border-radius:9px;">Sign in to Silbo Sports</a>
+              <td class="section-pad" style="padding:24px 30px 8px;">
+                <a class="primary-button" href="{{ .ConfirmationURL }}" style="display:inline-block;background:#ffffff;color:#0b6f44;border:2px solid #0b6f44;text-decoration:none;font:700 15px/1 'Space Grotesk','Segoe UI',Arial,sans-serif;padding:14px 24px;border-radius:9px;box-shadow:5px 5px 0 #d8e6d8;">Sign in to Silbo Sports</a>
               </td>
             </tr>
             <tr>
-              <td class="section-pad" style="padding:16px 28px 26px;">
-                <p style="margin:0;color:#8a7c63;font:700 11px/1.5 'Space Grotesk','Segoe UI',Arial,sans-serif;text-transform:uppercase;letter-spacing:.14em;">
-                  Button not working? Paste this link into your browser:
-                </p>
-                <p style="margin:8px 0 0;word-break:break-all;">
-                  <a href="{{ .ConfirmationURL }}" style="color:#0b6f44;text-decoration:underline;font:400 13px/1.5 'Space Grotesk','Segoe UI',Arial,sans-serif;">{{ .ConfirmationURL }}</a>
-                </p>
+              <td class="section-pad" style="padding:18px 30px 28px;">
+                <p style="margin:0;color:#7b8a82;font:700 10px/1.5 'Space Grotesk','Segoe UI',Arial,sans-serif;text-transform:uppercase;letter-spacing:.15em;">Button not working? Paste this link into your browser:</p>
+                <p style="margin:8px 0 0;word-break:break-all;"><a href="{{ .ConfirmationURL }}" style="color:#0b6f44;text-decoration:underline;font:400 13px/1.5 'Space Grotesk','Segoe UI',Arial,sans-serif;">{{ .ConfirmationURL }}</a></p>
               </td>
             </tr>
             <tr>
-              <td style="padding:16px 28px 22px;border-top:1px solid #d8c9ad;background:#efe3cd;color:#5f5544;font:400 12.5px/1.55 'Space Grotesk','Segoe UI',Arial,sans-serif;">
-                If you didn't try to sign in, you can safely ignore this email — your account stays secure and nothing happens.
-                <div style="margin-top:10px;color:#8a7c63;">Silbo Sports · <a href="https://silbosports.com" style="color:#0b6f44;text-decoration:none;font-weight:700;">silbosports.com</a></div>
+              <td class="footer" style="padding:18px 30px 22px;border-top:1px solid #c6d7c9;background:#edf1e6;color:#53675f;font:400 12.5px/1.55 'Space Grotesk','Segoe UI',Arial,sans-serif;">
+                If you did not try to sign in, ignore this email. Your account stays secure and nothing changes.
+                <div style="margin-top:10px;color:#7b8a82;"><strong style="color:#0b6f44;">Silbo Sports</strong> &nbsp;·&nbsp; <a href="https://silbosports.com" style="color:#0b6f44;text-decoration:none;font-weight:700;">silbosports.com</a></div>
               </td>
             </tr>
           </table>
