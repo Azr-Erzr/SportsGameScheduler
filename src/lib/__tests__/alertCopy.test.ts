@@ -53,6 +53,10 @@ describe('alert copy', () => {
     expect(email.html).toContain('Silbo Sports')
     expect(email.html).toContain('View event')
     expect(email.html).toContain('BMO Field')
+    expect(email.html).toContain('Live schedule signal / your local time')
+    expect(email.html).toContain('background-color:#f3eddd')
+    expect(email.html).toContain('#45c7d4')
+    expect(email.html).toContain('#ef6baf')
   })
 
   test('renders an event-specific paid Ticketmaster link with an adjacent disclosure', () => {

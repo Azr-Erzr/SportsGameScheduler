@@ -42,8 +42,12 @@ These use Supabase's Go-template tokens, already embedded in the HTML:
 - (Available if you want them) `{{ .Token }}` 6-digit code, `{{ .SiteURL }}`, `{{ .Email }}`.
 
 ## Keeping brand consistency
-All three templates share the "Matchday Programme" layout: dark broadcast header (brand lockup +
-`#54ff9f` neon rule) over a light program-paper body, per the site's design direction (dark surfaces
-for live UI, paper for reading). Palette: void `#0b0a08`, paper `#f4ead8` / card `#fffdf4`, ink
-`#1d1812` (muted `#5f5544`, labels `#8a7c63`), stub green `#0b6f44`, neon `#54ff9f`. Type: Space
-Grotesk body / Archivo Black display, with Arial fallbacks for clients that strip web fonts.
+All three templates share the light CRT programme layout used by the site: warm cream reading paper,
+a charcoal broadcast header for the neon lockup, faint scanlines where supported, and small
+cyan/pink/amber/green pixel accents. Palette: charcoal `#171b18`, paper `#f3eddd` /
+card `#fffaf0`, ink `#17352d` (muted `#53675f`, labels `#718178`), action green `#0b6f44`, neon
+`#54ff9f`, cyan `#45c7d4`, pink `#ef6baf`, and amber `#f0b93f`. Type: Space Grotesk body /
+Archivo Black display, with Arial fallbacks for clients that strip web fonts.
+
+The texture and gradients are progressive enhancement. Every structural element, CTA, and contrast
+boundary also has an inline solid-colour fallback for Outlook and clients that remove background images.
