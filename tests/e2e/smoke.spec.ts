@@ -101,6 +101,53 @@ test.describe('accessibility smoke', () => {
 })
 
 test.describe('adaptive presentation', () => {
+  test('desktop homepage artwork stays edge-anchored and spans ultrawide gutters', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'desktop-chromium', 'desktop responsive-art regression')
+
+    const samples: Array<{ viewport: number; sideWidth: number }> = []
+    for (const viewport of [960, 1440, 1920, 2560, 3440]) {
+      await page.setViewportSize({ width: viewport, height: 1000 })
+      await page.goto('/')
+      await expect.poll(() => page.locator('html').getAttribute('data-browser')).toBe('enhanced')
+
+      const geometry = await page.evaluate(() => {
+        const left = document.querySelector<HTMLElement>('.crt-side-signal-left')!.getBoundingClientRect()
+        const right = document.querySelector<HTMLElement>('.crt-side-signal-right')!.getBoundingClientRect()
+        const leftTrace = document.querySelector<HTMLElement>('.crt-side-signal-left .crt-signal-trace')!.getBoundingClientRect()
+        const leftPixel = document.querySelector<HTMLElement>('.crt-side-signal-left .crt-pixel-cyan')!.getBoundingClientRect()
+        const rightPixel = document.querySelector<HTMLElement>('.crt-side-signal-right .crt-pixel-cyan')!.getBoundingClientRect()
+        return {
+          documentWidth: document.documentElement.scrollWidth,
+          viewportWidth: window.innerWidth,
+          left: { x: left.x, right: left.right, width: left.width },
+          right: { x: right.x, right: right.right, width: right.width },
+          leftTrace: { x: leftTrace.x, right: leftTrace.right },
+          leftPixelX: leftPixel.x,
+          rightPixelGap: window.innerWidth - rightPixel.right,
+        }
+      })
+
+      expect(geometry.documentWidth, `${viewport}px should not overflow horizontally`).toBeLessThanOrEqual(
+        geometry.viewportWidth,
+      )
+      expect(geometry.left.x).toBeLessThanOrEqual(14)
+      expect(viewport - geometry.right.right).toBeLessThanOrEqual(14)
+      expect(geometry.leftPixelX).toBeLessThanOrEqual(120)
+      expect(geometry.rightPixelGap).toBeLessThanOrEqual(120)
+      expect(geometry.leftTrace.x).toBeLessThanOrEqual(80)
+
+      if (viewport >= 1920) {
+        const gutter = (viewport - 1460) / 2
+        expect(geometry.left.right - gutter, `${viewport}px artwork should overlap the content rail`).toBeGreaterThanOrEqual(175)
+        expect(geometry.leftTrace.right, `${viewport}px trace should cross the outer gutter`).toBeGreaterThan(gutter)
+      }
+
+      samples.push({ viewport, sideWidth: geometry.left.width })
+    }
+
+    expect(samples.map(({ sideWidth }) => Math.round(sideWidth))).toEqual([260, 260, 422, 806, 1270])
+  })
+
   test('desktop homepage CRT artwork loops on long scrolls', async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== 'desktop-chromium', 'desktop scroll-motion regression')
 

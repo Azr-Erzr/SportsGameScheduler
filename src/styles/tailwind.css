@@ -189,7 +189,11 @@
     position: absolute;
     top: -6%;
     bottom: -6%;
-    width: clamp(96px, calc((100vw - 1080px) / 2 + 128px), 340px);
+    /* Fill the real viewport gutter, then continue a controlled distance behind the content.
+       A fixed max-width left the artwork stranded toward the middle of ultrawide screens. This
+       keeps a consistent central quiet zone at every desktop width while the traces naturally
+       lengthen on wider displays. */
+    width: max(260px, calc((100vw - 1460px) / 2 + clamp(180px, 10vw, 280px)));
     background-image: url('/assets/backgrounds/silbo-crt-signals.svg');
     background-repeat: no-repeat;
     background-size: calc(100vw + var(--crt-wave-stretch, 0px)) 112%;
@@ -208,8 +212,8 @@
 
   .crt-signal-trace {
     position: absolute;
-    left: 4%;
-    right: 4%;
+    left: clamp(18px, 2.25vw, 64px);
+    right: clamp(18px, 2.25vw, 64px);
     z-index: 2;
     height: 44px;
     pointer-events: none;
@@ -308,14 +312,16 @@
     transform: scale(var(--crt-pixel-amber-scale, 1.08));
   }
 
-  .crt-side-signal-left .crt-pixel-cyan { left: 15%; top: 16%; }
-  .crt-side-signal-left .crt-pixel-pink { left: 58%; top: 42%; }
-  .crt-side-signal-left .crt-pixel-green { left: 28%; top: 73%; }
-  .crt-side-signal-left .crt-pixel-amber { left: 72%; top: 86%; }
-  .crt-side-signal-right .crt-pixel-cyan { right: 14%; top: 24%; }
-  .crt-side-signal-right .crt-pixel-pink { right: 58%; top: 68%; }
-  .crt-side-signal-right .crt-pixel-green { right: 28%; top: 46%; }
-  .crt-side-signal-right .crt-pixel-amber { right: 72%; top: 83%; }
+  /* Pixel clusters stay tied to the physical screen edges instead of drifting inward as the
+     fluid side fields expand. Their vertical rhythm still changes with the scroll sequence. */
+  .crt-side-signal-left .crt-pixel-cyan { left: clamp(32px, 4vw, 104px); top: 16%; }
+  .crt-side-signal-left .crt-pixel-pink { left: clamp(118px, 10vw, 260px); top: 42%; }
+  .crt-side-signal-left .crt-pixel-green { left: clamp(58px, 6vw, 154px); top: 73%; }
+  .crt-side-signal-left .crt-pixel-amber { left: clamp(164px, 14vw, 320px); top: 86%; }
+  .crt-side-signal-right .crt-pixel-cyan { right: clamp(32px, 4vw, 104px); top: 24%; }
+  .crt-side-signal-right .crt-pixel-pink { right: clamp(118px, 10vw, 260px); top: 68%; }
+  .crt-side-signal-right .crt-pixel-green { right: clamp(58px, 6vw, 154px); top: 46%; }
+  .crt-side-signal-right .crt-pixel-amber { right: clamp(164px, 14vw, 320px); top: 83%; }
 
   @media (min-width: 900px) and (prefers-reduced-motion: no-preference) {
     /* Enhanced desktop uses the scroll-reactive side crops exclusively. Keeping the full-screen
