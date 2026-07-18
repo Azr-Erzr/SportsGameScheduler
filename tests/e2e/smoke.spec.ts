@@ -1,5 +1,7 @@
 import { AxeBuilder } from '@axe-core/playwright'
-import { expect, test } from '@playwright/test'
+import { expect, test, type Locator } from '@playwright/test'
+import { readFileSync, readdirSync } from 'node:fs'
+import { join } from 'node:path'
 
 const smokeRoutes = [
   { path: '/', landmark: /one schedule for every sport you follow/i },
@@ -22,6 +24,41 @@ const mainSportRoutes = [
   { path: '/sports/olympic', landmark: /olympic sports/i },
   { path: '/sports/baseball', landmark: /baseball/i },
 ]
+
+function cssColorChannels(value: string): [number, number, number] {
+  const channels = value.match(/[\d.]+/g)?.map(Number)
+  if (!channels || channels.length < 3) throw new Error(`Unsupported CSS color: ${value}`)
+  if (value.startsWith('color(srgb')) return [channels[0], channels[1], channels[2]]
+  return [channels[0] / 255, channels[1] / 255, channels[2] / 255]
+}
+
+function contrastRatio(foreground: string, background: string) {
+  const luminance = (color: string) => {
+    const [red, green, blue] = cssColorChannels(color).map((channel) =>
+      channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4,
+    )
+    return red * 0.2126 + green * 0.7152 + blue * 0.0722
+  }
+  const lighter = Math.max(luminance(foreground), luminance(background))
+  const darker = Math.min(luminance(foreground), luminance(background))
+  return (lighter + 0.05) / (darker + 0.05)
+}
+
+async function renderedContrast(locator: Locator) {
+  const colors = await locator.evaluate((element) => {
+    const style = getComputedStyle(element)
+    return { foreground: style.color, background: style.backgroundColor }
+  })
+  return contrastRatio(colors.foreground, colors.background)
+}
+
+function sourceFiles(directory: string): string[] {
+  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(directory, entry.name)
+    if (entry.isDirectory()) return sourceFiles(path)
+    return entry.name.endsWith('.tsx') ? [path] : []
+  })
+}
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
@@ -101,6 +138,87 @@ test.describe('accessibility smoke', () => {
 })
 
 test.describe('adaptive presentation', () => {
+  test('opaque primary hover controls opt into the program contrast treatment', async ({ browserName }, testInfo) => {
+    test.skip(
+      testInfo.project.name !== 'desktop-chromium' || browserName !== 'chromium',
+      'source-level hover contrast regression',
+    )
+    const unsafeLines = sourceFiles(join(process.cwd(), 'src')).flatMap((path) =>
+      readFileSync(path, 'utf8')
+        .split(/\r?\n/)
+        .filter((line) => line.includes('hover:bg-primary') && line.includes('hover:text-void'))
+        .map((line) => ({ path, line })),
+    )
+
+    expect(unsafeLines.length).toBeGreaterThan(0)
+    for (const candidate of unsafeLines) {
+      expect(candidate.line, candidate.path).toContain('silbo-opaque-primary-hover')
+    }
+  })
+
+  test('program-mode opaque hover controls retain readable foregrounds', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'desktop-chromium', 'desktop hover contrast regression')
+    await page.emulateMedia({ colorScheme: 'light' })
+    await page.goto('/')
+
+    const worldCupCta = page.getByRole('button', { name: 'Soccer: World Cup', exact: true })
+    await worldCupCta.hover()
+    expect(await renderedContrast(worldCupCta)).toBeGreaterThanOrEqual(4.5)
+
+    const homepageIconLinks = page.locator('.silbo-opaque-primary-hover')
+    expect(await homepageIconLinks.count()).toBeGreaterThan(0)
+    const homepageIconLink = homepageIconLinks.first()
+    await homepageIconLink.hover()
+    expect(await renderedContrast(homepageIconLink)).toBeGreaterThanOrEqual(3)
+  })
+
+  test('desktop homepage artwork stays edge-anchored and spans ultrawide gutters', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'desktop-chromium', 'desktop responsive-art regression')
+
+    const samples: Array<{ viewport: number; sideWidth: number }> = []
+    for (const viewport of [960, 1440, 1920, 2560, 3440]) {
+      await page.setViewportSize({ width: viewport, height: 1000 })
+      await page.goto('/')
+      await expect.poll(() => page.locator('html').getAttribute('data-browser')).toBe('enhanced')
+
+      const geometry = await page.evaluate(() => {
+        const left = document.querySelector<HTMLElement>('.crt-side-signal-left')!.getBoundingClientRect()
+        const right = document.querySelector<HTMLElement>('.crt-side-signal-right')!.getBoundingClientRect()
+        const leftTrace = document.querySelector<HTMLElement>('.crt-side-signal-left .crt-signal-trace')!.getBoundingClientRect()
+        const leftPixel = document.querySelector<HTMLElement>('.crt-side-signal-left .crt-pixel-cyan')!.getBoundingClientRect()
+        const rightPixel = document.querySelector<HTMLElement>('.crt-side-signal-right .crt-pixel-cyan')!.getBoundingClientRect()
+        return {
+          documentWidth: document.documentElement.scrollWidth,
+          viewportWidth: window.innerWidth,
+          left: { x: left.x, right: left.right, width: left.width },
+          right: { x: right.x, right: right.right, width: right.width },
+          leftTrace: { x: leftTrace.x, right: leftTrace.right },
+          leftPixelX: leftPixel.x,
+          rightPixelGap: window.innerWidth - rightPixel.right,
+        }
+      })
+
+      expect(geometry.documentWidth, `${viewport}px should not overflow horizontally`).toBeLessThanOrEqual(
+        geometry.viewportWidth,
+      )
+      expect(geometry.left.x).toBeLessThanOrEqual(14)
+      expect(viewport - geometry.right.right).toBeLessThanOrEqual(14)
+      expect(geometry.leftPixelX).toBeLessThanOrEqual(120)
+      expect(geometry.rightPixelGap).toBeLessThanOrEqual(120)
+      expect(geometry.leftTrace.x).toBeLessThanOrEqual(80)
+
+      if (viewport >= 1920) {
+        const gutter = (viewport - 1460) / 2
+        expect(geometry.left.right - gutter, `${viewport}px artwork should overlap the content rail`).toBeGreaterThanOrEqual(175)
+        expect(geometry.leftTrace.right, `${viewport}px trace should cross the outer gutter`).toBeGreaterThan(gutter)
+      }
+
+      samples.push({ viewport, sideWidth: geometry.left.width })
+    }
+
+    expect(samples.map(({ sideWidth }) => Math.round(sideWidth))).toEqual([260, 260, 422, 806, 1270])
+  })
+
   test('desktop homepage CRT artwork loops on long scrolls', async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== 'desktop-chromium', 'desktop scroll-motion regression')
 
@@ -159,20 +277,38 @@ test.describe('adaptive presentation', () => {
 
     for (const path of ['/', '/sports/basketball', '/other-sports']) {
       await page.goto(path)
-      const presentation = await page.evaluate(() => ({
-        viewportWidth: window.innerWidth,
-        documentWidth: document.documentElement.scrollWidth,
-        effects: document.documentElement.dataset.visualEffects,
-        liveSignals: [...document.querySelectorAll<HTMLElement>('.page-signal-live')].filter(
-          (element) => getComputedStyle(element).display !== 'none',
-        ).length,
-      }))
+      const presentation = await page.evaluate(() => {
+        const broadcastAir = document.querySelector<HTMLElement>('.broadcast-air')
+        const mobileArtwork = broadcastAir ? getComputedStyle(broadcastAir, '::after') : null
+        const artworkHeight = Number.parseFloat(mobileArtwork?.backgroundSize.split(' ')[1] ?? '0')
+
+        return {
+          viewportWidth: window.innerWidth,
+          documentWidth: document.documentElement.scrollWidth,
+          effects: document.documentElement.dataset.visualEffects,
+          liveSignals: [...document.querySelectorAll<HTMLElement>('.page-signal-live')].filter(
+            (element) => getComputedStyle(element).display !== 'none',
+          ).length,
+          staticSignals: [...document.querySelectorAll<HTMLElement>('.page-signal-ghost')].filter(
+            (element) => getComputedStyle(element).display !== 'none',
+          ).length,
+          artworkDisplay: mobileArtwork?.display,
+          artworkHeight,
+          hasCoarseScanlines: broadcastAir
+            ? getComputedStyle(broadcastAir).backgroundImage.includes('repeating-linear-gradient')
+            : false,
+        }
+      })
 
       expect(presentation.documentWidth, `${path} should not overflow horizontally`).toBeLessThanOrEqual(
         presentation.viewportWidth,
       )
       expect(presentation.effects).toBe('reduced')
       expect(presentation.liveSignals).toBe(0)
+      expect(presentation.artworkDisplay).toBe('block')
+      expect(presentation.artworkHeight).toBeGreaterThanOrEqual(720)
+      expect(presentation.hasCoarseScanlines).toBe(true)
+      expect(presentation.staticSignals).toBe(path === '/' ? 0 : 2)
     }
   })
 })

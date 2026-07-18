@@ -162,7 +162,7 @@ export function HomeSportTickets({ sports, regionCode }: HomeSportTicketsProps) 
                 <Link
                   to={`/sports/${sport.key}`}
                   aria-label={`Open ${sport.label} schedule`}
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary transition-colors hover:bg-primary hover:text-void"
+                  className="silbo-opaque-primary-hover flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary transition-colors hover:bg-primary hover:text-void"
                 >
                   <ArrowUpRight size={15} />
                 </Link>
