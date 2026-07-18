@@ -136,9 +136,9 @@
   /* CRT atmosphere: faint scanlines + broad grey static bands + tube vignette + corner
      glows. Sits behind content; the data-paper subtree (share pages/exports) overrides it.
      Static by design — nothing animates, so prefers-reduced-motion needs no branch. */
-  /* PERF: everything lives on ONE fixed translateZ(0) layer, painted once — scrolling never
-     repaints it. Scanlines run at a 3px pitch (not 1px) to keep the rasterized layer cheap
-     and avoid DPR moiré; the mobile block below drops them entirely. */
+  /* PERF: everything lives on one fixed layer, painted once — scrolling never repaints it.
+     Desktop scanlines run at a 4px pitch; phones use a coarser static pitch below so the CRT
+     texture stays visible without producing high-DPR moiré. */
   .broadcast-air {
     position: fixed;
     inset: 0;
@@ -825,18 +825,71 @@
   }
 
   @media (max-width: 767px) {
+    /* A phone needs its own crop of the 1920px signal artwork. Stretching the full desktop SVG
+       into 320–700px made every trace and pixel unreadably small. Two static edge crops keep the
+       motifs human-sized while the masks protect the content column. */
+    .broadcast-air::before,
+    .broadcast-air::after {
+      display: block;
+      background-image: url('/assets/backgrounds/silbo-crt-signals.svg');
+      background-repeat: no-repeat;
+      background-size: auto clamp(720px, 108vh, 980px);
+      opacity: 0.34;
+    }
+
+    .broadcast-air::before {
+      background-position: left center;
+      -webkit-mask-image: linear-gradient(90deg, #000 0%, rgba(0, 0, 0, 0.88) 18%, transparent 72%);
+      mask-image: linear-gradient(90deg, #000 0%, rgba(0, 0, 0, 0.88) 18%, transparent 72%);
+    }
+
+    .broadcast-air::after {
+      background-position: right center;
+      -webkit-mask-image: linear-gradient(270deg, #000 0%, rgba(0, 0, 0, 0.88) 18%, transparent 72%);
+      mask-image: linear-gradient(270deg, #000 0%, rgba(0, 0, 0, 0.88) 18%, transparent 72%);
+    }
+
+    [data-paper] .broadcast-air::before,
+    [data-paper] .broadcast-air::after {
+      opacity: 0.39;
+    }
+
     .page-signal {
-      display: none;
+      display: block;
+      width: clamp(540px, 150vw, 760px);
+      height: 108px;
+      opacity: 0.38;
+    }
+
+    .page-signal-top {
+      right: -52%;
+      top: clamp(10rem, 21vh, 14rem);
+    }
+
+    .page-signal-low {
+      left: -52%;
+      top: clamp(35rem, 70vh, 52rem);
+      opacity: 0.32;
+    }
+
+    .page-signal-ghost {
+      stroke-width: 1.6;
+      opacity: 0.3;
     }
 
     .page-pixel-cluster-a {
-      right: 1%;
-      top: 9rem;
-      transform: scale(0.72);
+      right: -4px;
+      top: 8.5rem;
+      transform: scale(0.92);
+      opacity: 0.58;
     }
 
     .page-pixel-cluster-b {
-      display: none;
+      display: block;
+      left: -8px;
+      top: clamp(38rem, 76vh, 54rem);
+      transform: scale(0.78) rotate(180deg);
+      opacity: 0.34;
     }
   }
 
@@ -3701,14 +3754,27 @@
     }
 
     .broadcast-air {
-      /* Mobile: bands + vignette only — no scanlines (cheaper, and 1-3px pitches moiré
-         against high-DPR phone screens). */
+      /* Coarse static scanlines remain legible on high-DPR phones without the shimmer caused
+         by desktop's tighter pitch. All signal artwork is static on compact screens. */
       background:
+        repeating-linear-gradient(0deg, rgba(6, 9, 7, 0.12) 0 1px, transparent 1px 8px),
         repeating-linear-gradient(0deg, rgba(233, 240, 234, 0.024) 0 44px, transparent 44px 170px),
         radial-gradient(140% 110% at 50% 40%, transparent 60%, rgba(4, 6, 5, 0.30) 100%),
         radial-gradient(680px 330px at 80% -10%, color-mix(in srgb, var(--mp-primary) 8%, transparent), transparent 62%),
         radial-gradient(560px 300px at -10% 105%, color-mix(in srgb, var(--mp-accent) 5%, transparent), transparent 64%);
       opacity: 0.9;
+    }
+
+    [data-paper] .broadcast-air {
+      background:
+        repeating-linear-gradient(0deg, rgba(31, 85, 70, 0.064) 0 1px, transparent 1px 8px),
+        repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.2) 0 42px, transparent 42px 196px),
+        repeating-linear-gradient(108deg, rgba(29, 24, 18, 0.022) 0 1px, transparent 1px 23px),
+        radial-gradient(140% 110% at 50% 40%, transparent 60%, rgba(52, 83, 72, 0.12) 100%),
+        radial-gradient(560px 380px at 4% 12%, color-mix(in srgb, #20d77b 18%, transparent), transparent 70%),
+        radial-gradient(580px 380px at 96% 88%, color-mix(in srgb, #45c7d4 15%, transparent), transparent 70%),
+        radial-gradient(420px 300px at 94% 7%, color-mix(in srgb, #ef6baf 9%, transparent), transparent 72%),
+        linear-gradient(135deg, rgba(255, 250, 236, 0.17), rgba(236, 243, 225, 0.12) 52%, rgba(226, 241, 242, 0.16));
     }
 
     .art-capsule {

@@ -138,8 +138,11 @@ test.describe('accessibility smoke', () => {
 })
 
 test.describe('adaptive presentation', () => {
-  test('opaque primary hover controls opt into the program contrast treatment', async (_fixtures, testInfo) => {
-    test.skip(testInfo.project.name !== 'desktop-chromium', 'source-level hover contrast regression')
+  test('opaque primary hover controls opt into the program contrast treatment', async ({ browserName }, testInfo) => {
+    test.skip(
+      testInfo.project.name !== 'desktop-chromium' || browserName !== 'chromium',
+      'source-level hover contrast regression',
+    )
     const unsafeLines = sourceFiles(join(process.cwd(), 'src')).flatMap((path) =>
       readFileSync(path, 'utf8')
         .split(/\r?\n/)
@@ -274,20 +277,38 @@ test.describe('adaptive presentation', () => {
 
     for (const path of ['/', '/sports/basketball', '/other-sports']) {
       await page.goto(path)
-      const presentation = await page.evaluate(() => ({
-        viewportWidth: window.innerWidth,
-        documentWidth: document.documentElement.scrollWidth,
-        effects: document.documentElement.dataset.visualEffects,
-        liveSignals: [...document.querySelectorAll<HTMLElement>('.page-signal-live')].filter(
-          (element) => getComputedStyle(element).display !== 'none',
-        ).length,
-      }))
+      const presentation = await page.evaluate(() => {
+        const broadcastAir = document.querySelector<HTMLElement>('.broadcast-air')
+        const mobileArtwork = broadcastAir ? getComputedStyle(broadcastAir, '::after') : null
+        const artworkHeight = Number.parseFloat(mobileArtwork?.backgroundSize.split(' ')[1] ?? '0')
+
+        return {
+          viewportWidth: window.innerWidth,
+          documentWidth: document.documentElement.scrollWidth,
+          effects: document.documentElement.dataset.visualEffects,
+          liveSignals: [...document.querySelectorAll<HTMLElement>('.page-signal-live')].filter(
+            (element) => getComputedStyle(element).display !== 'none',
+          ).length,
+          staticSignals: [...document.querySelectorAll<HTMLElement>('.page-signal-ghost')].filter(
+            (element) => getComputedStyle(element).display !== 'none',
+          ).length,
+          artworkDisplay: mobileArtwork?.display,
+          artworkHeight,
+          hasCoarseScanlines: broadcastAir
+            ? getComputedStyle(broadcastAir).backgroundImage.includes('repeating-linear-gradient')
+            : false,
+        }
+      })
 
       expect(presentation.documentWidth, `${path} should not overflow horizontally`).toBeLessThanOrEqual(
         presentation.viewportWidth,
       )
       expect(presentation.effects).toBe('reduced')
       expect(presentation.liveSignals).toBe(0)
+      expect(presentation.artworkDisplay).toBe('block')
+      expect(presentation.artworkHeight).toBeGreaterThanOrEqual(720)
+      expect(presentation.hasCoarseScanlines).toBe(true)
+      expect(presentation.staticSignals).toBe(path === '/' ? 0 : 2)
     }
   })
 })
