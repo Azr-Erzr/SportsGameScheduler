@@ -2048,7 +2048,7 @@ function EventTicket({
           to={`/events/${event.id}`}
           title="Open event page"
           aria-label={`Open the event page for ${event.title}`}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-paper-ink/8 text-paper-ink/70 transition-colors hover:bg-primary hover:text-void focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          className="silbo-opaque-primary-hover flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-paper-ink/8 text-paper-ink/70 transition-colors hover:bg-primary hover:text-void focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
           <ArrowUpRight size={16} />
         </Link>

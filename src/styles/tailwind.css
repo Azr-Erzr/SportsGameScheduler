@@ -407,6 +407,7 @@
     background: color-mix(in srgb, var(--mp-surface) 90%, transparent) !important;
     color: var(--mp-primary) !important;
     box-shadow: inset 0 1px 0 color-mix(in srgb, #f4ead8 16%, transparent);
+    transition-property: border-color, box-shadow !important;
   }
 
   .home-cta:hover,
@@ -423,6 +424,18 @@
 
   [data-paper] .home-cta:hover,
   [data-paper] .home-cta:focus-visible {
+    border-color: var(--mp-primary) !important;
+    background: var(--mp-primary) !important;
+    color: var(--mp-ticket-stub-text) !important;
+  }
+
+  /* Opaque primary hovers use near-black ink in broadcast mode. On program paper the primary is
+     much darker, so swap those hover-only foregrounds to the dedicated light-on-fill token. */
+  .silbo-opaque-primary-hover {
+    transition-property: border-color, box-shadow !important;
+  }
+
+  [data-paper] .silbo-opaque-primary-hover:hover {
     color: var(--mp-ticket-stub-text) !important;
   }
 
